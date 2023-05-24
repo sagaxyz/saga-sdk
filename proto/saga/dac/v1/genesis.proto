@@ -1,0 +1,18 @@
+syntax = "proto3";
+package sagaevm.dac.v1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/dac/types";
+
+// GenesisState defines the module's genesis state.
+message GenesisState {
+  Params params = 1 [ (gogoproto.nullable) = false ];
+  repeated string admins = 2;
+  repeated string allowed = 3;
+}
+
+// Params defines the module's params
+message Params {
+  bool enable = 1;
+}
