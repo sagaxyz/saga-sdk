@@ -17,8 +17,12 @@ var (
 
 const (
 	// Amino names
-	addAdminsName  = "sagaevm/MsgAddAdmins"
-	addAllowedName = "sagaevm/MsgAddAllowed"
+	addAdminsName     = "saga/MsgAddAdmins"
+	addAllowedName    = "saga/MsgAddAllowed"
+	removeAdminsName  = "saga/MsgRemoveAdmins"
+	removeAllowedName = "saga/MsgRemoveAllowed"
+	enableName        = "saga/MsgEnable"
+	disableName       = "saga/MsgDisable"
 )
 
 // NOTE: This is required for the GetSignBytes function
@@ -33,6 +37,10 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 		(*sdk.Msg)(nil),
 		&MsgAddAllowed{},
 		&MsgAddAdmins{},
+		&MsgRemoveAllowed{},
+		&MsgRemoveAdmins{},
+		&MsgEnable{},
+		&MsgDisable{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
@@ -44,4 +52,8 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgAddAdmins{}, addAdminsName, nil)
 	cdc.RegisterConcrete(&MsgAddAllowed{}, addAllowedName, nil)
+	cdc.RegisterConcrete(&MsgRemoveAdmins{}, removeAdminsName, nil)
+	cdc.RegisterConcrete(&MsgRemoveAllowed{}, removeAllowedName, nil)
+	cdc.RegisterConcrete(&MsgEnable{}, enableName, nil)
+	cdc.RegisterConcrete(&MsgDisable{}, disableName, nil)
 }

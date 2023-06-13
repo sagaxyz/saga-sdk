@@ -10,7 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	"github.com/sagaxyz/sagaevm/v8/x/dac/types"
+	"github.com/sagaxyz/saga-sdk/x/dac/types"
 )
 
 // Keeper struct

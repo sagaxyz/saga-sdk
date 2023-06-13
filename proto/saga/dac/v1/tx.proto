@@ -1,7 +1,9 @@
 syntax = "proto3";
-package sagaevm.dac.v1;
+package saga.dac.v1;
 
 import "google/api/annotations.proto";
+
+import "saga/dac/v1/address.proto";
 
 option go_package = "github.com/sagaxyz/saga-sdk/x/dac/types";
 
@@ -35,25 +37,25 @@ service Msg {
 
 message MsgAddAdmins {
   string sender = 1;
-  repeated string admins = 2;
+  repeated Address admins = 2;
 }
 message MsgAddAdminsResponse {}
 
 message MsgRemoveAdmins {
   string sender = 1;
-  repeated string admins = 2;
+  repeated Address admins = 2;
 }
 message MsgRemoveAdminsResponse {}
 
 message MsgAddAllowed {
   string sender = 1;
-  repeated string allowed = 2;
+  repeated Address allowed = 2;
 }
 message MsgAddAllowedResponse {}
 
 message MsgRemoveAllowed {
   string sender = 1;
-  repeated string allowed = 2;
+  repeated Address allowed = 2;
 }
 message MsgRemoveAllowedResponse {}
 

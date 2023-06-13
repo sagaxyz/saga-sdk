@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // DefaultGenesis returns the default genesis state
@@ -37,14 +35,18 @@ func (gs GenesisState) Validate() error {
 	}
 
 	for _, admin := range gs.Admins {
-		_, err := sdk.AccAddressFromBech32(admin)
+		if admin.Format != AddressFormat_ADDRESS_BECH32 {
+			return fmt.Errorf("unsupported admin address format: %s", admin.Format)
+		}
+		err := admin.Validate()
 		if err != nil {
-			return fmt.Errorf("admin address '%s' invalid: %w", admin, err)
+			return fmt.Errorf("admin address invalid: %w", err)
 		}
 	}
 	for _, allowed := range gs.Allowed {
-		if !common.IsHexAddress(allowed) {
-			return fmt.Errorf("allowed address '%s' is not an ethereum address", allowed)
+		err := allowed.Validate()
+		if err != nil {
+			return fmt.Errorf("allowed address invalid: %w", err)
 		}
 	}
 

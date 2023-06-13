@@ -2,22 +2,23 @@ package dac
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/sagaxyz/sagaevm/v8/x/dac/keeper"
-	"github.com/sagaxyz/sagaevm/v8/x/dac/types"
+	"github.com/sagaxyz/saga-sdk/x/dac/keeper"
+	"github.com/sagaxyz/saga-sdk/x/dac/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) {
 	k.SetParams(ctx, data.Params)
 
-	for _, admin := range data.Admins {
-		addr := sdk.MustAccAddressFromBech32(admin)
-		k.SetAdmin(ctx, addr)
+	for _, addr := range data.Admins {
+		accAddr, err := sdk.AccAddressFromBech32(addr.Value)
+		if err != nil {
+			panic(err)
+		}
+		k.SetAdmin(ctx, accAddr)
 	}
-	for _, allowed := range data.Allowed {
-		addr := common.HexToAddress(allowed)
+	for _, addr := range data.Allowed {
 		k.SetAllowed(ctx, addr)
 	}
 }
