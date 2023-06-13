@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/sagaxyz/sagaevm/v8/x/dac/keeper"
-	"github.com/sagaxyz/sagaevm/v8/x/dac/types"
+	"github.com/sagaxyz/saga-sdk/x/dac/keeper"
+	"github.com/sagaxyz/saga-sdk/x/dac/types"
 )
 
 // NewHandler returns dac module messages

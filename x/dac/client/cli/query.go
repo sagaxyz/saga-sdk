@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	"github.com/sagaxyz/sagaevm/v8/x/dac/types"
+	"github.com/sagaxyz/saga-sdk/x/dac/types"
 )
 
 // GetQueryCmd returns the parent command for all dac CLI query commands

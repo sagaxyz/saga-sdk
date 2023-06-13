@@ -1,10 +1,11 @@
 syntax = "proto3";
-package sagaevm.dac.v1;
+package saga.dac.v1;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 
-import "saga/v1/genesis.proto";
+import "saga/dac/v1/genesis.proto";
+import "saga/dac/v1/address.proto";
 
 option go_package = "github.com/sagaxyz/saga-sdk/x/dac/types";
 
@@ -32,10 +33,10 @@ message QueryParamsResponse {
 
 message QueryListAdminsRequest {}
 message QueryListAdminsResponse {
-  repeated string admins = 1;
+  repeated Address admins = 1;
 }
 
 message QueryListAllowedRequest {}
 message QueryListAllowedResponse {
-  repeated string allowed = 1;
+  repeated Address allowed = 1;
 }

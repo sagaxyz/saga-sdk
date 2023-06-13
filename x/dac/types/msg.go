@@ -3,8 +3,6 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
-	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -26,7 +24,7 @@ const (
 )
 
 // NewMsgAddAllowed creates a new instance of MsgAddAllowed
-func NewMsgAddAllowed(sender sdk.AccAddress, allowed ...string) *MsgAddAllowed { // nolint: interfacer
+func NewMsgAddAllowed(sender sdk.AccAddress, allowed ...*Address) *MsgAddAllowed { // nolint: interfacer
 	return &MsgAddAllowed{
 		Sender:  sender.String(),
 		Allowed: allowed,
@@ -46,8 +44,9 @@ func (msg MsgAddAllowed) ValidateBasic() error {
 		return sdkerrors.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Allowed {
-		if !common.IsHexAddress(addr) {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid receiver hex address %s", addr)
+		err = addr.Validate()
+		if err != nil {
+			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
 		}
 	}
 	return nil
@@ -65,7 +64,7 @@ func (msg MsgAddAllowed) GetSigners() []sdk.AccAddress {
 }
 
 // NewMsgRemoveAllowed creates a new instance of MsgRemoveAllowed
-func NewMsgRemoveAllowed(sender sdk.AccAddress, allowed ...string) *MsgRemoveAllowed { // nolint: interfacer
+func NewMsgRemoveAllowed(sender sdk.AccAddress, allowed ...*Address) *MsgRemoveAllowed { // nolint: interfacer
 	return &MsgRemoveAllowed{
 		Sender:  sender.String(),
 		Allowed: allowed,
@@ -85,8 +84,9 @@ func (msg MsgRemoveAllowed) ValidateBasic() error {
 		return sdkerrors.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Allowed {
-		if !common.IsHexAddress(addr) {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid receiver hex address %s", addr)
+		err = addr.Validate()
+		if err != nil {
+			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
 		}
 	}
 	return nil
@@ -104,7 +104,7 @@ func (msg MsgRemoveAllowed) GetSigners() []sdk.AccAddress {
 }
 
 // NewMsgAddAdmins creates a new instance of MsgAddAdmins
-func NewMsgAddAdmins(sender sdk.AccAddress, admins ...string) *MsgAddAdmins { // nolint: interfacer
+func NewMsgAddAdmins(sender sdk.AccAddress, admins ...*Address) *MsgAddAdmins { // nolint: interfacer
 	return &MsgAddAdmins{
 		Sender: sender.String(),
 		Admins: admins,
@@ -124,9 +124,9 @@ func (msg MsgAddAdmins) ValidateBasic() error {
 		return sdkerrors.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Admins {
-		_, err := sdk.AccAddressFromBech32(addr)
+		err = addr.Validate()
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin bech32 address '%s'", addr)
+			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
 		}
 	}
 	return nil
@@ -144,7 +144,7 @@ func (msg MsgAddAdmins) GetSigners() []sdk.AccAddress {
 }
 
 // NewMsgRemoveAdmins creates a new instance of MsgRemoveAdmins
-func NewMsgRemoveAdmins(sender sdk.AccAddress, admins ...string) *MsgRemoveAdmins { // nolint: interfacer
+func NewMsgRemoveAdmins(sender sdk.AccAddress, admins ...*Address) *MsgRemoveAdmins { // nolint: interfacer
 	return &MsgRemoveAdmins{
 		Sender: sender.String(),
 		Admins: admins,
@@ -164,9 +164,9 @@ func (msg MsgRemoveAdmins) ValidateBasic() error {
 		return sdkerrors.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Admins {
-		_, err := sdk.AccAddressFromBech32(addr)
+		err := addr.Validate()
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin bech32 address '%s'", addr)
+			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
 		}
 	}
 	return nil

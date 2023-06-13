@@ -3,13 +3,11 @@ package keeper
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/sagaxyz/sagaevm/v8/x/dac/types"
+	"github.com/sagaxyz/saga-sdk/x/dac/types"
 )
 
 var _ types.MsgServer = &Keeper{}
@@ -29,13 +27,8 @@ func (k Keeper) AddAllowed(goCtx context.Context, msg *types.MsgAddAllowed) (res
 	}
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAllowed)
-	for _, allowed := range msg.Allowed {
-		if !common.IsHexAddress(allowed) {
-			err = fmt.Errorf("invalid Ethereum address: %s", allowed)
-			return
-		}
-		addr := common.HexToAddress(allowed)
-		store.Set(addr.Bytes(), []byte{})
+	for _, addr := range msg.Allowed {
+		store.Set(addr.Bytes(), []byte{byte(addr.Format)})
 	}
 
 	resp = &types.MsgAddAllowedResponse{}
@@ -54,12 +47,7 @@ func (k Keeper) RemoveAllowed(goCtx context.Context, msg *types.MsgRemoveAllowed
 	}
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAllowed)
-	for _, allowed := range msg.Allowed {
-		if !common.IsHexAddress(allowed) {
-			err = fmt.Errorf("invalid Ethereum address: %s", allowed)
-			return
-		}
-		addr := common.HexToAddress(allowed)
+	for _, addr := range msg.Allowed {
 		store.Delete(addr.Bytes())
 	}
 	resp = &types.MsgRemoveAllowedResponse{}
@@ -79,13 +67,8 @@ func (k Keeper) AddAdmins(goCtx context.Context, msg *types.MsgAddAdmins) (resp 
 	}
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
-	for _, admin := range msg.Admins {
-		var addr sdk.AccAddress
-		addr, err = sdk.AccAddressFromBech32(admin)
-		if err != nil {
-			return
-		}
-		store.Set(addr.Bytes(), []byte{})
+	for _, addr := range msg.Admins {
+		store.Set(addr.Bytes(), []byte{byte(addr.Format)})
 	}
 
 	resp = &types.MsgAddAdminsResponse{}
@@ -104,12 +87,7 @@ func (k Keeper) RemoveAdmins(goCtx context.Context, msg *types.MsgRemoveAdmins) 
 	}
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
-	for _, admin := range msg.Admins {
-		var addr sdk.AccAddress
-		addr, err = sdk.AccAddressFromBech32(admin)
-		if err != nil {
-			return
-		}
+	for _, addr := range msg.Admins {
 		store.Delete(addr.Bytes())
 	}
 
