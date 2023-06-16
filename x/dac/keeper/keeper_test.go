@@ -7,10 +7,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/sagaxyz/ethermint/crypto/ethsecp256k1"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	evm "github.com/sagaxyz/ethermint/x/evm/types"
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
+	evm "github.com/evmos/ethermint/x/evm/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 

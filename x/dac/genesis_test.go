@@ -6,9 +6,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/sagaxyz/ethermint/crypto/ethsecp256k1"
 
 	"github.com/sagaxyz/saga-sdk/x/dac"
 	"github.com/sagaxyz/saga-sdk/x/dac/keeper"
