@@ -8,8 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/sagaxyz/ethermint/crypto/ethsecp256k1"
-
+	"github.com/sagaxyz/saga-sdk/crypto/ethsecp256k1"
 	"github.com/sagaxyz/saga-sdk/x/dac"
 	"github.com/sagaxyz/saga-sdk/x/dac/keeper"
 	"github.com/sagaxyz/saga-sdk/x/dac/types"
@@ -25,8 +24,6 @@ type GenesisTestSuite struct {
 }
 
 func (suite *GenesisTestSuite) SetupTest() {
-	params := types.DefaultParams()
-
 	suite.genesis = *types.DefaultGenesis()
 }
 
