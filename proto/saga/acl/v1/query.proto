@@ -1,0 +1,42 @@
+syntax = "proto3";
+package saga.acl.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+
+import "saga.acl/v1/genesis.proto";
+import "saga.acl/v1/address.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/acl/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Params returns the params
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/saga/v1/params";
+  }
+  // ListAllowed returns the list of addresses that are allowed to deploy EVM
+  // contracts
+  rpc ListAllowed(QueryListAllowedRequest) returns (QueryListAllowedResponse) {
+    option (google.api.http).get = "/saga/v1/allowed";
+  }
+  // ListAdmins returns the list of admin addresses
+  rpc ListAdmins(QueryListAdminsRequest) returns (QueryListAdminsResponse) {
+    option (google.api.http).get = "/saga/v1/admins";
+  }
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse {
+  Params params = 1 [ (gogoproto.nullable) = false ];
+}
+
+message QueryListAdminsRequest {}
+message QueryListAdminsResponse {
+  repeated Address admins = 1;
+}
+
+message QueryListAllowedRequest {}
+message QueryListAllowedResponse {
+  repeated Address allowed = 1;
+}
