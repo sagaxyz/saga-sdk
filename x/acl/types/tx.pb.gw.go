@@ -538,17 +538,17 @@ func RegisterMsgHandlerClient(ctx context.Context, mux *runtime.ServeMux, client
 }
 
 var (
-	pattern_Msg_AddAdmins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "v1", "tx", "add_admins"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Msg_AddAdmins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "acl", "v1", "tx", "add_admins"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Msg_RemoveAdmins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "v1", "tx", "remove_admins"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Msg_RemoveAdmins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "acl", "v1", "tx", "remove_admins"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Msg_AddAllowed_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "v1", "tx", "add_allowed"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Msg_AddAllowed_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "acl", "v1", "tx", "add_allowed"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Msg_RemoveAllowed_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "v1", "tx", "add_allowed"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Msg_RemoveAllowed_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "acl", "v1", "tx", "add_allowed"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Msg_Enable_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "v1", "tx", "enable"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Msg_Enable_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "acl", "v1", "tx", "enable"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Msg_Disable_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "v1", "tx", "disable"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Msg_Disable_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "acl", "v1", "tx", "disable"}, "", runtime.AssumeColonVerbOpt(false)))
 )
 
 var (

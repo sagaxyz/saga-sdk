@@ -11,27 +11,27 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/acl/types";
 service Msg {
   // AddAdmins adds addresses to the admin list.
   rpc AddAdmins(MsgAddAdmins) returns (MsgAddAdminsResponse) {
-    option (google.api.http).get = "/saga/v1/tx/add_admins";
+    option (google.api.http).get = "/saga/acl/v1/tx/add_admins";
   };
   // RemoveAdmins removes addresses from the admin list.
   rpc RemoveAdmins(MsgRemoveAdmins) returns (MsgRemoveAdminsResponse) {
-    option (google.api.http).get = "/saga/v1/tx/remove_admins";
+    option (google.api.http).get = "/saga/acl/v1/tx/remove_admins";
   };
   // AddAllowed adds addresses to the allowed list.
   rpc AddAllowed(MsgAddAllowed) returns (MsgAddAllowedResponse) {
-    option (google.api.http).get = "/saga/v1/tx/add_allowed";
+    option (google.api.http).get = "/saga/acl/v1/tx/add_allowed";
   };
   // RemoveAllowed removes addresses from the allowed list.
   rpc RemoveAllowed(MsgRemoveAllowed) returns (MsgRemoveAllowedResponse) {
-    option (google.api.http).get = "/saga/v1/tx/add_allowed";
+    option (google.api.http).get = "/saga/acl/v1/tx/add_allowed";
   };
   // Enable enables the access control based on the allowed list. 
   rpc Enable(MsgEnable) returns (MsgEnableResponse) {
-    option (google.api.http).get = "/saga/v1/tx/enable";
+    option (google.api.http).get = "/saga/acl/v1/tx/enable";
   };
   // Disable disables the access control based on the allowed list. 
   rpc Disable(MsgDisable) returns (MsgDisableResponse) {
-    option (google.api.http).get = "/saga/v1/tx/disable";
+    option (google.api.http).get = "/saga/acl/v1/tx/disable";
   };
 }
 
