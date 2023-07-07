@@ -4,8 +4,8 @@ package saga.acl.v1;
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 
-import "saga.acl/v1/genesis.proto";
-import "saga.acl/v1/address.proto";
+import "saga/acl/v1/genesis.proto";
+import "saga/acl/v1/address.proto";
 
 option go_package = "github.com/sagaxyz/saga-sdk/x/acl/types";
 
