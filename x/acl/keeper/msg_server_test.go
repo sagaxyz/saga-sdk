@@ -3,8 +3,8 @@ package keeper_test
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
+	"github.com/sagaxyz/saga-sdk/crypto/ethsecp256k1"
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
 )
 
