@@ -6,9 +6,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/sagaxyz/saga-sdk/crypto/ethsecp256k1"
 	"github.com/sagaxyz/saga-sdk/x/acl"
 	"github.com/sagaxyz/saga-sdk/x/acl/keeper"
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
@@ -24,7 +24,7 @@ type GenesisTestSuite struct {
 }
 
 func (suite *GenesisTestSuite) SetupTest() {
-	params := types.DefaultParams()
+	_ = types.DefaultParams()
 
 	suite.genesis = *types.DefaultGenesis()
 }

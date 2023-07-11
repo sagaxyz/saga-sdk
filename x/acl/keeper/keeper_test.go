@@ -8,11 +8,10 @@ import (
 	. "github.com/onsi/gomega"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
-	evm "github.com/evmos/ethermint/x/evm/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/sagaxyz/saga-sdk/crypto/ethsecp256k1"
 	"github.com/sagaxyz/saga-sdk/x/acl/keeper"
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
 )
@@ -22,10 +21,9 @@ type KeeperTestSuite struct {
 
 	ctx sdk.Context
 
-	keeper         keeper.Keeper
-	queryClient    types.QueryClient
-	queryClientEvm evm.QueryClient
-	address        common.Address
+	keeper      keeper.Keeper
+	queryClient types.QueryClient
+	address     common.Address
 
 	adminAddress sdk.AccAddress
 }
