@@ -3,13 +3,13 @@ package ethsecp256k1
 import (
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
-
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/tyler-smith/go-bip39"
 )
 
 const (
@@ -30,8 +30,6 @@ var (
 
 // EthSecp256k1Option defines a function keys options for the ethereum Secp256k1 curve.
 // It supports eth_secp256k1 and secp256k1 keys for accounts.
-//
-//goland:noinspection GoUnusedExportedFunction
 func EthSecp256k1Option() keyring.Option {
 	return func(options *keyring.Options) {
 		options.SupportedAlgos = SupportedAlgorithms

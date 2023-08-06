@@ -8,7 +8,7 @@ import (
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
 )
 
-func (suite *KeeperTestSuite) TestMsgServer() {
+func (suite *TestSuite) TestMsgServer() {
 	suite.SetupTest()
 
 	ctx := sdk.WrapSDKContext(suite.ctx)
@@ -19,8 +19,8 @@ func (suite *KeeperTestSuite) TestMsgServer() {
 		addr2 := sdk.AccAddress(key2.PubKey().Address())
 
 		suite.Run("add", func() {
-			suite.Require().False(suite.keeper.Admin(suite.ctx, addr))
-			_, err := suite.keeper.AddAdmins(ctx, &types.MsgAddAdmins{
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
+			_, err := suite.aclKeeper.AddAdmins(ctx, &types.MsgAddAdmins{
 				Sender: addr.String(),
 				Admins: []*types.Address{
 					{
@@ -31,7 +31,7 @@ func (suite *KeeperTestSuite) TestMsgServer() {
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.keeper.AddAdmins(ctx, &types.MsgAddAdmins{
+			_, err = suite.aclKeeper.AddAdmins(ctx, &types.MsgAddAdmins{
 				Sender: suite.adminAddress.String(),
 				Admins: []*types.Address{
 					{
@@ -41,13 +41,13 @@ func (suite *KeeperTestSuite) TestMsgServer() {
 				},
 			})
 			suite.Require().NoError(err)
-			suite.Require().True(suite.keeper.Admin(suite.ctx, addr))
+			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr))
 		})
 		suite.Run("remove", func() {
-			suite.Require().True(suite.keeper.Admin(suite.ctx, addr))
-			suite.Require().False(suite.keeper.Admin(suite.ctx, addr2))
+			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr2))
 
-			_, err := suite.keeper.RemoveAdmins(ctx, &types.MsgRemoveAdmins{
+			_, err := suite.aclKeeper.RemoveAdmins(ctx, &types.MsgRemoveAdmins{
 				Sender: addr2.String(),
 				Admins: []*types.Address{
 					{
@@ -58,7 +58,7 @@ func (suite *KeeperTestSuite) TestMsgServer() {
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.keeper.RemoveAdmins(ctx, &types.MsgRemoveAdmins{
+			_, err = suite.aclKeeper.RemoveAdmins(ctx, &types.MsgRemoveAdmins{
 				Sender: addr.String(),
 				Admins: []*types.Address{
 					{
@@ -68,7 +68,7 @@ func (suite *KeeperTestSuite) TestMsgServer() {
 				},
 			})
 			suite.Require().NoError(err)
-			suite.Require().False(suite.keeper.Admin(suite.ctx, addr))
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
 		})
 	})
 	suite.Run("allowed", func() {
@@ -80,38 +80,38 @@ func (suite *KeeperTestSuite) TestMsgServer() {
 		}
 
 		suite.Run("add", func() {
-			suite.Require().False(suite.keeper.Admin(suite.ctx, addr))
-			suite.Require().False(suite.keeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
 
-			_, err := suite.keeper.AddAllowed(ctx, &types.MsgAddAllowed{
+			_, err := suite.aclKeeper.AddAllowed(ctx, &types.MsgAddAllowed{
 				Sender:  addr.String(),
 				Allowed: []*types.Address{ethAddr},
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.keeper.AddAllowed(ctx, &types.MsgAddAllowed{
+			_, err = suite.aclKeeper.AddAllowed(ctx, &types.MsgAddAllowed{
 				Sender:  suite.adminAddress.String(),
 				Allowed: []*types.Address{ethAddr},
 			})
 			suite.Require().NoError(err)
-			suite.Require().True(suite.keeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
 		})
 		suite.Run("remove", func() {
-			suite.Require().False(suite.keeper.Admin(suite.ctx, addr))
-			suite.Require().True(suite.keeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
 
-			_, err := suite.keeper.RemoveAllowed(ctx, &types.MsgRemoveAllowed{
+			_, err := suite.aclKeeper.RemoveAllowed(ctx, &types.MsgRemoveAllowed{
 				Sender:  addr.String(),
 				Allowed: []*types.Address{ethAddr},
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.keeper.RemoveAllowed(ctx, &types.MsgRemoveAllowed{
+			_, err = suite.aclKeeper.RemoveAllowed(ctx, &types.MsgRemoveAllowed{
 				Sender:  suite.adminAddress.String(),
 				Allowed: []*types.Address{ethAddr},
 			})
 			suite.Require().NoError(err)
-			suite.Require().False(suite.keeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
 		})
 	})
 }
