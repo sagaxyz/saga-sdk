@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParamsValidate(t *testing.T) {
@@ -32,20 +32,20 @@ func TestParamsValidate(t *testing.T) {
 	for _, tc := range testCases {
 		err := tc.params.Validate()
 		if tc.expError {
-			require.Error(t, err, tc.name)
+			assert.Error(t, err, tc.name)
 		} else {
-			require.NoError(t, err, tc.name)
+			assert.NoError(t, err, tc.name)
 		}
 	}
 }
 
 func TestParamsValidateBool(t *testing.T) {
 	err := validateBool(true)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = validateBool(false)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = validateBool("")
-	require.Error(t, err)
+	assert.Error(t, err)
 	err = validateBool(int64(123))
-	require.Error(t, err)
+	assert.Error(t, err)
 }

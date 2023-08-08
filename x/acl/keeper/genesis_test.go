@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"fmt"
+	"sort"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -103,6 +104,11 @@ func (suite *TestSuite) TestExportGenesis() {
 
 	suite.aclKeeper.InitGenesis(suite.ctx, genesis)
 	genesisExported := suite.aclKeeper.ExportGenesis(suite.ctx)
+
+	sort.Slice(genesis.Admins, func(i, j int) bool { return genesis.Admins[i].Value < genesis.Admins[j].Value })
+	sort.Slice(genesis.Allowed, func(i, j int) bool { return genesis.Allowed[i].Value < genesis.Allowed[j].Value })
+	sort.Slice(genesisExported.Admins, func(i, j int) bool { return genesisExported.Admins[i].Value < genesisExported.Admins[j].Value })
+	sort.Slice(genesisExported.Allowed, func(i, j int) bool { return genesisExported.Allowed[i].Value < genesisExported.Allowed[j].Value })
 
 	suite.Require().Equal(genesisExported.Params, genesis.Params)
 	suite.Require().Equal(genesisExported.Admins, genesis.Admins)
