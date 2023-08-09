@@ -1,6 +1,7 @@
 package types
 
 import (
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
@@ -41,12 +42,12 @@ func (msg MsgAddAllowed) Type() string { return TypeMsgAddAllowed }
 func (msg MsgAddAllowed) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return sdkerrors.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Allowed {
 		err = addr.Validate()
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
 		}
 	}
 	return nil
@@ -81,12 +82,12 @@ func (msg MsgRemoveAllowed) Type() string { return TypeMsgRemoveAllowed }
 func (msg MsgRemoveAllowed) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return sdkerrors.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Allowed {
 		err = addr.Validate()
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
 		}
 	}
 	return nil
@@ -121,12 +122,12 @@ func (msg MsgAddAdmins) Type() string { return TypeMsgAddAdmins }
 func (msg MsgAddAdmins) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return sdkerrors.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Admins {
 		err = addr.Validate()
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
 		}
 	}
 	return nil
@@ -161,12 +162,12 @@ func (msg MsgRemoveAdmins) Type() string { return TypeMsgRemoveAdmins }
 func (msg MsgRemoveAdmins) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return sdkerrors.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Admins {
 		err := addr.Validate()
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
 		}
 	}
 	return nil
@@ -200,7 +201,7 @@ func (msg MsgEnable) Type() string { return TypeMsgEnable }
 func (msg MsgEnable) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return sdkerrors.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	return nil
 }
@@ -233,7 +234,7 @@ func (msg MsgDisable) Type() string { return TypeMsgDisable }
 func (msg MsgDisable) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return sdkerrors.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	return nil
 }
