@@ -32,11 +32,7 @@ message QueryParamsResponse {
 }
 
 message QueryListAdminsRequest {}
-message QueryListAdminsResponse {
-  repeated Address admins = 1;
-}
+message QueryListAdminsResponse { repeated Address admins = 1; }
 
 message QueryListAllowedRequest {}
-message QueryListAllowedResponse {
-  repeated Address allowed = 1;
-}
+message QueryListAllowedResponse { repeated Address allowed = 1; }

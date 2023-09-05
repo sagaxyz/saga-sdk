@@ -25,11 +25,11 @@ service Msg {
   rpc RemoveAllowed(MsgRemoveAllowed) returns (MsgRemoveAllowedResponse) {
     option (google.api.http).get = "/saga/v1/tx/add_allowed";
   };
-  // Enable enables the access control based on the allowed list. 
+  // Enable enables the access control based on the allowed list.
   rpc Enable(MsgEnable) returns (MsgEnableResponse) {
     option (google.api.http).get = "/saga/v1/tx/enable";
   };
-  // Disable disables the access control based on the allowed list. 
+  // Disable disables the access control based on the allowed list.
   rpc Disable(MsgDisable) returns (MsgDisableResponse) {
     option (google.api.http).get = "/saga/v1/tx/disable";
   };
@@ -59,12 +59,8 @@ message MsgRemoveAllowed {
 }
 message MsgRemoveAllowedResponse {}
 
-message MsgEnable {
-  string sender = 1;
-}
+message MsgEnable { string sender = 1; }
 message MsgEnableResponse {}
 
-message MsgDisable {
-  string sender = 1;
-}
+message MsgDisable { string sender = 1; }
 message MsgDisableResponse {}
