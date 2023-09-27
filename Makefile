@@ -362,6 +362,14 @@ devdoc-update:
 ###############################################################################
 ###                                Protobuf                                 ###
 ###############################################################################
+PROJECT_NAME=saga-sdk
+proto_ver=v0.7
+proto_image_name=tendermintdev/sdk-proto-gen:$(proto_ver)
+container_proto_gen=$(PROJECT_NAME)-proto-gen-$(proto_ver)
+proto-gen:
+	@echo "Generating Protobuf files"
+	@if docker ps -a --format '{{.Names}}' | grep -Eq "^${container_proto_gen}$$"; then docker start -a $(container_proto_gen); else docker run --name $(container_proto_gen) -v $(CURDIR):/workspace --workdir /workspace $(proto_image_name) \
+		sh ./scripts/protocgen.sh; fi
 
 containerProtoVer=v0.2
 containerProtoImage=tendermintdev/sdk-proto-gen:$(containerProtoVer)
@@ -371,10 +379,6 @@ containerProtoFmt=cosmos-sdk-proto-fmt-$(containerProtoVer)
 
 proto-all: proto-format proto-lint proto-gen
 
-proto-gen:
-	@echo "Generating Protobuf files"
-	@if docker ps -a --format '{{.Names}}' | grep -Eq "^${containerProtoGen}$$"; then docker start -a $(containerProtoGen); else docker run --name $(containerProtoGen) -v $(CURDIR):/workspace --workdir /workspace $(containerProtoImage) \
-		sh ./scripts/protocgen.sh; fi
 
 # This generates the SDK's custom wrapper for google.protobuf.Any. It should only be run manually when needed
 proto-gen-any:
