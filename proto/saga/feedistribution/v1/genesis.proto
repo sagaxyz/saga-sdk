@@ -1,0 +1,17 @@
+syntax = "proto3";
+package saga.feedistribution.v1;
+
+option go_package            = "github.com/sagaxyz/saga-sdk/x/feedistribution/types";
+option (gogoproto.equal_all) = true;
+
+import "gogoproto/gogo.proto";
+import "saga/feedistribution/v1/feedistribution.proto";
+
+// GenesisState defines the feedistribution module's genesis state.
+message GenesisState {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  // params defines all the paramaters of the module.
+  Params params = 1 [(gogoproto.nullable) = false];
+}

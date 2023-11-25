@@ -1,0 +1,13 @@
+syntax = "proto3";
+package saga.feedistribution.v1;
+
+option go_package            = "github.com/sagaxyz/saga-sdk/x/feedistribution/types";
+option (gogoproto.equal_all) = true;
+
+import "gogoproto/gogo.proto";
+
+// Params defines the set of params for the feedistribution module.
+message Params {
+  bool enabled = 1;
+  string recipient = 2;
+}
