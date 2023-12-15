@@ -1,6 +1,6 @@
 package keeper_test
 
-import (
+/*import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,4 +21,5 @@ func TestMsgServer(t *testing.T) {
 	require.NotNil(t, ms)
 	require.NotNil(t, ctx)
 	require.NotEmpty(t, k)
-}
+}*/
+

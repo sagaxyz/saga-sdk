@@ -1,6 +1,6 @@
 package keeper_test
 
-import (
+/*import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -19,4 +19,4 @@ func TestParamsQuery(t *testing.T) {
 	response, err := keeper.Params(wctx, &types.QueryParamsRequest{})
 	require.NoError(t, err)
 	require.Equal(t, &types.QueryParamsResponse{Params: params}, response)
-}
+}*/

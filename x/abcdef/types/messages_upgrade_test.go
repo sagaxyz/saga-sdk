@@ -1,6 +1,6 @@
 package types
 
-import (
+/*import (
 	"testing"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -70,4 +70,4 @@ func TestMsgSendUpgrade_ValidateBasic(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
+}*/

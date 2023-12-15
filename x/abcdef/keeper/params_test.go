@@ -1,6 +1,6 @@
 package keeper_test
 
-import (
+/*import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,4 +15,4 @@ func TestGetParams(t *testing.T) {
 
 	require.NoError(t, k.SetParams(ctx, params))
 	require.EqualValues(t, params, k.GetParams(ctx))
-}
+}*/

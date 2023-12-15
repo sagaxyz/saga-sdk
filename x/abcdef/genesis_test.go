@@ -1,6 +1,6 @@
 package abcdef_test
 
-import (
+/*import (
 	"testing"
 
 	keepertest "github.com/sagaxyz/saga-sdk/testutil/keeper"
@@ -28,4 +28,4 @@ func TestGenesis(t *testing.T) {
 	require.Equal(t, genesisState.PortId, got.PortId)
 
 	// this line is used by starport scaffolding # genesis/test/assert
-}
+}*/

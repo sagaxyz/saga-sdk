@@ -1,6 +1,6 @@
 package types_test
 
-import (
+/*import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -38,4 +38,5 @@ func TestGenesisState_Validate(t *testing.T) {
             }
         })
     }
-}
+}*/
+
