@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-    "github.com/sagaxyz/sagaos/x/chainlet/types"
+    "github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 func (k Keeper) Params(goCtx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {

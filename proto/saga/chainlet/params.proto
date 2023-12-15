@@ -4,7 +4,7 @@ package saga.chainlet;
 import "amino/amino.proto";
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/sagaxyz/sagaos/x/chainlet/types";
+option go_package = "github.com/sagaxyz/saga-sdk/x/chainlet/types";
 
 // Params defines the parameters for the module.
 message Params {

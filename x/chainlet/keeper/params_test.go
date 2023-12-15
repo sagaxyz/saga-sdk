@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-    keepertest "github.com/sagaxyz/sagaos/testutil/keeper"
-    "github.com/sagaxyz/sagaos/x/chainlet/types"
+    keepertest "github.com/sagaxyz/saga-sdk/testutil/keeper"
+    "github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 func TestGetParams(t *testing.T) {

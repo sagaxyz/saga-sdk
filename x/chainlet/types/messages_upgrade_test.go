@@ -5,7 +5,7 @@ import (
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/require"
-	"github.com/sagaxyz/sagaos/testutil/sample"
+	"github.com/sagaxyz/saga-sdk/testutil/sample"
 )
 
 func TestMsgSendUpgrade_ValidateBasic(t *testing.T) {

@@ -3,9 +3,9 @@ package chainlet
 import (
 	"math/rand"
 
-	"github.com/sagaxyz/sagaos/testutil/sample"
-	chainletsimulation "github.com/sagaxyz/sagaos/x/chainlet/simulation"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/testutil/sample"
+	chainletsimulation "github.com/sagaxyz/saga-sdk/x/chainlet/simulation"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"

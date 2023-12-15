@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
 
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 type Keeper struct {

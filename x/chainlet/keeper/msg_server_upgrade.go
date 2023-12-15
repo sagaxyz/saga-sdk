@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 func (k msgServer) SendUpgrade(goCtx context.Context, msg *types.MsgSendUpgrade) (*types.MsgSendUpgradeResponse, error) {

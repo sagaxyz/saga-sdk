@@ -11,8 +11,8 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
-	"github.com/sagaxyz/sagaos/x/chainlet/keeper"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/keeper"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 // IBCModule implements the ICS26 interface for interchain accounts host chains

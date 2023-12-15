@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package saga.chainlet;
 
-option go_package = "github.com/sagaxyz/sagaos/x/chainlet/types";
+option go_package = "github.com/sagaxyz/saga-sdk/x/chainlet/types";
 
 message ChainletPacketData {
   oneof packet {

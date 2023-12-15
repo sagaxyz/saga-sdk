@@ -8,7 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	// "github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 var (

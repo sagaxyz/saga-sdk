@@ -6,9 +6,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-    keepertest "github.com/sagaxyz/sagaos/testutil/keeper"
-    "github.com/sagaxyz/sagaos/x/chainlet/types"
-    "github.com/sagaxyz/sagaos/x/chainlet/keeper"
+    keepertest "github.com/sagaxyz/saga-sdk/testutil/keeper"
+    "github.com/sagaxyz/saga-sdk/x/chainlet/types"
+    "github.com/sagaxyz/saga-sdk/x/chainlet/keeper"
 )
 
 func setupMsgServer(t testing.TB) (keeper.Keeper, types.MsgServer, sdk.Context) {

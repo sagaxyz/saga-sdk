@@ -1,12 +1,12 @@
 syntax = "proto3";
-package sagaos.chainlet.module;
+package saga.chainlet.module;
 
 import "cosmos/app/v1alpha1/module.proto";
 
 // Module is the config object for the module.
 message Module {
   option (cosmos.app.v1alpha1.module) = {
-    go_import: "github.com/sagaxyz/sagaos/x/chainlet"
+    go_import: "github.com/sagaxyz/saga-sdk/x/chainlet"
   };
 
   // authority defines the custom module authority. If not set, defaults to the governance module.

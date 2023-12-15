@@ -17,9 +17,9 @@ import (
 
 	// this line is used by starport scaffolding # 1
 
-	"github.com/sagaxyz/sagaos/x/chainlet/client/cli"
-	"github.com/sagaxyz/sagaos/x/chainlet/keeper"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/client/cli"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/keeper"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 var (

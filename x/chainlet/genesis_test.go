@@ -3,10 +3,10 @@ package chainlet_test
 import (
 	"testing"
 
-	keepertest "github.com/sagaxyz/sagaos/testutil/keeper"
-	"github.com/sagaxyz/sagaos/testutil/nullify"
-	"github.com/sagaxyz/sagaos/x/chainlet"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	keepertest "github.com/sagaxyz/saga-sdk/testutil/keeper"
+	"github.com/sagaxyz/saga-sdk/testutil/nullify"
+	"github.com/sagaxyz/saga-sdk/x/chainlet"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 	"github.com/stretchr/testify/require"
 )
 

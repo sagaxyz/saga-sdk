@@ -15,8 +15,8 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgSendUpgrade{}, "chainlet/SendUpgrade", nil)
 // this line is used by starport scaffolding # 2
 
-	cdc.RegisterConcrete(Params{}, "sagaos/x/chainlet/Params", nil)
-	legacy.RegisterAminoMsg(cdc, &MsgUpdateParams{}, "sagaos/x/chainlet/MsgUpdateParams")
+	cdc.RegisterConcrete(Params{}, "saga-sdk/x/chainlet/Params", nil)
+	legacy.RegisterAminoMsg(cdc, &MsgUpdateParams{}, "saga-sdk/x/chainlet/MsgUpdateParams")
 }
 
 

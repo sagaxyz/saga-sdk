@@ -2,8 +2,8 @@ package chainlet
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/sagaxyz/sagaos/x/chainlet/keeper"
-	"github.com/sagaxyz/sagaos/x/chainlet/types"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/keeper"
+	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.
