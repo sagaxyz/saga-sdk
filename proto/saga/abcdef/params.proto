@@ -1,0 +1,15 @@
+syntax = "proto3";
+package saga.abcdef;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/abcdef/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (amino.name) = "saga/x/abcdef/Params";
+  option (gogoproto.equal) = true;
+
+  
+}
