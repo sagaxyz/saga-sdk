@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package saga.chainlet;
+
+option go_package = "github.com/sagaxyz/sagaos/x/chainlet/types";
+
+message ChainletPacketData {
+  oneof packet {
+    NoData            noData        = 1;
+    UpgradePacketData upgradePacket = 2;
+  }
+}
+
+message NoData {}
+
+// UpgradePacketData defines a struct for the packet payload
+message UpgradePacketData {
+    uint64 height = 1;
+}
+
+// UpgradePacketAck defines a struct for the packet acknowledgment
+message UpgradePacketAck {}
+
