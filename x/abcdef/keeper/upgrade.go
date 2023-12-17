@@ -44,9 +44,9 @@ func (k Keeper) OnRecvUpgradePacket(ctx sdk.Context, packet channeltypes.Packet,
 	}
 
 	plan := upgradetypes.Plan{
-		Name:   "v1-to-v2",
+		Name:   "v122-to-v123",
 		Height: int64(data.Height),
-		Info:   "ibc upgrade",
+		Info:   "IBC-created upgrade",
 	}
 	err = k.upgradeKeeper.ScheduleUpgrade(ctx, plan)
 	if err != nil {
