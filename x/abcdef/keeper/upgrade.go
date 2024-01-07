@@ -44,7 +44,7 @@ func (k Keeper) OnRecvUpgradePacket(ctx sdk.Context, packet channeltypes.Packet,
 	}
 
 	plan := upgradetypes.Plan{
-		Name:   "v122-to-v123",
+		Name:   "0.6-to-0.7",
 		Height: int64(data.Height),
 		Info:   "IBC-created upgrade",
 	}
