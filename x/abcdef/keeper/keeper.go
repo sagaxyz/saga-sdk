@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	icacontrollerkeeper "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/keeper"
 	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v7/modules/core/exported"
@@ -31,6 +32,7 @@ type Keeper struct {
 	scopedKeeper exported.ScopedKeeper
 
 	upgradeKeeper *upgradekeeper.Keeper //TODO interface
+	icaKeeper     icacontrollerkeeper.Keeper
 }
 
 func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, scopedKeeper exported.ScopedKeeper, uk *upgradekeeper.Keeper) Keeper {

@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 
-# --------------
-# Commands to run locally
-# docker run --network host --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:v0.7 sh ./protocgen.sh
-#
-set -eo pipefail
+# How to run manually:
+# docker build --pull --rm -f "contrib/devtools/Dockerfile" -t cosmossdk-proto:latest "contrib/devtools"
+# docker run --rm -v $(pwd):/workspace --workdir /workspace cosmossdk-proto sh ./scripts/protocgen.sh
+
+set -e
 
 echo "Generating gogo proto code"
-proto_dirs=$(find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
+cd proto
+proto_dirs=$(find . -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
 for dir in $proto_dirs; do
-  proto_files=$(find "${dir}" -maxdepth 1 -name '*.proto')
-  for file in $proto_files; do
-    # Check if the go_package in the file is pointing to evmos
-    if grep go_package $file &>/dev/null; then
-      buf generate --template proto/buf.gen.gogo.yaml "$file"
+  for file in $(find "${dir}" -maxdepth 1 -name '*.proto'); do
+    if grep -q "option go_package" "$file";  then
+      buf generate --template buf.gen.gogo.yaml $file
     fi
   done
 done
 
+cd ..
+
 # move proto files to the right places
+find | grep saga-sdk
 cp -r github.com/sagaxyz/saga-sdk/* ./
-rm -rf github.com
+
+go mod tidy
