@@ -71,6 +71,9 @@ func (l zeroLogWrapper) Error(msg string, keyVals ...interface{}) {
 func (l zeroLogWrapper) Debug(msg string, keyVals ...interface{}) {
 	l.Logger.Debug().Fields(keyVals).Msg(msg)
 }
+func (l zeroLogWrapper) Warn(msg string, keyVals ...interface{}) {
+	l.Logger.Warn().Fields(keyVals).Msg(msg)
+}
 func (l zeroLogWrapper) With(keyVals ...interface{}) log.Logger {
 	logger := l.Logger.With().Fields(keyVals).Logger()
 	return zeroLogWrapper{logger}
