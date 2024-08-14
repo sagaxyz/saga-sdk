@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
@@ -28,7 +28,12 @@ func (k Keeper) AddAllowed(goCtx context.Context, msg *types.MsgAddAllowed) (res
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAllowed)
 	for _, addr := range msg.Allowed {
-		store.Set(addr.Bytes(), []byte{byte(addr.Format)})
+		var accAddr sdk.AccAddress
+		accAddr, err = sdk.AccAddressFromBech32(addr)
+		if err != nil {
+			return
+		}
+		store.Set(accAddr, []byte{0}) //TODO
 	}
 
 	resp = &types.MsgAddAllowedResponse{}
@@ -48,7 +53,12 @@ func (k Keeper) RemoveAllowed(goCtx context.Context, msg *types.MsgRemoveAllowed
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAllowed)
 	for _, addr := range msg.Allowed {
-		store.Delete(addr.Bytes())
+		var accAddr sdk.AccAddress
+		accAddr, err = sdk.AccAddressFromBech32(addr)
+		if err != nil {
+			return
+		}
+		store.Delete(accAddr)
 	}
 	resp = &types.MsgRemoveAllowedResponse{}
 	return
@@ -68,7 +78,12 @@ func (k Keeper) AddAdmins(goCtx context.Context, msg *types.MsgAddAdmins) (resp 
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
 	for _, addr := range msg.Admins {
-		store.Set(addr.Bytes(), []byte{byte(addr.Format)})
+		var accAddr sdk.AccAddress
+		accAddr, err = sdk.AccAddressFromBech32(addr)
+		if err != nil {
+			return
+		}
+		store.Set(accAddr, []byte{0}) //TODO
 	}
 
 	resp = &types.MsgAddAdminsResponse{}
@@ -88,7 +103,12 @@ func (k Keeper) RemoveAdmins(goCtx context.Context, msg *types.MsgRemoveAdmins) 
 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
 	for _, addr := range msg.Admins {
-		store.Delete(addr.Bytes())
+		var accAddr sdk.AccAddress
+		accAddr, err = sdk.AccAddressFromBech32(addr)
+		if err != nil {
+			return
+		}
+		store.Delete(accAddr)
 	}
 
 	resp = &types.MsgRemoveAdminsResponse{}

@@ -8,8 +8,8 @@ test:
 proto: proto-gen
 
 proto_ver=0.11.6
-proto_image_name=ghcr.io/cosmos/proto-builder:$(protoVer)
-proto_image=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+proto_image_name=ghcr.io/cosmos/proto-builder:$(proto_ver)
+proto_image=docker run --rm -v $(CURDIR):/workspace --workdir /workspace $(proto_image_name)
 proto-gen:
 	@echo "Generating Protobuf files"
-	@$(protoImage) sh ./scripts/protocgen.sh
+	@$(proto_image) sh ./scripts/protocgen.sh

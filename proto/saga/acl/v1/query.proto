@@ -5,7 +5,6 @@ import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 
 import "saga/acl/v1/genesis.proto";
-import "saga/acl/v1/address.proto";
 
 option go_package = "github.com/sagaxyz/saga-sdk/x/acl/types";
 
@@ -33,10 +32,10 @@ message QueryParamsResponse {
 
 message QueryListAdminsRequest {}
 message QueryListAdminsResponse {
-  repeated Address admins = 1;
+  repeated string admins = 1;
 }
 
 message QueryListAllowedRequest {}
 message QueryListAllowedResponse {
-  repeated Address allowed = 1;
+  repeated string allowed = 1;
 }

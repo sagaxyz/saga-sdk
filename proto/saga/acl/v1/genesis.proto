@@ -3,15 +3,13 @@ package saga.acl.v1;
 
 import "gogoproto/gogo.proto";
 
-import "saga/acl/v1/address.proto";
-
 option go_package = "github.com/sagaxyz/saga-sdk/x/acl/types";
 
 // GenesisState defines the module's genesis state.
 message GenesisState {
   Params params = 1 [ (gogoproto.nullable) = false ];
-  repeated Address admins = 2;
-  repeated Address allowed = 3;
+  repeated string admins = 2;
+  repeated string allowed = 3;
 }
 
 // Params defines the module's params

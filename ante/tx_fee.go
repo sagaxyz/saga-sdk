@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
 
 // Returns a function mirroring authante.checkTxFeeWithValidatorMinGasPrices but with the ability
@@ -22,28 +23,43 @@ func CheckTxFeeWithValidatorMinGasPrices(freeFn FilterFn, freeGasLimit uint64, f
 		feeCoins := feeTx.GetFee()
 		gas := feeTx.GetGas()
 
+		sigTx, ok := tx.(authsigning.SigVerifiableTx)
+		if !ok {
+			return nil, 0, errors.Wrap(sdkerrors.ErrTxDecode, "invalid tx type")
+		}
+		signers, err := sigTx.GetSigners()
+		if err != nil {
+			return nil, 0, err
+		}
+
+		matchAll := true
 		for _, msg := range tx.GetMsgs() {
 			msgType := sdk.MsgTypeURL(msg)
 
+			var match bool
 			for _, prefix := range freePrefixes {
-				if !strings.HasPrefix(msgType, prefix) {
-					continue
+				if strings.HasPrefix(msgType, prefix) {
+					match = true
+					break
 				}
-
-				free := true
-				for _, signer := range msg.GetSigners() {
-					if !freeFn(ctx, signer) {
-						free = false
-						break
-					}
-				}
-				if free {
-					//TODO cap gas limit for free transactions
-					feeCoins = sdk.NewCoins() // No fee
-					return feeCoins, 0, nil
-				}
-
+			}
+			if !match {
+				matchAll = false
 				break
+			}
+		}
+		if matchAll { // All messages match a free prefix
+			free := true
+			for _, signer := range signers {
+				if !freeFn(ctx, signer) {
+					free = false
+					break
+				}
+			}
+			if free {
+				//TODO cap gas limit for free transactions
+				feeCoins = sdk.NewCoins() // No fee
+				return feeCoins, 0, nil
 			}
 		}
 

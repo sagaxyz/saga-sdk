@@ -41,12 +41,7 @@ func (suite *GenesisTestSuite) TestValidateGenesis() {
 				Params: Params{
 					Enable: true,
 				},
-				Admins: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_BECH32,
-						Value:  "cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc",
-					},
-				},
+				Admins: []string{"cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc"},
 			},
 			expPass: true,
 		},
@@ -56,16 +51,7 @@ func (suite *GenesisTestSuite) TestValidateGenesis() {
 				Params: Params{
 					Enable: true,
 				},
-				Allowed: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_BECH32,
-						Value:  "cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc",
-					},
-					{
-						Format: AddressFormat_ADDRESS_EIP55,
-						Value:  "0x165CD37b4C644C2921454429E7F9358d18A45e14",
-					},
-				},
+				Allowed: []string{"cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc"},
 			},
 			expPass: true,
 		},
@@ -75,23 +61,13 @@ func (suite *GenesisTestSuite) TestValidateGenesis() {
 				Params: Params{
 					Enable: true,
 				},
-				Admins: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_BECH32,
-						Value:  "cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc",
-					},
-				},
-				Allowed: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_EIP55,
-						Value:  "0x165CD37b4C644C2921454429E7F9358d18A45e14",
-					},
-				},
+				Allowed: []string{"cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc"},
+				Admins:  []string{"cosmos1qql8ag4cluz6r4dz28p3w00dnc9w8ueulg2gmc"},
 			},
 			expPass: true,
 		},
 		{
-			name: "invalid genesis - no admin or allowed",
+			name: "invalid genesis - enabled and no admin or allowed",
 			genState: &GenesisState{
 				Params: Params{
 					Enable: true,
@@ -103,38 +79,15 @@ func (suite *GenesisTestSuite) TestValidateGenesis() {
 			name: "invalid genesis - bad admin address",
 			genState: &GenesisState{
 				Params: DefaultParams(),
-				Admins: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_BECH32,
-						Value:  "abcd",
-					},
-				},
-			},
-			expPass: false,
-		},
-		{
-			name: "invalid genesis - unsupported admin address format",
-			genState: &GenesisState{
-				Params: DefaultParams(),
-				Admins: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_EIP55,
-						Value:  "0x165CD37b4C644C2921454429E7F9358d18A45e14",
-					},
-				},
+				Admins: []string{"abcd"},
 			},
 			expPass: false,
 		},
 		{
 			name: "invalid genesis - bad allowed address",
 			genState: &GenesisState{
-				Params: DefaultParams(),
-				Allowed: []*Address{
-					{
-						Format: AddressFormat_ADDRESS_EIP55,
-						Value:  "abcd",
-					},
-				},
+				Params:  DefaultParams(),
+				Allowed: []string{"abcd"},
 			},
 			expPass: false,
 		},
