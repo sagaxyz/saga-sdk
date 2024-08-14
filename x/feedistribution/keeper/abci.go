@@ -1,16 +1,17 @@
 package keeper
 
 import (
-	abci "github.com/cometbft/cometbft/abci/types"
+	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (k *Keeper) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
-	//defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
+func (k *Keeper) BeginBlock(ctx context.Context) error {
+	k.TransferFees(sdk.UnwrapSDKContext(ctx))
 
-	k.TransferFees(ctx)
+	return nil
 }
 
-func (k *Keeper) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) {
+func (k *Keeper) EndBlock(ctx context.Context) error {
+	return nil
 }

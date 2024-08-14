@@ -1,11 +1,10 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/spf13/cobra"
 
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
 )
@@ -29,19 +28,6 @@ func NewTxCmd() *cobra.Command {
 	return txCmd
 }
 
-func argsToAddresses(args []string) (addresses []*types.Address, err error) {
-	addresses = make([]*types.Address, 0, len(args))
-	for _, arg := range args {
-		var addr *types.Address
-		addr, err = types.GuessAddress(arg)
-		if err != nil {
-			return
-		}
-		addresses = append(addresses, addr)
-	}
-	return
-}
-
 // NewAddAllowedCmd returns a CLI command handler for adding allowed addresses
 func NewAddAllowedCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -53,12 +39,7 @@ func NewAddAllowedCmd() *cobra.Command {
 				return err
 			}
 
-			addresses, err := argsToAddresses(args)
-			if err != nil {
-				return err
-			}
-
-			msg := types.NewMsgAddAllowed(cliCtx.GetFromAddress(), addresses...)
+			msg := types.NewMsgAddAllowed(cliCtx.GetFromAddress().String(), args...)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -83,12 +64,7 @@ func NewRemoveAllowedCmd() *cobra.Command {
 				return err
 			}
 
-			addresses, err := argsToAddresses(args)
-			if err != nil {
-				return err
-			}
-
-			msg := types.NewMsgRemoveAllowed(cliCtx.GetFromAddress(), addresses...)
+			msg := types.NewMsgRemoveAllowed(cliCtx.GetFromAddress().String(), args...)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -113,12 +89,7 @@ func NewAddAdminsCmd() *cobra.Command {
 				return err
 			}
 
-			addresses, err := argsToAddresses(args)
-			if err != nil {
-				return err
-			}
-
-			msg := types.NewMsgAddAdmins(cliCtx.GetFromAddress(), addresses...)
+			msg := types.NewMsgAddAdmins(cliCtx.GetFromAddress().String(), args...)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -143,12 +114,7 @@ func NewRemoveAdminsCmd() *cobra.Command {
 				return err
 			}
 
-			addresses, err := argsToAddresses(args)
-			if err != nil {
-				return err
-			}
-
-			msg := types.NewMsgRemoveAdmins(cliCtx.GetFromAddress(), addresses...)
+			msg := types.NewMsgRemoveAdmins(cliCtx.GetFromAddress().String(), args...)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err

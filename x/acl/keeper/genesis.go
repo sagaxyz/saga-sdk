@@ -11,14 +11,18 @@ func (k Keeper) InitGenesis(ctx sdk.Context, data *types.GenesisState) {
 	k.SetParams(ctx, data.Params)
 
 	for _, addr := range data.Admins {
-		accAddr, err := sdk.AccAddressFromBech32(addr.Value)
+		accAddr, err := sdk.AccAddressFromBech32(addr)
 		if err != nil {
 			panic(err)
 		}
 		k.SetAdmin(ctx, accAddr)
 	}
 	for _, addr := range data.Allowed {
-		k.SetAllowed(ctx, addr)
+		accAddr, err := sdk.AccAddressFromBech32(addr)
+		if err != nil {
+			panic(err)
+		}
+		k.SetAllowed(ctx, accAddr)
 	}
 }
 

@@ -7,14 +7,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 )
 
-var (
-	amino = codec.NewLegacyAmino()
-	//ModuleCdc = codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-
-	// AminoCdc is a amino codec created to support amino JSON compatible msgs.
-	AminoCdc = codec.NewAminoCodec(amino)
-)
-
 const (
 	// Amino names
 	addAdminsName     = "saga/MsgAddAdmins"
@@ -24,12 +16,6 @@ const (
 	enableName        = "saga/MsgEnable"
 	disableName       = "saga/MsgDisable"
 )
-
-// NOTE: This is required for the GetSignBytes function
-func init() {
-	RegisterLegacyAminoCodec(amino)
-	amino.Seal()
-}
 
 // RegisterInterfaces register implementations
 func RegisterInterfaces(registry codectypes.InterfaceRegistry) {

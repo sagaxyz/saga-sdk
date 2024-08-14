@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // DefaultGenesis returns the default genesis state
@@ -35,16 +36,13 @@ func (gs GenesisState) Validate() error {
 	}
 
 	for _, admin := range gs.Admins {
-		if admin.Format != AddressFormat_ADDRESS_BECH32 {
-			return fmt.Errorf("unsupported admin address format: %s", admin.Format)
-		}
-		err := admin.Validate()
+		_, err := sdk.AccAddressFromBech32(admin)
 		if err != nil {
 			return fmt.Errorf("admin address invalid: %w", err)
 		}
 	}
 	for _, allowed := range gs.Allowed {
-		err := allowed.Validate()
+		_, err := sdk.AccAddressFromBech32(allowed)
 		if err != nil {
 			return fmt.Errorf("allowed address invalid: %w", err)
 		}
