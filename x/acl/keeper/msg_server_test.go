@@ -2,116 +2,86 @@ package keeper_test
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/sagaxyz/saga-sdk/crypto/ethsecp256k1"
 	"github.com/sagaxyz/saga-sdk/x/acl/types"
 )
 
 func (suite *TestSuite) TestMsgServer() {
 	suite.SetupTest()
 
-	ctx := sdk.WrapSDKContext(suite.ctx)
 	suite.Run("admins", func() {
-		key, _ := ethsecp256k1.GenerateKey()
-		addr := sdk.AccAddress(key.PubKey().Address())
-		key2, _ := ethsecp256k1.GenerateKey()
-		addr2 := sdk.AccAddress(key2.PubKey().Address())
+		addr1 := sdk.AccAddress([]byte{111})
+		addr2 := sdk.AccAddress([]byte{222})
 
 		suite.Run("add", func() {
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
-			_, err := suite.aclKeeper.AddAdmins(ctx, &types.MsgAddAdmins{
-				Sender: addr.String(),
-				Admins: []*types.Address{
-					{
-						Format: types.AddressFormat_ADDRESS_BECH32,
-						Value:  addr.String(),
-					},
-				},
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr1))
+			_, err := suite.aclKeeper.AddAdmins(suite.ctx, &types.MsgAddAdmins{
+				Sender: addr1.String(),
+				Admins: []string{addr1.String()},
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.aclKeeper.AddAdmins(ctx, &types.MsgAddAdmins{
+			_, err = suite.aclKeeper.AddAdmins(suite.ctx, &types.MsgAddAdmins{
 				Sender: suite.adminAddress.String(),
-				Admins: []*types.Address{
-					{
-						Format: types.AddressFormat_ADDRESS_BECH32,
-						Value:  addr.String(),
-					},
-				},
+				Admins: []string{addr1.String()},
 			})
 			suite.Require().NoError(err)
-			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr1))
 		})
 		suite.Run("remove", func() {
-			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr1))
 			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr2))
 
-			_, err := suite.aclKeeper.RemoveAdmins(ctx, &types.MsgRemoveAdmins{
+			_, err := suite.aclKeeper.RemoveAdmins(suite.ctx, &types.MsgRemoveAdmins{
 				Sender: addr2.String(),
-				Admins: []*types.Address{
-					{
-						Format: types.AddressFormat_ADDRESS_BECH32,
-						Value:  addr.String(),
-					},
-				},
+				Admins: []string{addr1.String()},
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.aclKeeper.RemoveAdmins(ctx, &types.MsgRemoveAdmins{
-				Sender: addr.String(),
-				Admins: []*types.Address{
-					{
-						Format: types.AddressFormat_ADDRESS_BECH32,
-						Value:  addr.String(),
-					},
-				},
+			_, err = suite.aclKeeper.RemoveAdmins(suite.ctx, &types.MsgRemoveAdmins{
+				Sender: addr1.String(),
+				Admins: []string{addr1.String()},
 			})
 			suite.Require().NoError(err)
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr1))
 		})
 	})
 	suite.Run("allowed", func() {
-		key, _ := ethsecp256k1.GenerateKey()
-		addr := sdk.AccAddress(key.PubKey().Address())
-		ethAddr := &types.Address{
-			Format: types.AddressFormat_ADDRESS_EIP55,
-			Value:  common.BytesToAddress(key.PubKey().Bytes()).Hex(),
-		}
+		addr := sdk.AccAddress([]byte{111})
 
 		suite.Run("add", func() {
 			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
-			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, addr))
 
-			_, err := suite.aclKeeper.AddAllowed(ctx, &types.MsgAddAllowed{
+			_, err := suite.aclKeeper.AddAllowed(suite.ctx, &types.MsgAddAllowed{
 				Sender:  addr.String(),
-				Allowed: []*types.Address{ethAddr},
+				Allowed: []string{addr.String()},
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.aclKeeper.AddAllowed(ctx, &types.MsgAddAllowed{
+			_, err = suite.aclKeeper.AddAllowed(suite.ctx, &types.MsgAddAllowed{
 				Sender:  suite.adminAddress.String(),
-				Allowed: []*types.Address{ethAddr},
+				Allowed: []string{addr.String()},
 			})
 			suite.Require().NoError(err)
-			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, addr))
 		})
 		suite.Run("remove", func() {
 			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
-			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, addr))
 
-			_, err := suite.aclKeeper.RemoveAllowed(ctx, &types.MsgRemoveAllowed{
+			_, err := suite.aclKeeper.RemoveAllowed(suite.ctx, &types.MsgRemoveAllowed{
 				Sender:  addr.String(),
-				Allowed: []*types.Address{ethAddr},
+				Allowed: []string{addr.String()},
 			})
 			suite.Require().Error(err)
 
-			_, err = suite.aclKeeper.RemoveAllowed(ctx, &types.MsgRemoveAllowed{
+			_, err = suite.aclKeeper.RemoveAllowed(suite.ctx, &types.MsgRemoveAllowed{
 				Sender:  suite.adminAddress.String(),
-				Allowed: []*types.Address{ethAddr},
+				Allowed: []string{addr.String()},
 			})
 			suite.Require().NoError(err)
-			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, ethAddr))
+			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, addr))
 		})
 	})
 }

@@ -2,13 +2,15 @@ syntax = "proto3";
 package saga.acl.v1;
 
 import "google/api/annotations.proto";
-
-import "saga/acl/v1/address.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
 
 option go_package = "github.com/sagaxyz/saga-sdk/x/acl/types";
 
 // Msg defines the module's Msg service.
 service Msg {
+  option (cosmos.msg.v1.service) = true;
+
   // AddAdmins adds addresses to the admin list.
   rpc AddAdmins(MsgAddAdmins) returns (MsgAddAdminsResponse) {
     option (google.api.http).get = "/saga/acl/v1/tx/add_admins";
@@ -36,35 +38,41 @@ service Msg {
 }
 
 message MsgAddAdmins {
-  string sender = 1;
-  repeated Address admins = 2;
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  repeated string admins = 2;
 }
 message MsgAddAdminsResponse {}
 
 message MsgRemoveAdmins {
-  string sender = 1;
-  repeated Address admins = 2;
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  repeated string admins = 2;
 }
 message MsgRemoveAdminsResponse {}
 
 message MsgAddAllowed {
-  string sender = 1;
-  repeated Address allowed = 2;
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  repeated string allowed = 2;
 }
 message MsgAddAllowedResponse {}
 
 message MsgRemoveAllowed {
-  string sender = 1;
-  repeated Address allowed = 2;
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  repeated string allowed = 2;
 }
 message MsgRemoveAllowedResponse {}
 
 message MsgEnable {
-  string sender = 1;
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
 }
 message MsgEnableResponse {}
 
 message MsgDisable {
-  string sender = 1;
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
 }
 message MsgDisableResponse {}

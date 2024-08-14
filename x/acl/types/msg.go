@@ -25,9 +25,9 @@ const (
 )
 
 // NewMsgAddAllowed creates a new instance of MsgAddAllowed
-func NewMsgAddAllowed(sender sdk.AccAddress, allowed ...*Address) *MsgAddAllowed { // nolint: interfacer
+func NewMsgAddAllowed(sender string, allowed ...string) *MsgAddAllowed { // nolint: interfacer
 	return &MsgAddAllowed{
-		Sender:  sender.String(),
+		Sender:  sender,
 		Allowed: allowed,
 	}
 }
@@ -45,7 +45,7 @@ func (msg MsgAddAllowed) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Allowed {
-		err = addr.Validate()
+		_, err := sdk.AccAddressFromBech32(addr)
 		if err != nil {
 			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
 		}
@@ -53,21 +53,10 @@ func (msg MsgAddAllowed) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (msg MsgAddAllowed) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
-}
-
-// GetSigners defines whose signature is required
-func (msg MsgAddAllowed) GetSigners() []sdk.AccAddress {
-	addr := sdk.MustAccAddressFromBech32(msg.Sender)
-	return []sdk.AccAddress{addr}
-}
-
 // NewMsgRemoveAllowed creates a new instance of MsgRemoveAllowed
-func NewMsgRemoveAllowed(sender sdk.AccAddress, allowed ...*Address) *MsgRemoveAllowed { // nolint: interfacer
+func NewMsgRemoveAllowed(sender string, allowed ...string) *MsgRemoveAllowed { // nolint: interfacer
 	return &MsgRemoveAllowed{
-		Sender:  sender.String(),
+		Sender:  sender,
 		Allowed: allowed,
 	}
 }
@@ -85,7 +74,7 @@ func (msg MsgRemoveAllowed) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Allowed {
-		err = addr.Validate()
+		_, err := sdk.AccAddressFromBech32(addr)
 		if err != nil {
 			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
 		}
@@ -93,21 +82,10 @@ func (msg MsgRemoveAllowed) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (msg MsgRemoveAllowed) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
-}
-
-// GetSigners defines whose signature is required
-func (msg MsgRemoveAllowed) GetSigners() []sdk.AccAddress {
-	addr := sdk.MustAccAddressFromBech32(msg.Sender)
-	return []sdk.AccAddress{addr}
-}
-
 // NewMsgAddAdmins creates a new instance of MsgAddAdmins
-func NewMsgAddAdmins(sender sdk.AccAddress, admins ...*Address) *MsgAddAdmins { // nolint: interfacer
+func NewMsgAddAdmins(sender string, admins ...string) *MsgAddAdmins { // nolint: interfacer
 	return &MsgAddAdmins{
-		Sender: sender.String(),
+		Sender: sender,
 		Admins: admins,
 	}
 }
@@ -125,7 +103,7 @@ func (msg MsgAddAdmins) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Admins {
-		err = addr.Validate()
+		_, err := sdk.AccAddressFromBech32(addr)
 		if err != nil {
 			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
 		}
@@ -133,21 +111,10 @@ func (msg MsgAddAdmins) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (msg MsgAddAdmins) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
-}
-
-// GetSigners defines whose signature is required
-func (msg MsgAddAdmins) GetSigners() []sdk.AccAddress {
-	addr := sdk.MustAccAddressFromBech32(msg.Sender)
-	return []sdk.AccAddress{addr}
-}
-
 // NewMsgRemoveAdmins creates a new instance of MsgRemoveAdmins
-func NewMsgRemoveAdmins(sender sdk.AccAddress, admins ...*Address) *MsgRemoveAdmins { // nolint: interfacer
+func NewMsgRemoveAdmins(sender string, admins ...string) *MsgRemoveAdmins { // nolint: interfacer
 	return &MsgRemoveAdmins{
-		Sender: sender.String(),
+		Sender: sender,
 		Admins: admins,
 	}
 }
@@ -165,23 +132,12 @@ func (msg MsgRemoveAdmins) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	for _, addr := range msg.Admins {
-		err := addr.Validate()
+		_, err := sdk.AccAddressFromBech32(addr)
 		if err != nil {
 			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
 		}
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (msg MsgRemoveAdmins) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
-}
-
-// GetSigners defines whose signature is required
-func (msg MsgRemoveAdmins) GetSigners() []sdk.AccAddress {
-	addr := sdk.MustAccAddressFromBech32(msg.Sender)
-	return []sdk.AccAddress{addr}
 }
 
 // NewMsgEnable creates a new instance of MsgEnable
@@ -206,17 +162,6 @@ func (msg MsgEnable) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (msg MsgEnable) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
-}
-
-// GetSigners defines whose signature is required
-func (msg MsgEnable) GetSigners() []sdk.AccAddress {
-	addr := sdk.MustAccAddressFromBech32(msg.Sender)
-	return []sdk.AccAddress{addr}
-}
-
 // NewMsgDisable creates a new instance of MsgDisable
 func NewMsgDisable(sender sdk.AccAddress, admins ...string) *MsgDisable { // nolint: interfacer
 	return &MsgDisable{
@@ -237,15 +182,4 @@ func (msg MsgDisable) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid sender address")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (msg MsgDisable) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
-}
-
-// GetSigners defines whose signature is required
-func (msg MsgDisable) GetSigners() []sdk.AccAddress {
-	addr := sdk.MustAccAddressFromBech32(msg.Sender)
-	return []sdk.AccAddress{addr}
 }

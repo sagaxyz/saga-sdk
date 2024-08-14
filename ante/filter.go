@@ -1,6 +1,8 @@
 package ante
 
 import (
+	"context"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -8,7 +10,7 @@ import (
 type FilterFn func(sdk.Context, sdk.AccAddress) bool
 
 type StakingKeeper interface {
-	GetValidator(ctx sdk.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, found bool)
+	GetValidator(ctx context.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, err error)
 }
 
 func BondedValidator(stakingKeeper StakingKeeper) FilterFn {
@@ -16,8 +18,8 @@ func BondedValidator(stakingKeeper StakingKeeper) FilterFn {
 		valAddr := sdk.ValAddress(signer)
 
 		var val stakingtypes.Validator
-		val, found := stakingKeeper.GetValidator(ctx, valAddr)
-		if !found {
+		val, err := stakingKeeper.GetValidator(ctx, valAddr)
+		if err != nil {
 			return false
 		}
 		if val.GetStatus() != stakingtypes.Bonded {

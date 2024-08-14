@@ -11,6 +11,7 @@ import "saga/feedistribution/v1/feedistribution.proto";
 
 // Msg defines the erc20 Msg service.
 service Msg {
+  option (cosmos.msg.v1.service) = true;
   // UpdateParams defined a governance operation for updating the x/basefee module parameters.
   // The authority is hard-coded to the Cosmos SDK x/gov module account
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
