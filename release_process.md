@@ -50,8 +50,8 @@ The process differs depending on whether the release is a `MAJOR`, `MINOR`, or `
 Once the release is ready, it can be published to the [releases page](https://github.com/sagaxyz/ssc/releases) on GitHub. This involves tagging the release branch with the release version and creating a release announcement. The release anouncement should contain the changelog of the release.
 
 ```bash
-git checkout release/1.2
-git tag v1.2 -m "SSC Release v1.2
+git checkout release/1.0
+git tag v1.0 -m "Saga SDK Release v1.0.0"
 ```
 
 ## Post-Release Activities
