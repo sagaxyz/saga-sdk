@@ -21,7 +21,7 @@ func (k Keeper) AddAllowed(goCtx context.Context, msg *types.MsgAddAllowed) (res
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSigners()[0].String() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -41,7 +41,7 @@ func (k Keeper) RemoveAllowed(goCtx context.Context, msg *types.MsgRemoveAllowed
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSigners()[0].String() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -61,7 +61,7 @@ func (k Keeper) AddAdmins(goCtx context.Context, msg *types.MsgAddAdmins) (resp 
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSigners()[0].String() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -81,7 +81,7 @@ func (k Keeper) RemoveAdmins(goCtx context.Context, msg *types.MsgRemoveAdmins) 
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSigners()[0].String() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -102,7 +102,7 @@ func (k Keeper) Enable(goCtx context.Context, msg *types.MsgEnable) (resp *types
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSigners()[0].String() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -119,7 +119,7 @@ func (k Keeper) Disable(goCtx context.Context, msg *types.MsgDisable) (resp *typ
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSigners()[0].String() {
 		err = ErrNotAuthorized
 		return
 	}
