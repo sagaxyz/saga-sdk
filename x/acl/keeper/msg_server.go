@@ -17,11 +17,11 @@ var ErrNotAuthorized = errors.New("not authorized")
 func (k Keeper) AddAllowed(goCtx context.Context, msg *types.MsgAddAllowed) (resp *types.MsgAddAllowedResponse, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
+	sender, err := sdk.AccAddressFromBech32(msg.GetSender())
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -46,7 +46,7 @@ func (k Keeper) RemoveAllowed(goCtx context.Context, msg *types.MsgRemoveAllowed
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -71,7 +71,7 @@ func (k Keeper) AddAdmins(goCtx context.Context, msg *types.MsgAddAdmins) (resp 
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -96,7 +96,7 @@ func (k Keeper) RemoveAdmins(goCtx context.Context, msg *types.MsgRemoveAdmins) 
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -122,7 +122,7 @@ func (k Keeper) Enable(goCtx context.Context, msg *types.MsgEnable) (resp *types
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
 		err = ErrNotAuthorized
 		return
 	}
@@ -139,7 +139,7 @@ func (k Keeper) Disable(goCtx context.Context, msg *types.MsgDisable) (resp *typ
 	if err != nil {
 		return
 	}
-	if !k.Admin(ctx, sender) {
+	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
 		err = ErrNotAuthorized
 		return
 	}
