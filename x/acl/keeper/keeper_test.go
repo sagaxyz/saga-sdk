@@ -12,6 +12,7 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/address"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -89,6 +90,7 @@ func (suite *TestSuite) SetupTest() {
 		encCfg.Codec,
 		key,
 		ss,
+		sdk.AccAddress(address.Module("gov")).String(),
 	)
 
 	suite.adminAddress = sdk.AccAddress([]byte{123})
