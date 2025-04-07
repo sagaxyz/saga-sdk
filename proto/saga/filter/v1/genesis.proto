@@ -1,0 +1,13 @@
+syntax = "proto3";
+package saga.filter.v1;
+
+import "saga/filter/v1/filter.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/filter/types";
+
+// GenesisState defines the filter module's genesis state.
+message GenesisState {
+  // params defines all the parameters of the filter module.
+  Params params = 1 [(gogoproto.nullable) = false];
+}
