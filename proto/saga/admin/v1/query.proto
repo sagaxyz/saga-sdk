@@ -1,0 +1,30 @@
+syntax = "proto3";
+package saga.admin.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+
+import "saga/admin/v1/genesis.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/admin/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Params returns the params
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/saga/v1/params";
+  }
+  rpc Superuser(QuerySuperuserRequest) returns (QuerySuperuserResponse) {
+    option (google.api.http).get = "/saga/v1/superuser";
+  }
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse {
+  Params params = 1 [ (gogoproto.nullable) = false ];
+}
+
+message QuerySuperuserRequest {}
+message QuerySuperuserResponse {
+  string superuser = 1;
+}
