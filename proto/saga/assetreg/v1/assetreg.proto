@@ -1,0 +1,16 @@
+syntax = "proto3";
+package saga.assetctl.v1;
+
+option go_package            = "github.com/sagaxyz/saga-sdk/x/assetctl/types";
+
+
+// DenomUnit represents a unit of a asset
+message DenomUnit {
+    // denom represents the string name of the given denom unit (e.g uatom).
+    string denom = 1;
+    // exponent represents power of 10 exponent that one must
+    // raise the base_denom to in order to equal the given DenomUnit.
+    uint32 exponent = 2;
+    // aliases is a list of string aliases for the given denom
+    repeated string aliases = 3;
+  } 

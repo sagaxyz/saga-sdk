@@ -1,0 +1,50 @@
+syntax = "proto3";
+package saga.assetctl.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "saga/assetctl/v1/assetctl.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // AssetDirectory queries the list of all registered assets on the Hub.
+  rpc AssetDirectory(QueryAssetDirectoryRequest) returns (QueryAssetDirectoryResponse) {
+    option (google.api.http).get = "/saga/assetctl/v1/asset_directory";
+  }
+
+  // ChainletRegistryStatus queries if the asset registry is enabled for a specific chainlet.
+  rpc ChainletRegistryStatus(QueryChainletRegistryStatusRequest) returns (QueryChainletRegistryStatusResponse) {
+    option (google.api.http).get = "/saga/assetctl/v1/chainlet_status/{chainlet_id}";
+  }
+}
+
+// QueryAssetDirectoryRequest is the request type for the Query/AssetDirectory RPC method.
+message QueryAssetDirectoryRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// QueryAssetDirectoryResponse is the response type for the Query/AssetDirectory RPC method.
+message QueryAssetDirectoryResponse {
+  repeated RegisteredAsset assets = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryChainletRegistryStatusRequest {
+  string chainlet_id = 1;
+}
+
+message QueryChainletRegistryStatusResponse {
+  bool is_enabled = 1;
+}
+
+// RegisteredAsset defines the structure of an asset in the directory.
+message RegisteredAsset {
+  string ibc_denom = 1;
+  string original_denom = 2;
+  string display_name = 3;
+  string description = 4;
+  repeated DenomUnit denom_units = 5 [(gogoproto.nullable) = false];
+}

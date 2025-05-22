@@ -1,0 +1,12 @@
+syntax = "proto3";
+package saga.assetctl.v1;
+
+import "gogoproto/gogo.proto";
+import "saga/assetctl/v1/query.proto";
+
+option go_package            = "github.com/sagaxyz/saga-sdk/x/assetctl/types";
+
+// GenesisState defines the assetctl module's genesis state.
+message GenesisState {
+  repeated RegisteredAsset assets = 1 [(gogoproto.nullable) = false];
+} 
