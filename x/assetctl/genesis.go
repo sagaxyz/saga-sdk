@@ -1,7 +1,7 @@
 package assetctl
 
 import (
-	"github.com/sagaxyz/saga-sdk/x/assetctl/keeper"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/keeper"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"

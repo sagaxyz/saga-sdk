@@ -13,20 +13,17 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/types/module/simulation"
-	"github.com/cosmos/cosmos-sdk/types/registry"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	"github.com/sagaxyz/saga-sdk/x/assetctl/keeper"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/keeper"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
 )
 
 var (
-	_ module.AppModuleBasic      = AppModuleBasic{}
-	_ module.AppModuleSimulation = AppModule{}
-	_ module.HasGenesis          = AppModule{}
-	_ appmodule.AppModule        = AppModule{}
+	_ module.AppModuleBasic = AppModuleBasic{}
+	_ module.HasGenesis     = AppModule{}
+	_ appmodule.AppModule   = AppModule{}
 	// _ module.HasConsensusVersion  = AppModule{}
 
 	// _ appmodule.HasServices = AppModule{}
@@ -180,13 +177,13 @@ func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 	// simulation.RandomizedGenState(simState)
 }
 
-// RegisterStoreDecoder registers a decoder for the module's types.
-func (am AppModule) RegisterStoreDecoder(sdr registry.StoreDecoderRegistry) {
-	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
-}
+// // RegisterStoreDecoder registers a decoder for the module's types.
+// func (am AppModule) RegisterStoreDecoder(sdr registry.StoreDecoderRegistry) {
+// 	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
+// }
 
-// WeightedOperations returns the all the module operations with their respective weights.
-func (am AppModule) WeightedOperations(simState module.SimulationState) []simulation.WeightedOperation {
-	// return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.accountKeeper, am.bankKeeper, am.keeper)
-	return nil
-}
+// // WeightedOperations returns the all the module operations with their respective weights.
+// func (am AppModule) WeightedOperations(simState module.SimulationState) []simulation.WeightedOperation {
+// 	// return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.accountKeeper, am.bankKeeper, am.keeper)
+// 	return nil
+// }
