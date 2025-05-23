@@ -1,12 +1,12 @@
 syntax = "proto3";
-package saga.assetctl.v1;
+package saga.assetctl.controller.v1;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-import "saga/assetctl/v1/assetctl.proto";
+import "saga/assetctl/controller/v1/assetctl.proto";
 
-option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/types";
+option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types";
 
 // Query defines the gRPC querier service.
 service Query {

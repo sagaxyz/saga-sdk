@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 
 	"fmt"
 
@@ -27,9 +27,12 @@ type Keeper struct {
 	logger       log.Logger
 	addressCodec address.Codec
 
-	Schema        collections.Schema
-	EnabledList   collections.KeySet[string]                     // Key: ChainletID. Value: presence means enabled.
-	AssetMetadata collections.Map[string, types.RegisteredAsset] // Key: Hub IBC Denom. Value: RegisteredAsset metadata.
+	Authority string
+
+	Schema          collections.Schema
+	EnabledList     collections.KeySet[string]                           // Key: ChainletID. Value: presence means enabled.
+	AssetMetadata   collections.Map[string, types.RegisteredAsset]       // Key: Hub IBC Denom. Value: RegisteredAsset metadata.
+	SupportedAssets collections.KeySet[collections.Pair[string, string]] // Key: ChainletID, Hub IBC Denom. Value: presence means supported.
 }
 
 func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {

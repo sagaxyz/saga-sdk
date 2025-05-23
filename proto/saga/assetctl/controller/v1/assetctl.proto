@@ -1,7 +1,7 @@
 syntax = "proto3";
-package saga.assetctl.v1;
+package saga.assetctl.controller.v1;
 
-option go_package            = "github.com/sagaxyz/saga-sdk/x/assetctl/types";
+option go_package            = "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types";
 
 
 // DenomUnit represents a unit of a asset

@@ -1,0 +1,24 @@
+syntax = "proto3";
+package saga.assetctl.host.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "saga/assetctl/host/v1/host.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/host/types";
+
+service Msg {
+    option (cosmos.msg.v1.service) = true;
+
+    rpc SupportAsset(MsgSupportAsset) returns (MsgSupportAssetResponse);
+}
+
+message MsgSupportAsset {
+    option (cosmos.msg.v1.signer) = "creator";
+
+    string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string ibc_denom = 2;
+}
+
+message MsgSupportAssetResponse {}

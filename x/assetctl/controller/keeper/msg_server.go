@@ -3,8 +3,9 @@ package keeper
 import (
 	"context"
 
+	"cosmossdk.io/collections"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -23,6 +24,10 @@ var _ types.MsgServer = msgServer{}
 
 // RegisterAssets implements types.MsgServer.
 func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterAssets) (*types.MsgRegisterAssetsResponse, error) {
+	if msg.Creator != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	}
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// TODO: Iterate through msg.AssetsToRegister
@@ -40,6 +45,10 @@ func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterA
 
 // UnregisterAssets implements types.MsgServer.
 func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregisterAssets) (*types.MsgUnregisterAssetsResponse, error) {
+	if msg.Creator != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	}
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// TODO: Iterate through msg.IbcDenomsToUnregister
@@ -55,8 +64,9 @@ func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregis
 
 // ToggleChainletRegistry implements types.MsgServer.
 func (k msgServer) ToggleChainletRegistry(ctx context.Context, msg *types.MsgToggleChainletRegistry) (*types.MsgToggleChainletRegistryResponse, error) {
-	// TODO: Add authority check - who can toggle this? Chainlet's ICA controller? Specific admin key?
-	// For now, assuming the msg.Creator is authorized and msg.ChainletId is the target.
+	if msg.Creator != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	}
 
 	if msg.ChainletId == "" {
 		return nil, sdkerrors.ErrInvalidRequest.Wrap("chainlet_id cannot be empty")
@@ -71,4 +81,33 @@ func (k msgServer) ToggleChainletRegistry(ctx context.Context, msg *types.MsgTog
 
 	err := k.EnabledList.Remove(ctx, msg.ChainletId)
 	return &types.MsgToggleChainletRegistryResponse{}, err
+}
+
+func (k msgServer) SupportAsset(ctx context.Context, msg *types.MsgSupportAsset) (*types.MsgSupportAssetResponse, error) {
+	if msg.Creator != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	}
+
+	chainletId := "" // TODO: get chainlet id from the sender address
+
+	if msg.IbcDenom == "" {
+		return nil, sdkerrors.ErrInvalidRequest.Wrap("ibc_denom cannot be empty")
+	}
+
+	exists, err := k.SupportedAssets.Has(ctx, collections.Join(chainletId, msg.IbcDenom))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return nil, sdkerrors.ErrInvalidRequest.Wrap("asset already supported")
+	}
+
+	err = k.SupportedAssets.Set(ctx, collections.Join(chainletId, msg.IbcDenom))
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgSupportAssetResponse{}, nil
 }

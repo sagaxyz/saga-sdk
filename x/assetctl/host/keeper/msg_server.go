@@ -72,3 +72,8 @@ func (k msgServer) ToggleChainletRegistry(ctx context.Context, msg *types.MsgTog
 	err := k.EnabledList.Remove(ctx, msg.ChainletId)
 	return &types.MsgToggleChainletRegistryResponse{}, err
 }
+
+// SupportAsset implements types.MsgServer.
+func (k msgServer) SupportAsset(context.Context, *types.MsgSupportAsset) (*types.MsgSupportAssetResponse, error) {
+	panic("unimplemented")
+}

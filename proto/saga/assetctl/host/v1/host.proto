@@ -1,0 +1,7 @@
+syntax = "proto3";
+package saga.assetctl.host.v1;
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/host/types";
+
+
+message HostGenesisState {}

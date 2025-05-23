@@ -4,7 +4,7 @@ import (
 	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
