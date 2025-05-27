@@ -4,148 +4,77 @@ import (
 	"context"
 	"errors"
 
-	"cosmossdk.io/store/prefix"
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/sagaxyz/saga-sdk/x/acl/types"
+	"github.com/sagaxyz/saga-sdk/x/admin/types"
 )
 
 var _ types.MsgServer = &Keeper{}
 
 var ErrNotAuthorized = errors.New("not authorized")
+var ErrInvalidRequest = errors.New("invalid request")
 
-func (k Keeper) AddAllowed(goCtx context.Context, msg *types.MsgAddAllowed) (resp *types.MsgAddAllowedResponse, err error) {
+func (k Keeper) SetMetadata(
+	goCtx context.Context,
+	msg *types.MsgSetMetadata,
+) (*types.MsgSetMetadataResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	sender, err := sdk.AccAddressFromBech32(msg.GetSender())
-	if err != nil {
-		return
-	}
-	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
-		err = ErrNotAuthorized
-		return
+	if msg.Metadata == nil {
+		return nil, errorsmod.Wrap(ErrInvalidRequest, "metadata is nil")
 	}
 
-	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAllowed)
-	for _, addr := range msg.Allowed {
-		var accAddr sdk.AccAddress
-		accAddr, err = sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return
-		}
-		store.Set(accAddr, []byte{0}) //TODO
+	params := k.GetParams(ctx)
+	isACLAdmin := params.Permissions.SetMetadata &&
+		k.aclKeeper != nil &&
+		k.aclKeeper.Admin(ctx, sdk.AccAddress(msg.Authority))
+	isModuleAuth := msg.Authority == k.GetAuthority()
+
+	if !isACLAdmin && !isModuleAuth {
+		return nil, errorsmod.Wrap(ErrNotAuthorized, "authority not permitted")
 	}
 
-	resp = &types.MsgAddAllowedResponse{}
-	return
-}
-func (k Keeper) RemoveAllowed(goCtx context.Context, msg *types.MsgRemoveAllowed) (resp *types.MsgRemoveAllowedResponse, err error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.bankKeeper.SetDenomMetaData(ctx, *msg.Metadata)
 
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return
-	}
-	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
-		err = ErrNotAuthorized
-		return
-	}
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			types.EventTypeSetMetadata,
+			sdk.NewAttribute(types.AttributeKeyDenom, msg.Metadata.Base),
+		),
+	)
 
-	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAllowed)
-	for _, addr := range msg.Allowed {
-		var accAddr sdk.AccAddress
-		accAddr, err = sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return
-		}
-		store.Delete(accAddr)
-	}
-	resp = &types.MsgRemoveAllowedResponse{}
-	return
+	return &types.MsgSetMetadataResponse{}, nil
 }
 
-func (k Keeper) AddAdmins(goCtx context.Context, msg *types.MsgAddAdmins) (resp *types.MsgAddAdminsResponse, err error) {
+func (k Keeper) EnableSetMetadata(goCtx context.Context, msg *types.MsgEnableSetMetadata) (resp *types.MsgEnableSetMetadataResponse, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return
-	}
-	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
+	if k.GetAuthority() != msg.Authority {
 		err = ErrNotAuthorized
 		return
 	}
 
-	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
-	for _, addr := range msg.Admins {
-		var accAddr sdk.AccAddress
-		accAddr, err = sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return
-		}
-		store.Set(accAddr, []byte{0}) //TODO
-	}
+	p := k.GetParams(ctx)
+	p.Permissions.SetMetadata = true
+	k.SetParams(ctx, p)
 
-	resp = &types.MsgAddAdminsResponse{}
-	return
-}
-func (k Keeper) RemoveAdmins(goCtx context.Context, msg *types.MsgRemoveAdmins) (resp *types.MsgRemoveAdminsResponse, err error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return
-	}
-	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
-		err = ErrNotAuthorized
-		return
-	}
-
-	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
-	for _, addr := range msg.Admins {
-		var accAddr sdk.AccAddress
-		accAddr, err = sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return
-		}
-		store.Delete(accAddr)
-	}
-
-	resp = &types.MsgRemoveAdminsResponse{}
+	resp = &types.MsgEnableSetMetadataResponse{}
 	return
 }
 
-func (k Keeper) Enable(goCtx context.Context, msg *types.MsgEnable) (resp *types.MsgEnableResponse, err error) {
+func (k Keeper) DisableSetMetadata(goCtx context.Context, msg *types.MsgDisableSetMetadata) (resp *types.MsgDisableSetMetadataResponse, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return
-	}
-	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
+	if k.GetAuthority() != msg.Authority {
 		err = ErrNotAuthorized
 		return
 	}
 
-	k.paramSpace.Set(ctx, types.ParamStoreKeyEnable, true)
+	p := k.GetParams(ctx)
+	p.Permissions.SetMetadata = false
+	k.SetParams(ctx, p)
 
-	resp = &types.MsgEnableResponse{}
-	return
-}
-func (k Keeper) Disable(goCtx context.Context, msg *types.MsgDisable) (resp *types.MsgDisableResponse, err error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return
-	}
-	if !k.Admin(ctx, sender) && k.GetAuthority() != msg.GetSender() {
-		err = ErrNotAuthorized
-		return
-	}
-
-	k.paramSpace.Set(ctx, types.ParamStoreKeyEnable, false)
-
-	resp = &types.MsgDisableResponse{}
+	resp = &types.MsgDisableSetMetadataResponse{}
 	return
 }

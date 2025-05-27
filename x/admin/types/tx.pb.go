@@ -31,167 +31,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type MsgEnable struct {
-	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
-}
-
-func (m *MsgEnable) Reset()         { *m = MsgEnable{} }
-func (m *MsgEnable) String() string { return proto.CompactTextString(m) }
-func (*MsgEnable) ProtoMessage()    {}
-func (*MsgEnable) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1be15843df3dbf51, []int{0}
-}
-func (m *MsgEnable) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *MsgEnable) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_MsgEnable.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *MsgEnable) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgEnable.Merge(m, src)
-}
-func (m *MsgEnable) XXX_Size() int {
-	return m.Size()
-}
-func (m *MsgEnable) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgEnable.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MsgEnable proto.InternalMessageInfo
-
-func (m *MsgEnable) GetAuthority() string {
-	if m != nil {
-		return m.Authority
-	}
-	return ""
-}
-
-type MsgEnableResponse struct {
-}
-
-func (m *MsgEnableResponse) Reset()         { *m = MsgEnableResponse{} }
-func (m *MsgEnableResponse) String() string { return proto.CompactTextString(m) }
-func (*MsgEnableResponse) ProtoMessage()    {}
-func (*MsgEnableResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1be15843df3dbf51, []int{1}
-}
-func (m *MsgEnableResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *MsgEnableResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_MsgEnableResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *MsgEnableResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgEnableResponse.Merge(m, src)
-}
-func (m *MsgEnableResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *MsgEnableResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgEnableResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MsgEnableResponse proto.InternalMessageInfo
-
-type MsgDisable struct {
-	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
-}
-
-func (m *MsgDisable) Reset()         { *m = MsgDisable{} }
-func (m *MsgDisable) String() string { return proto.CompactTextString(m) }
-func (*MsgDisable) ProtoMessage()    {}
-func (*MsgDisable) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1be15843df3dbf51, []int{2}
-}
-func (m *MsgDisable) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *MsgDisable) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_MsgDisable.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *MsgDisable) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgDisable.Merge(m, src)
-}
-func (m *MsgDisable) XXX_Size() int {
-	return m.Size()
-}
-func (m *MsgDisable) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgDisable.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MsgDisable proto.InternalMessageInfo
-
-func (m *MsgDisable) GetAuthority() string {
-	if m != nil {
-		return m.Authority
-	}
-	return ""
-}
-
-type MsgDisableResponse struct {
-}
-
-func (m *MsgDisableResponse) Reset()         { *m = MsgDisableResponse{} }
-func (m *MsgDisableResponse) String() string { return proto.CompactTextString(m) }
-func (*MsgDisableResponse) ProtoMessage()    {}
-func (*MsgDisableResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1be15843df3dbf51, []int{3}
-}
-func (m *MsgDisableResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *MsgDisableResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_MsgDisableResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *MsgDisableResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgDisableResponse.Merge(m, src)
-}
-func (m *MsgDisableResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *MsgDisableResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgDisableResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MsgDisableResponse proto.InternalMessageInfo
-
-// MsgSetMetadata is the Msg/MsgSetMetadata request type.
 type MsgSetMetadata struct {
 	Authority string          `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
 	Metadata  *types.Metadata `protobuf:"bytes,2,opt,name=metadata,proto3" json:"metadata,omitempty"`
@@ -201,7 +40,7 @@ func (m *MsgSetMetadata) Reset()         { *m = MsgSetMetadata{} }
 func (m *MsgSetMetadata) String() string { return proto.CompactTextString(m) }
 func (*MsgSetMetadata) ProtoMessage()    {}
 func (*MsgSetMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1be15843df3dbf51, []int{4}
+	return fileDescriptor_1be15843df3dbf51, []int{0}
 }
 func (m *MsgSetMetadata) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -251,7 +90,7 @@ func (m *MsgSetMetadataResponse) Reset()         { *m = MsgSetMetadataResponse{}
 func (m *MsgSetMetadataResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgSetMetadataResponse) ProtoMessage()    {}
 func (*MsgSetMetadataResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1be15843df3dbf51, []int{5}
+	return fileDescriptor_1be15843df3dbf51, []int{1}
 }
 func (m *MsgSetMetadataResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -280,46 +119,209 @@ func (m *MsgSetMetadataResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgSetMetadataResponse proto.InternalMessageInfo
 
+type MsgEnableSetMetadata struct {
+	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+}
+
+func (m *MsgEnableSetMetadata) Reset()         { *m = MsgEnableSetMetadata{} }
+func (m *MsgEnableSetMetadata) String() string { return proto.CompactTextString(m) }
+func (*MsgEnableSetMetadata) ProtoMessage()    {}
+func (*MsgEnableSetMetadata) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1be15843df3dbf51, []int{2}
+}
+func (m *MsgEnableSetMetadata) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgEnableSetMetadata) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgEnableSetMetadata.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgEnableSetMetadata) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgEnableSetMetadata.Merge(m, src)
+}
+func (m *MsgEnableSetMetadata) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgEnableSetMetadata) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgEnableSetMetadata.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgEnableSetMetadata proto.InternalMessageInfo
+
+func (m *MsgEnableSetMetadata) GetAuthority() string {
+	if m != nil {
+		return m.Authority
+	}
+	return ""
+}
+
+type MsgEnableSetMetadataResponse struct {
+}
+
+func (m *MsgEnableSetMetadataResponse) Reset()         { *m = MsgEnableSetMetadataResponse{} }
+func (m *MsgEnableSetMetadataResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgEnableSetMetadataResponse) ProtoMessage()    {}
+func (*MsgEnableSetMetadataResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1be15843df3dbf51, []int{3}
+}
+func (m *MsgEnableSetMetadataResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgEnableSetMetadataResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgEnableSetMetadataResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgEnableSetMetadataResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgEnableSetMetadataResponse.Merge(m, src)
+}
+func (m *MsgEnableSetMetadataResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgEnableSetMetadataResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgEnableSetMetadataResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgEnableSetMetadataResponse proto.InternalMessageInfo
+
+type MsgDisableSetMetadata struct {
+	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+}
+
+func (m *MsgDisableSetMetadata) Reset()         { *m = MsgDisableSetMetadata{} }
+func (m *MsgDisableSetMetadata) String() string { return proto.CompactTextString(m) }
+func (*MsgDisableSetMetadata) ProtoMessage()    {}
+func (*MsgDisableSetMetadata) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1be15843df3dbf51, []int{4}
+}
+func (m *MsgDisableSetMetadata) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgDisableSetMetadata) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgDisableSetMetadata.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgDisableSetMetadata) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgDisableSetMetadata.Merge(m, src)
+}
+func (m *MsgDisableSetMetadata) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgDisableSetMetadata) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgDisableSetMetadata.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgDisableSetMetadata proto.InternalMessageInfo
+
+func (m *MsgDisableSetMetadata) GetAuthority() string {
+	if m != nil {
+		return m.Authority
+	}
+	return ""
+}
+
+type MsgDisableSetMetadataResponse struct {
+}
+
+func (m *MsgDisableSetMetadataResponse) Reset()         { *m = MsgDisableSetMetadataResponse{} }
+func (m *MsgDisableSetMetadataResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgDisableSetMetadataResponse) ProtoMessage()    {}
+func (*MsgDisableSetMetadataResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1be15843df3dbf51, []int{5}
+}
+func (m *MsgDisableSetMetadataResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgDisableSetMetadataResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgDisableSetMetadataResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgDisableSetMetadataResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgDisableSetMetadataResponse.Merge(m, src)
+}
+func (m *MsgDisableSetMetadataResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgDisableSetMetadataResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgDisableSetMetadataResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgDisableSetMetadataResponse proto.InternalMessageInfo
+
 func init() {
-	proto.RegisterType((*MsgEnable)(nil), "saga.admin.v1.MsgEnable")
-	proto.RegisterType((*MsgEnableResponse)(nil), "saga.admin.v1.MsgEnableResponse")
-	proto.RegisterType((*MsgDisable)(nil), "saga.admin.v1.MsgDisable")
-	proto.RegisterType((*MsgDisableResponse)(nil), "saga.admin.v1.MsgDisableResponse")
 	proto.RegisterType((*MsgSetMetadata)(nil), "saga.admin.v1.MsgSetMetadata")
 	proto.RegisterType((*MsgSetMetadataResponse)(nil), "saga.admin.v1.MsgSetMetadataResponse")
+	proto.RegisterType((*MsgEnableSetMetadata)(nil), "saga.admin.v1.MsgEnableSetMetadata")
+	proto.RegisterType((*MsgEnableSetMetadataResponse)(nil), "saga.admin.v1.MsgEnableSetMetadataResponse")
+	proto.RegisterType((*MsgDisableSetMetadata)(nil), "saga.admin.v1.MsgDisableSetMetadata")
+	proto.RegisterType((*MsgDisableSetMetadataResponse)(nil), "saga.admin.v1.MsgDisableSetMetadataResponse")
 }
 
 func init() { proto.RegisterFile("saga/admin/v1/tx.proto", fileDescriptor_1be15843df3dbf51) }
 
 var fileDescriptor_1be15843df3dbf51 = []byte{
-	// 428 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x92, 0x41, 0x6f, 0xd3, 0x30,
-	0x14, 0xc7, 0xeb, 0x21, 0x06, 0x35, 0x62, 0x12, 0x61, 0x1a, 0x69, 0x80, 0x28, 0xeb, 0x69, 0x4c,
-	0x9a, 0xad, 0x0c, 0x09, 0x09, 0x6e, 0x0c, 0x38, 0xe6, 0xd2, 0x72, 0xe2, 0x82, 0x9c, 0xc5, 0x78,
-	0x61, 0x8d, 0x1d, 0xe5, 0xb9, 0x55, 0xcb, 0x09, 0xf5, 0x13, 0x20, 0xf5, 0x8b, 0xf4, 0xc0, 0x87,
-	0xe0, 0x58, 0xc1, 0x85, 0x63, 0xd5, 0x22, 0xf5, 0x6b, 0xa0, 0x3a, 0x6e, 0xaa, 0x52, 0xf5, 0x82,
-	0x76, 0x8a, 0xfe, 0xfe, 0xbf, 0xfc, 0xfe, 0xcf, 0xcf, 0x0f, 0x1f, 0x01, 0x13, 0x8c, 0xb2, 0x24,
-	0x4b, 0x25, 0xed, 0x85, 0x54, 0xf7, 0x49, 0x5e, 0x28, 0xad, 0x9c, 0xfb, 0xcb, 0x73, 0x62, 0xce,
-	0x49, 0x2f, 0xf4, 0x9e, 0x08, 0xa5, 0x44, 0x87, 0x53, 0x96, 0xa7, 0x94, 0x49, 0xa9, 0x34, 0xd3,
-	0xa9, 0x92, 0x50, 0x16, 0x7b, 0x8d, 0x4b, 0x05, 0x99, 0x82, 0x8f, 0x46, 0xd1, 0x52, 0x58, 0xeb,
-	0x51, 0xa9, 0x68, 0x06, 0x62, 0xc9, 0xcf, 0x40, 0x58, 0xc3, 0xb7, 0x46, 0xcc, 0xe4, 0x35, 0xed,
-	0x85, 0x31, 0xd7, 0x2c, 0x34, 0xa2, 0xf4, 0x9b, 0x6d, 0x5c, 0x8f, 0x40, 0xbc, 0x93, 0x2c, 0xee,
-	0x70, 0xe7, 0x05, 0xae, 0xb3, 0xae, 0xbe, 0x52, 0x45, 0xaa, 0x07, 0x2e, 0x0a, 0xd0, 0x49, 0xfd,
-	0xc2, 0xfd, 0xf9, 0xfd, 0xec, 0xd0, 0x46, 0xbd, 0x4e, 0x92, 0x82, 0x03, 0xb4, 0x75, 0x91, 0x4a,
-	0xd1, 0x5a, 0x97, 0xbe, 0x3a, 0x18, 0x2e, 0xc6, 0xa7, 0x6b, 0xdd, 0x7c, 0x88, 0x1f, 0x54, 0xd0,
-	0x16, 0x87, 0x5c, 0x49, 0xe0, 0xcd, 0xf7, 0x18, 0x47, 0x20, 0xde, 0xa6, 0x70, 0xa3, 0x51, 0x87,
-	0xd8, 0x59, 0x53, 0xab, 0xac, 0x11, 0xc2, 0x07, 0x11, 0x88, 0x36, 0xd7, 0x11, 0xd7, 0x2c, 0x61,
-	0x9a, 0xfd, 0x6f, 0xa0, 0xf3, 0x12, 0xdf, 0xcd, 0x2c, 0xc3, 0xdd, 0x0b, 0xd0, 0xc9, 0xbd, 0xf3,
-	0xa7, 0xc4, 0xfe, 0x63, 0xc6, 0x68, 0x67, 0x4a, 0x56, 0x41, 0xad, 0xaa, 0x7c, 0xab, 0x57, 0x17,
-	0x1f, 0x6d, 0x36, 0xb5, 0xea, 0xf7, 0x7c, 0x8a, 0xf0, 0xad, 0x08, 0x84, 0xf3, 0x09, 0xef, 0xdb,
-	0xa7, 0x70, 0xc9, 0xc6, 0x66, 0x90, 0x6a, 0x9e, 0x5e, 0xb0, 0xcb, 0xa9, 0x6e, 0x1f, 0x0c, 0x7f,
-	0xfd, 0x19, 0xed, 0x79, 0x8e, 0x4b, 0xff, 0xdd, 0x3a, 0xca, 0x4b, 0xfa, 0x67, 0x7c, 0x67, 0xf5,
-	0x10, 0x8d, 0x6d, 0x9c, 0xb5, 0xbc, 0xe3, 0x9d, 0x56, 0x15, 0x75, 0x6c, 0xa2, 0x1e, 0x3b, 0x8d,
-	0xed, 0xa8, 0xc4, 0x52, 0x6e, 0x7f, 0x5d, 0x8c, 0x4f, 0xd1, 0xc5, 0x9b, 0x1f, 0x33, 0x1f, 0x4d,
-	0x66, 0x3e, 0x9a, 0xce, 0x7c, 0xf4, 0x6d, 0xee, 0xd7, 0x26, 0x73, 0xbf, 0xf6, 0x7b, 0xee, 0xd7,
-	0x3e, 0x3c, 0x13, 0xa9, 0xbe, 0xea, 0xc6, 0xe4, 0x52, 0x65, 0x86, 0xd2, 0x1f, 0x7c, 0x31, 0xdf,
-	0x33, 0x48, 0xae, 0x69, 0xdf, 0x32, 0xf5, 0x20, 0xe7, 0x10, 0xef, 0x9b, 0xa5, 0x7d, 0xfe, 0x37,
-	0x00, 0x00, 0xff, 0xff, 0x4d, 0x3d, 0xbf, 0x63, 0x4f, 0x03, 0x00, 0x00,
+	// 480 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x93, 0x3f, 0x6f, 0x13, 0x31,
+	0x18, 0xc6, 0xe3, 0x56, 0x20, 0xea, 0x8a, 0x4a, 0x58, 0xa5, 0x5c, 0xaf, 0x8d, 0x09, 0xe1, 0x8f,
+	0x4a, 0xa1, 0x67, 0xa5, 0x48, 0x48, 0xb0, 0x51, 0x60, 0xbc, 0x25, 0xdd, 0x18, 0x88, 0x7c, 0x3d,
+	0xcb, 0xb5, 0xda, 0xb3, 0xa3, 0xbc, 0x6e, 0x94, 0xc0, 0x82, 0xba, 0x30, 0xb0, 0x20, 0xf5, 0x13,
+	0xf0, 0x0d, 0x3a, 0xf0, 0x21, 0x18, 0x2b, 0x58, 0x18, 0x51, 0x82, 0xd4, 0xaf, 0x81, 0xea, 0x38,
+	0xd7, 0x86, 0x3b, 0xa1, 0x0c, 0x74, 0x3a, 0xbd, 0x7e, 0x9f, 0xf7, 0x79, 0x7e, 0xb6, 0xde, 0xc3,
+	0x4b, 0xc0, 0x25, 0x67, 0x3c, 0xcd, 0x94, 0x66, 0xdd, 0x06, 0xb3, 0xbd, 0xa8, 0xdd, 0x31, 0xd6,
+	0x90, 0xeb, 0x67, 0xe7, 0x91, 0x3b, 0x8f, 0xba, 0x8d, 0x70, 0x55, 0x1a, 0x23, 0xf7, 0x05, 0xe3,
+	0x6d, 0xc5, 0xb8, 0xd6, 0xc6, 0x72, 0xab, 0x8c, 0x86, 0x91, 0x38, 0x5c, 0xde, 0x31, 0x90, 0x19,
+	0x68, 0xb9, 0x8a, 0x8d, 0x0a, 0xdf, 0xba, 0x35, 0xaa, 0x58, 0x06, 0xf2, 0xcc, 0x3f, 0x03, 0xe9,
+	0x1b, 0xd4, 0x37, 0x12, 0xae, 0xf7, 0x58, 0xb7, 0x91, 0x08, 0xcb, 0x1b, 0xae, 0xf0, 0xfd, 0x95,
+	0x49, 0x30, 0x29, 0xb4, 0x00, 0xe5, 0x5d, 0xeb, 0x47, 0x08, 0x2f, 0xc4, 0x20, 0xb7, 0x85, 0x8d,
+	0x85, 0xe5, 0x29, 0xb7, 0x9c, 0x3c, 0xc5, 0x73, 0xfc, 0xc0, 0xee, 0x9a, 0x8e, 0xb2, 0xfd, 0x00,
+	0xd5, 0xd0, 0xda, 0xdc, 0x56, 0xf0, 0xfd, 0xeb, 0xc6, 0xa2, 0xa7, 0x79, 0x91, 0xa6, 0x1d, 0x01,
+	0xb0, 0x6d, 0x3b, 0x4a, 0xcb, 0xe6, 0xb9, 0x94, 0x3c, 0xc3, 0xd7, 0x32, 0xef, 0x11, 0xcc, 0xd4,
+	0xd0, 0xda, 0xfc, 0x66, 0x35, 0xf2, 0x33, 0x8e, 0xc6, 0xa3, 0x45, 0xe3, 0xa0, 0x66, 0x2e, 0x7f,
+	0xbe, 0x70, 0x78, 0x7a, 0xbc, 0x7e, 0x6e, 0x55, 0x0f, 0xf0, 0xd2, 0x24, 0x54, 0x53, 0x40, 0xdb,
+	0x68, 0x10, 0xf5, 0xb7, 0x78, 0x31, 0x06, 0xf9, 0x5a, 0xf3, 0x64, 0x5f, 0xfc, 0x07, 0xe8, 0x42,
+	0x32, 0xc5, 0xab, 0x65, 0xfe, 0x79, 0x7e, 0x0b, 0xdf, 0x8c, 0x41, 0xbe, 0x52, 0x70, 0x59, 0x00,
+	0xb7, 0x71, 0xb5, 0x34, 0x60, 0x4c, 0xb0, 0xf9, 0x65, 0x16, 0xcf, 0xc6, 0x20, 0xc9, 0x47, 0x84,
+	0x6f, 0x14, 0xdf, 0xe1, 0x6e, 0x34, 0xb1, 0x6e, 0x51, 0xd9, 0x65, 0xc2, 0x47, 0x53, 0x88, 0xf2,
+	0x1b, 0xd7, 0x0e, 0x7f, 0xfc, 0x3e, 0x9a, 0x09, 0x49, 0xc0, 0xfe, 0x5e, 0x70, 0x26, 0xdc, 0x10,
+	0xf9, 0x84, 0x30, 0x29, 0x79, 0x91, 0x7b, 0xc5, 0x94, 0xa2, 0x2a, 0x7c, 0x3c, 0x8d, 0x2a, 0x87,
+	0xb9, 0xe3, 0x60, 0x56, 0xc8, 0x72, 0x11, 0x26, 0x1d, 0x4d, 0x91, 0xf7, 0x78, 0xfe, 0x22, 0x45,
+	0xb5, 0xe8, 0x7f, 0x31, 0xfe, 0xfe, 0x3f, 0xdb, 0x79, 0xee, 0x03, 0x97, 0x5b, 0xab, 0xd3, 0x62,
+	0x2e, 0x08, 0xdb, 0x1a, 0x2f, 0x72, 0x78, 0xe5, 0xc3, 0xe9, 0xf1, 0x3a, 0xda, 0x7a, 0xf9, 0x6d,
+	0x40, 0xd1, 0xc9, 0x80, 0xa2, 0x5f, 0x03, 0x8a, 0x3e, 0x0f, 0x69, 0xe5, 0x64, 0x48, 0x2b, 0x3f,
+	0x87, 0xb4, 0xf2, 0xe6, 0xa1, 0x54, 0x76, 0xf7, 0x20, 0x89, 0x76, 0x4c, 0xe6, 0xac, 0x7a, 0xfd,
+	0x77, 0xee, 0xbb, 0x01, 0xe9, 0x1e, 0xeb, 0x79, 0x63, 0xdb, 0x6f, 0x0b, 0x48, 0xae, 0xba, 0x3f,
+	0xf4, 0xc9, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x54, 0xee, 0x49, 0x46, 0x59, 0x04, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -334,10 +336,15 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type MsgClient interface {
-	// Enable enables the access control based on the allowed list.
-	Enable(ctx context.Context, in *MsgEnable, opts ...grpc.CallOption) (*MsgEnableResponse, error)
-	// Disable disables the access control based on the allowed list.
-	Disable(ctx context.Context, in *MsgDisable, opts ...grpc.CallOption) (*MsgDisableResponse, error)
+	// EnableSetMetadata enables the acl-based admin permissions to set metadata.
+	EnableSetMetadata(ctx context.Context, in *MsgEnableSetMetadata, opts ...grpc.CallOption) (*MsgEnableSetMetadataResponse, error)
+	// DisableSetMetadata disables the acl-based admin permissions to set
+	// metadata.
+	DisableSetMetadata(ctx context.Context, in *MsgDisableSetMetadata, opts ...grpc.CallOption) (*MsgDisableSetMetadataResponse, error)
+	// SetMetadata is a permissioned message that allows the admin or superuser to
+	// set metadata for a given denom. This is only available if the admin module
+	// is enabled.
+	SetMetadata(ctx context.Context, in *MsgSetMetadata, opts ...grpc.CallOption) (*MsgSetMetadataResponse, error)
 }
 
 type msgClient struct {
@@ -348,18 +355,27 @@ func NewMsgClient(cc grpc1.ClientConn) MsgClient {
 	return &msgClient{cc}
 }
 
-func (c *msgClient) Enable(ctx context.Context, in *MsgEnable, opts ...grpc.CallOption) (*MsgEnableResponse, error) {
-	out := new(MsgEnableResponse)
-	err := c.cc.Invoke(ctx, "/saga.admin.v1.Msg/Enable", in, out, opts...)
+func (c *msgClient) EnableSetMetadata(ctx context.Context, in *MsgEnableSetMetadata, opts ...grpc.CallOption) (*MsgEnableSetMetadataResponse, error) {
+	out := new(MsgEnableSetMetadataResponse)
+	err := c.cc.Invoke(ctx, "/saga.admin.v1.Msg/EnableSetMetadata", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) Disable(ctx context.Context, in *MsgDisable, opts ...grpc.CallOption) (*MsgDisableResponse, error) {
-	out := new(MsgDisableResponse)
-	err := c.cc.Invoke(ctx, "/saga.admin.v1.Msg/Disable", in, out, opts...)
+func (c *msgClient) DisableSetMetadata(ctx context.Context, in *MsgDisableSetMetadata, opts ...grpc.CallOption) (*MsgDisableSetMetadataResponse, error) {
+	out := new(MsgDisableSetMetadataResponse)
+	err := c.cc.Invoke(ctx, "/saga.admin.v1.Msg/DisableSetMetadata", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) SetMetadata(ctx context.Context, in *MsgSetMetadata, opts ...grpc.CallOption) (*MsgSetMetadataResponse, error) {
+	out := new(MsgSetMetadataResponse)
+	err := c.cc.Invoke(ctx, "/saga.admin.v1.Msg/SetMetadata", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -368,59 +384,85 @@ func (c *msgClient) Disable(ctx context.Context, in *MsgDisable, opts ...grpc.Ca
 
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
-	// Enable enables the access control based on the allowed list.
-	Enable(context.Context, *MsgEnable) (*MsgEnableResponse, error)
-	// Disable disables the access control based on the allowed list.
-	Disable(context.Context, *MsgDisable) (*MsgDisableResponse, error)
+	// EnableSetMetadata enables the acl-based admin permissions to set metadata.
+	EnableSetMetadata(context.Context, *MsgEnableSetMetadata) (*MsgEnableSetMetadataResponse, error)
+	// DisableSetMetadata disables the acl-based admin permissions to set
+	// metadata.
+	DisableSetMetadata(context.Context, *MsgDisableSetMetadata) (*MsgDisableSetMetadataResponse, error)
+	// SetMetadata is a permissioned message that allows the admin or superuser to
+	// set metadata for a given denom. This is only available if the admin module
+	// is enabled.
+	SetMetadata(context.Context, *MsgSetMetadata) (*MsgSetMetadataResponse, error)
 }
 
 // UnimplementedMsgServer can be embedded to have forward compatible implementations.
 type UnimplementedMsgServer struct {
 }
 
-func (*UnimplementedMsgServer) Enable(ctx context.Context, req *MsgEnable) (*MsgEnableResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Enable not implemented")
+func (*UnimplementedMsgServer) EnableSetMetadata(ctx context.Context, req *MsgEnableSetMetadata) (*MsgEnableSetMetadataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnableSetMetadata not implemented")
 }
-func (*UnimplementedMsgServer) Disable(ctx context.Context, req *MsgDisable) (*MsgDisableResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Disable not implemented")
+func (*UnimplementedMsgServer) DisableSetMetadata(ctx context.Context, req *MsgDisableSetMetadata) (*MsgDisableSetMetadataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DisableSetMetadata not implemented")
+}
+func (*UnimplementedMsgServer) SetMetadata(ctx context.Context, req *MsgSetMetadata) (*MsgSetMetadataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetMetadata not implemented")
 }
 
 func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
 	s.RegisterService(&_Msg_serviceDesc, srv)
 }
 
-func _Msg_Enable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgEnable)
+func _Msg_EnableSetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgEnableSetMetadata)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).Enable(ctx, in)
+		return srv.(MsgServer).EnableSetMetadata(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/saga.admin.v1.Msg/Enable",
+		FullMethod: "/saga.admin.v1.Msg/EnableSetMetadata",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).Enable(ctx, req.(*MsgEnable))
+		return srv.(MsgServer).EnableSetMetadata(ctx, req.(*MsgEnableSetMetadata))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_Disable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgDisable)
+func _Msg_DisableSetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgDisableSetMetadata)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).Disable(ctx, in)
+		return srv.(MsgServer).DisableSetMetadata(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/saga.admin.v1.Msg/Disable",
+		FullMethod: "/saga.admin.v1.Msg/DisableSetMetadata",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).Disable(ctx, req.(*MsgDisable))
+		return srv.(MsgServer).DisableSetMetadata(ctx, req.(*MsgDisableSetMetadata))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_SetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSetMetadata)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).SetMetadata(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/saga.admin.v1.Msg/SetMetadata",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).SetMetadata(ctx, req.(*MsgSetMetadata))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -430,122 +472,20 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*MsgServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Enable",
-			Handler:    _Msg_Enable_Handler,
+			MethodName: "EnableSetMetadata",
+			Handler:    _Msg_EnableSetMetadata_Handler,
 		},
 		{
-			MethodName: "Disable",
-			Handler:    _Msg_Disable_Handler,
+			MethodName: "DisableSetMetadata",
+			Handler:    _Msg_DisableSetMetadata_Handler,
+		},
+		{
+			MethodName: "SetMetadata",
+			Handler:    _Msg_SetMetadata_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "saga/admin/v1/tx.proto",
-}
-
-func (m *MsgEnable) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *MsgEnable) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MsgEnable) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Authority) > 0 {
-		i -= len(m.Authority)
-		copy(dAtA[i:], m.Authority)
-		i = encodeVarintTx(dAtA, i, uint64(len(m.Authority)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *MsgEnableResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *MsgEnableResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MsgEnableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *MsgDisable) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *MsgDisable) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MsgDisable) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Authority) > 0 {
-		i -= len(m.Authority)
-		copy(dAtA[i:], m.Authority)
-		i = encodeVarintTx(dAtA, i, uint64(len(m.Authority)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *MsgDisableResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *MsgDisableResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MsgDisableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	return len(dAtA) - i, nil
 }
 
 func (m *MsgSetMetadata) Marshal() (dAtA []byte, err error) {
@@ -613,6 +553,112 @@ func (m *MsgSetMetadataResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	return len(dAtA) - i, nil
 }
 
+func (m *MsgEnableSetMetadata) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgEnableSetMetadata) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgEnableSetMetadata) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Authority) > 0 {
+		i -= len(m.Authority)
+		copy(dAtA[i:], m.Authority)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Authority)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgEnableSetMetadataResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgEnableSetMetadataResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgEnableSetMetadataResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgDisableSetMetadata) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgDisableSetMetadata) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgDisableSetMetadata) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Authority) > 0 {
+		i -= len(m.Authority)
+		copy(dAtA[i:], m.Authority)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Authority)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgDisableSetMetadataResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgDisableSetMetadataResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgDisableSetMetadataResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	offset -= sovTx(v)
 	base := offset
@@ -624,50 +670,6 @@ func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *MsgEnable) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Authority)
-	if l > 0 {
-		n += 1 + l + sovTx(uint64(l))
-	}
-	return n
-}
-
-func (m *MsgEnableResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *MsgDisable) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Authority)
-	if l > 0 {
-		n += 1 + l + sovTx(uint64(l))
-	}
-	return n
-}
-
-func (m *MsgDisableResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
 func (m *MsgSetMetadata) Size() (n int) {
 	if m == nil {
 		return 0
@@ -694,275 +696,55 @@ func (m *MsgSetMetadataResponse) Size() (n int) {
 	return n
 }
 
+func (m *MsgEnableSetMetadata) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Authority)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgEnableSetMetadataResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgDisableSetMetadata) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Authority)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgDisableSetMetadataResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
 func sovTx(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozTx(x uint64) (n int) {
 	return sovTx(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (m *MsgEnable) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTx
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: MsgEnable: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgEnable: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Authority", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTx
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTx
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTx
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Authority = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTx(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthTx
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *MsgEnableResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTx
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: MsgEnableResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgEnableResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTx(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthTx
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *MsgDisable) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTx
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: MsgDisable: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgDisable: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Authority", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTx
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTx
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTx
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Authority = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTx(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthTx
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *MsgDisableResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTx
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: MsgDisableResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgDisableResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTx(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthTx
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
 }
 func (m *MsgSetMetadata) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -1109,6 +891,270 @@ func (m *MsgSetMetadataResponse) Unmarshal(dAtA []byte) error {
 		}
 		if fieldNum <= 0 {
 			return fmt.Errorf("proto: MsgSetMetadataResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgEnableSetMetadata) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgEnableSetMetadata: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgEnableSetMetadata: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Authority", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Authority = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgEnableSetMetadataResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgEnableSetMetadataResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgEnableSetMetadataResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgDisableSetMetadata) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgDisableSetMetadata: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgDisableSetMetadata: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Authority", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Authority = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgDisableSetMetadataResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgDisableSetMetadataResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgDisableSetMetadataResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:

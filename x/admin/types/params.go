@@ -8,7 +8,7 @@ import (
 
 // Parameter store key
 var (
-	ParamStoreKeyEnable = []byte("Enable")
+	ParamPermissions = []byte("Permissions")
 )
 
 var _ paramtypes.ParamSet = &Params{}
@@ -21,26 +21,28 @@ func ParamKeyTable() paramtypes.KeyTable {
 // ParamSetPairs returns the parameter set pairs.
 func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 	return paramtypes.ParamSetPairs{
-		paramtypes.NewParamSetPair(ParamStoreKeyEnable, &p.Enabled, validateBool),
+		paramtypes.NewParamSetPair(ParamPermissions, &p.Permissions, validatePermissions),
 	}
 }
 
 // NewParams creates a new Params object
-func NewParams(enable bool) Params {
+func NewParams(permissions Permissions) Params {
 	return Params{
-		Enabled: enable,
+		Permissions: permissions,
 	}
 }
 
 // DefaultParams creates a parameter instance with default values
 func DefaultParams() Params {
 	return Params{
-		Enabled: false,
+		Permissions: Permissions{
+			SetMetadata: true,
+		},
 	}
 }
 
-func validateBool(i interface{}) error {
-	_, ok := i.(bool)
+func validatePermissions(i interface{}) error {
+	_, ok := i.(Permissions)
 	if !ok {
 		return fmt.Errorf("invalid parameter type: %T", i)
 	}
