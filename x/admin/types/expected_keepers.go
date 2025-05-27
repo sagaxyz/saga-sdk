@@ -13,5 +13,5 @@ type BankKeeper interface {
 }
 
 type AclKeeper interface {
-	Admin(ctx context.Context, address sdk.AccAddress) bool
+	IsAdmin(ctx context.Context, address sdk.AccAddress) bool
 }

@@ -28,7 +28,7 @@ func (k Keeper) SetMetadata(
 	params := k.GetParams(ctx)
 	isACLAdmin := params.Permissions.SetMetadata &&
 		k.aclKeeper != nil &&
-		k.aclKeeper.Admin(ctx, sdk.AccAddress(msg.Authority))
+		k.aclKeeper.IsAdmin(ctx, sdk.AccAddress(msg.Authority))
 	isModuleAuth := msg.Authority == k.GetAuthority()
 
 	if !isACLAdmin && !isModuleAuth {
@@ -51,30 +51,26 @@ func (k Keeper) EnableSetMetadata(goCtx context.Context, msg *types.MsgEnableSet
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if k.GetAuthority() != msg.Authority {
-		err = ErrNotAuthorized
-		return
+		return nil, ErrNotAuthorized
 	}
 
 	p := k.GetParams(ctx)
 	p.Permissions.SetMetadata = true
 	k.SetParams(ctx, p)
 
-	resp = &types.MsgEnableSetMetadataResponse{}
-	return
+	return &types.MsgEnableSetMetadataResponse{}, nil
 }
 
 func (k Keeper) DisableSetMetadata(goCtx context.Context, msg *types.MsgDisableSetMetadata) (resp *types.MsgDisableSetMetadataResponse, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if k.GetAuthority() != msg.Authority {
-		err = ErrNotAuthorized
-		return
+		return nil, ErrNotAuthorized
 	}
 
 	p := k.GetParams(ctx)
 	p.Permissions.SetMetadata = false
 	k.SetParams(ctx, p)
 
-	resp = &types.MsgDisableSetMetadataResponse{}
-	return
+	return &types.MsgDisableSetMetadataResponse{}, nil
 }

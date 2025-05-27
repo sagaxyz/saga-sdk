@@ -156,4 +156,4 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 }
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
-func (AppModule) ConsensusVersion() uint64 { return 2 }
+func (AppModule) ConsensusVersion() uint64 { return 1 }
