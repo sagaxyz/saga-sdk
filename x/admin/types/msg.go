@@ -4,175 +4,88 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 var (
-	_ sdk.Msg = &MsgEnable{}
-	_ sdk.Msg = &MsgDisable{}
+	_ sdk.Msg = &MsgSetMetadata{}
 )
 
 const (
-	TypeMsgAddAdmins = "add_admins"
-	TypeMsgEnable    = "enable"
-	TypeMsgDisable   = "disable"
+	TypeMsgSetMetadata        = "set_metadata"
+	TypeMsgEnableSetMetadata  = "enable_set_metadata"
+	TypeMsgDisableSetMetadata = "disable_set_metadata"
 )
 
-// NewMsgAddAllowed creates a new instance of MsgAddAllowed
-func NewMsgAddAllowed(sender string, allowed ...string) *MsgAddAllowed { // nolint: interfacer
-	return &MsgAddAllowed{
-		Sender:  sender,
-		Allowed: allowed,
+// NewMsgSetMetadata creates a new instance of MsgSetMetadata
+func NewMsgSetMetadata(sender string, metadata banktypes.Metadata) *MsgSetMetadata { // nolint: interfacer
+	return &MsgSetMetadata{
+		Authority: sender,
+		Metadata:  &metadata,
 	}
 }
 
 // Route should return the name of the module
-func (msg MsgAddAllowed) Route() string { return RouterKey }
+func (msg MsgSetMetadata) Route() string { return RouterKey }
 
 // Type should return the action
-func (msg MsgAddAllowed) Type() string { return TypeMsgAddAllowed }
+func (msg MsgSetMetadata) Type() string { return TypeMsgSetMetadata }
 
 // ValidateBasic runs stateless checks on the message
-func (msg MsgAddAllowed) ValidateBasic() error {
-	_, err := sdk.AccAddressFromBech32(msg.Sender)
+func (msg MsgSetMetadata) ValidateBasic() error {
+	_, err := sdk.AccAddressFromBech32(msg.Authority)
 	if err != nil {
 		return errorsmod.Wrap(err, "invalid sender address")
 	}
-	for _, addr := range msg.Allowed {
-		_, err := sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
-		}
+	if msg.Metadata == nil {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "metadata cannot be nil")
+	}
+	if err := msg.Metadata.Validate(); err != nil {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
 	}
 	return nil
 }
 
-// NewMsgRemoveAllowed creates a new instance of MsgRemoveAllowed
-func NewMsgRemoveAllowed(sender string, allowed ...string) *MsgRemoveAllowed { // nolint: interfacer
-	return &MsgRemoveAllowed{
-		Sender:  sender,
-		Allowed: allowed,
+// NewMsgEnableSetMetadata creates a new instance of MsgEnableSetMetadata
+func NewMsgEnableSetMetadata(authority string) *MsgEnableSetMetadata {
+	return &MsgEnableSetMetadata{
+		Authority: authority,
 	}
 }
 
 // Route should return the name of the module
-func (msg MsgRemoveAllowed) Route() string { return RouterKey }
+func (msg MsgEnableSetMetadata) Route() string { return RouterKey }
 
 // Type should return the action
-func (msg MsgRemoveAllowed) Type() string { return TypeMsgRemoveAllowed }
+func (msg MsgEnableSetMetadata) Type() string { return TypeMsgEnableSetMetadata }
 
 // ValidateBasic runs stateless checks on the message
-func (msg MsgRemoveAllowed) ValidateBasic() error {
-	_, err := sdk.AccAddressFromBech32(msg.Sender)
+func (msg MsgEnableSetMetadata) ValidateBasic() error {
+	_, err := sdk.AccAddressFromBech32(msg.Authority)
 	if err != nil {
-		return errorsmod.Wrap(err, "invalid sender address")
-	}
-	for _, addr := range msg.Allowed {
-		_, err := sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid allowed address %s", addr)
-		}
+		return errorsmod.Wrap(err, "invalid authority address")
 	}
 	return nil
 }
 
-// NewMsgAddAdmins creates a new instance of MsgAddAdmins
-func NewMsgAddAdmins(sender string, admins ...string) *MsgAddAdmins { // nolint: interfacer
-	return &MsgAddAdmins{
-		Sender: sender,
-		Admins: admins,
+// NewMsgDisableSetMetadata creates a new instance of MsgDisableSetMetadata
+func NewMsgDisableSetMetadata(authority string) *MsgDisableSetMetadata {
+	return &MsgDisableSetMetadata{
+		Authority: authority,
 	}
 }
 
 // Route should return the name of the module
-func (msg MsgAddAdmins) Route() string { return RouterKey }
+func (msg MsgDisableSetMetadata) Route() string { return RouterKey }
 
 // Type should return the action
-func (msg MsgAddAdmins) Type() string { return TypeMsgAddAdmins }
+func (msg MsgDisableSetMetadata) Type() string { return TypeMsgDisableSetMetadata }
 
 // ValidateBasic runs stateless checks on the message
-func (msg MsgAddAdmins) ValidateBasic() error {
-	_, err := sdk.AccAddressFromBech32(msg.Sender)
+func (msg MsgDisableSetMetadata) ValidateBasic() error {
+	_, err := sdk.AccAddressFromBech32(msg.Authority)
 	if err != nil {
-		return errorsmod.Wrap(err, "invalid sender address")
-	}
-	for _, addr := range msg.Admins {
-		_, err := sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
-		}
-	}
-	return nil
-}
-
-// NewMsgRemoveAdmins creates a new instance of MsgRemoveAdmins
-func NewMsgRemoveAdmins(sender string, admins ...string) *MsgRemoveAdmins { // nolint: interfacer
-	return &MsgRemoveAdmins{
-		Sender: sender,
-		Admins: admins,
-	}
-}
-
-// Route should return the name of the module
-func (msg MsgRemoveAdmins) Route() string { return RouterKey }
-
-// Type should return the action
-func (msg MsgRemoveAdmins) Type() string { return TypeMsgRemoveAdmins }
-
-// ValidateBasic runs stateless checks on the message
-func (msg MsgRemoveAdmins) ValidateBasic() error {
-	_, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return errorsmod.Wrap(err, "invalid sender address")
-	}
-	for _, addr := range msg.Admins {
-		_, err := sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "invalid admin address '%s'", addr)
-		}
-	}
-	return nil
-}
-
-// NewMsgEnable creates a new instance of MsgEnable
-func NewMsgEnable(sender sdk.AccAddress) *MsgEnable { // nolint: interfacer
-	return &MsgEnable{
-		Authority: sender.String(),
-	}
-}
-
-// Route should return the name of the module
-func (msg MsgEnable) Route() string { return RouterKey }
-
-// Type should return the action
-func (msg MsgEnable) Type() string { return TypeMsgEnable }
-
-// ValidateBasic runs stateless checks on the message
-func (msg MsgEnable) ValidateBasic() error {
-	_, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return errorsmod.Wrap(err, "invalid sender address")
-	}
-	return nil
-}
-
-// NewMsgDisable creates a new instance of MsgDisable
-func NewMsgDisable(sender sdk.AccAddress, admins ...string) *MsgDisable { // nolint: interfacer
-	return &MsgDisable{
-		Sender: sender.String(),
-	}
-}
-
-// Route should return the name of the module
-func (msg MsgDisable) Route() string { return RouterKey }
-
-// Type should return the action
-func (msg MsgDisable) Type() string { return TypeMsgDisable }
-
-// ValidateBasic runs stateless checks on the message
-func (msg MsgDisable) ValidateBasic() error {
-	_, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return errorsmod.Wrap(err, "invalid sender address")
+		return errorsmod.Wrap(err, "invalid authority address")
 	}
 	return nil
 }

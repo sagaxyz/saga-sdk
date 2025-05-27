@@ -25,6 +25,4 @@ message QueryParamsResponse {
 }
 
 message QuerySuperuserRequest {}
-message QuerySuperuserResponse {
-  string superuser = 1;
-}
+message QuerySuperuserResponse { string superuser = 1; }

@@ -9,29 +9,28 @@ import (
 
 const (
 	// Amino names
-	addAdminsName     = "saga/MsgAddAdmins"
-	addAllowedName    = "saga/MsgAddAllowed"
-	removeAdminsName  = "saga/MsgRemoveAdmins"
-	removeAllowedName = "saga/MsgRemoveAllowed"
-	enableName        = "saga/MsgEnable"
-	disableName       = "saga/MsgDisable"
+	setMetadataName    = "saga/MsgSetMetadata"
+	EnableSetMetadata  = "saga/MsgEnableSetMetadata"
+	DisableSetMetadata = "saga/MsgDisableSetMetadata"
 )
 
 // RegisterInterfaces register implementations
 func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	registry.RegisterImplementations(
 		(*sdk.Msg)(nil),
-		&MsgEnable{},
-		&MsgDisable{},
+		&MsgSetMetadata{},
+		&MsgEnableSetMetadata{},
+		&MsgDisableSetMetadata{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
 }
 
-// RegisterLegacyAminoCodec registers the necessary x/acl interfaces and
+// RegisterLegacyAminoCodec registers the necessary x/admin interfaces and
 // concrete types on the provided LegacyAmino codec. These types are used for
 // Amino JSON serialization and EIP-712 compatibility.
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(&MsgEnable{}, enableName, nil)
-	cdc.RegisterConcrete(&MsgDisable{}, disableName, nil)
+	cdc.RegisterConcrete(&MsgSetMetadata{}, setMetadataName, nil)
+	cdc.RegisterConcrete(&MsgEnableSetMetadata{}, EnableSetMetadata, nil)
+	cdc.RegisterConcrete(&MsgDisableSetMetadata{}, DisableSetMetadata, nil)
 }
