@@ -3,6 +3,7 @@ package middleware
 import (
 	"github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
@@ -71,7 +72,7 @@ func (m *Middleware) OnTimeoutPacket(ctx types.Context, packet channeltypes.Pack
 }
 
 // SendPacket implements middlewareInterface.
-func (m *Middleware) SendPacket(ctx types.Context, chanCap *capabilitytypes.Capability, sourcePort string, sourceChannel string, timeoutHeight types.Height, timeoutTimestamp uint64, data []byte) (sequence uint64, err error) {
+func (m *Middleware) SendPacket(ctx types.Context, chanCap *capabilitytypes.Capability, sourcePort string, sourceChannel string, timeoutHeight clienttypes.Height, timeoutTimestamp uint64, data []byte) (sequence uint64, err error) {
 	panic("unimplemented")
 }
 

@@ -19,6 +19,11 @@ service Query {
   rpc ChainletRegistryStatus(QueryChainletRegistryStatusRequest) returns (QueryChainletRegistryStatusResponse) {
     option (google.api.http).get = "/saga/assetctl/v1/chainlet_status/{chainlet_id}";
   }
+
+  // Params queries the controller module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/saga/assetctl/v1/params";
+  }
 }
 
 // QueryAssetDirectoryRequest is the request type for the Query/AssetDirectory RPC method.
@@ -47,4 +52,10 @@ message RegisteredAsset {
   string display_name = 3;
   string description = 4;
   repeated DenomUnit denom_units = 5 [(gogoproto.nullable) = false];
+}
+
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1;
 }

@@ -21,8 +21,5 @@ func GetQueryCmd(queryRoute string) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	// cmd.AddCommand(CmdAssetDirectory())
-	// this line is used by SdkApp scaffolding # 1
-
 	return cmd
 }

@@ -21,9 +21,5 @@ func GetTxCmd() *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	// cmd.AddCommand(CmdRegisterAsset())
-	// cmd.AddCommand(CmdSupportAsset())
-	// this line is used by SdkApp scaffolding # 1
-
 	return cmd
 }

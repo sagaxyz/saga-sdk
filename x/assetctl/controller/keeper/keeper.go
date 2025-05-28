@@ -3,8 +3,6 @@ package keeper
 import (
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 
-	"fmt"
-
 	"cosmossdk.io/collections"
 	"cosmossdk.io/core/address"
 	corestore "cosmossdk.io/core/store"
@@ -65,51 +63,10 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 
 // InitGenesis initializes the keeper's state from a provided genesis state.
 func (k *Keeper) InitGenesis(ctx sdk.Context, genState types.GenesisState) {
-	// Populate AssetMetadata from genState.Assets
-	for _, asset := range genState.Assets {
-		// Assuming asset.IbcDenom is the Hub IBC denom for the asset
-		if asset.IbcDenom == "" {
-			panic(fmt.Errorf("genesis asset has empty ibc_denom: %+v", asset)) // Or handle more gracefully
-		}
-		k.AssetMetadata.Set(ctx, asset.IbcDenom, asset)
-	}
-
-	// TODO: If genState needs to store enabled chainlets, populate EnabledList here.
-	// For example, if GenesisState has a field like `EnabledChainletIds []string`:
-	// for _, chainletId := range genState.EnabledChainletIds {
-	// 	k.EnabledList.Set(ctx, chainletId)
-	// }
+	// TODO: figure out if we need to do anything here
 }
 
 // ExportGenesis returns the keeper's exported genesis state.
 func (k *Keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
-	assets := []types.RegisteredAsset{}
-	iter, err := k.AssetMetadata.Iterate(ctx, nil)
-	if err != nil {
-		// Consider logging and returning an error, or a partially valid/empty genesis
-		panic(fmt.Errorf("failed to iterate AssetMetadata: %w", err))
-	}
-	defer iter.Close()
-	for ; iter.Valid(); iter.Next() {
-		asset, err := iter.Value()
-		if err != nil {
-			// Consider logging and returning an error
-			panic(fmt.Errorf("failed to get asset value from iterator: %w", err))
-		}
-		assets = append(assets, asset)
-	}
-
-	// TODO: If EnabledList needs to be part of genesis, export it here.
-	// enabledChainletIds := []string{}
-	// enabledIter, err := k.EnabledList.Iterate(ctx, nil)
-	// if err != nil { panic(err) }
-	// defer enabledIter.Close()
-	// for ; enabledIter.Valid(); enabledIter.Next() {
-	// 	 chainletId, err := enabledIter.Key()
-	// 	 if err != nil { panic(err) }
-	// 	 enabledChainletIds = append(enabledChainletIds, chainletId)
-	// }
-
-	// return types.NewGenesisState(assets, enabledChainletIds) // Assuming GenesisState can take both
-	return &types.GenesisState{Assets: assets} // Placeholder if GenesisState only has Assets for now
+	return &types.GenesisState{}
 }

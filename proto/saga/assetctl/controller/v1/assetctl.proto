@@ -13,4 +13,7 @@ message DenomUnit {
     uint32 exponent = 2;
     // aliases is a list of string aliases for the given denom
     repeated string aliases = 3;
-  } 
+  }
+
+message Params {
+}

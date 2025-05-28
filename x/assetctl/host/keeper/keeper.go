@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 
 	"fmt"
 

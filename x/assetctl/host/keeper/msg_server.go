@@ -4,7 +4,7 @@ import (
 	"context"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
