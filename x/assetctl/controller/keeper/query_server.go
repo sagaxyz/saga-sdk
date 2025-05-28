@@ -54,3 +54,8 @@ func (k Querier) AssetDirectory(ctx context.Context, req *types.QueryAssetDirect
 func (k Querier) ChainletRegistryStatus(context.Context, *types.QueryChainletRegistryStatusRequest) (*types.QueryChainletRegistryStatusResponse, error) {
 	panic("unimplemented")
 }
+
+// Params implements types.QueryServer.
+func (k Querier) Params(context.Context, *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	panic("unimplemented")
+}

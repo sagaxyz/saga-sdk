@@ -14,6 +14,7 @@ import (
 var (
 	EnabledListPrefix   = collections.NewPrefix(0x00) // Stores ChainletIDs that have enabled the registry
 	AssetMetadataPrefix = collections.NewPrefix(0x01) // Stores global asset metadata keyed by Hub IBC Denom
+	ParamsPrefix        = collections.NewPrefix(0x02) // Stores controller module parameters
 )
 
 type IBCInterface interface {
@@ -31,6 +32,7 @@ type Keeper struct {
 	EnabledList     collections.KeySet[string]                           // Key: ChainletID. Value: presence means enabled.
 	AssetMetadata   collections.Map[string, types.RegisteredAsset]       // Key: Hub IBC Denom. Value: RegisteredAsset metadata.
 	SupportedAssets collections.KeySet[collections.Pair[string, string]] // Key: ChainletID, Hub IBC Denom. Value: presence means supported.
+	Params          collections.Item[types.Params]
 }
 
 func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {
@@ -50,6 +52,10 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 			"asset_metadata",      // Global asset directory
 			collections.StringKey, // Key is Hub IBC Denom
 			codec.CollValue[types.RegisteredAsset](cdc)),
+		Params: collections.NewItem(sb,
+			ParamsPrefix,
+			"params",
+			codec.CollValue[types.Params](cdc)),
 	}
 
 	var err error
