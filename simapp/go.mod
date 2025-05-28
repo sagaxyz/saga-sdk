@@ -236,7 +236,7 @@ replace (
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
 	// simapp uses the latest version of the saga-sdk
-	github.com/sagaxyz/saga-sdk => ../.
+	github.com/sagaxyz/saga-sdk => ../
 	// replace broken goleveldb
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )

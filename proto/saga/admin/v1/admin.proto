@@ -1,0 +1,6 @@
+syntax = "proto3";
+package saga.admin.v1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/admin/types";
