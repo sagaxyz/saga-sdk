@@ -321,11 +321,11 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Query_AssetDirectory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "assetctl", "v1", "asset_directory"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Query_AssetDirectory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "assetctl", "controller", "v1", "asset_directory"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Query_ChainletRegistryStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"saga", "assetctl", "v1", "chainlet_status", "chainlet_id"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Query_ChainletRegistryStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"saga", "assetctl", "controller", "v1", "chainlet_status", "chainlet_id"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Query_Params_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"saga", "assetctl", "v1", "params"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Query_Params_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"saga", "assetctl", "controller", "v1", "params"}, "", runtime.AssumeColonVerbOpt(false)))
 )
 
 var (

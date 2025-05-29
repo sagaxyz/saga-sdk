@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	// "cosmossdk.io/core/address"
 	"cosmossdk.io/core/appmodule"
-	// "cosmossdk.io/depinject"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"

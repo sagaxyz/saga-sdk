@@ -10,15 +10,40 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/host/types";
 
 service Msg {
     option (cosmos.msg.v1.service) = true;
-
+    // SupportAsset sends an message to the controller to let it know that this host
+    // supports the given asset.
     rpc SupportAsset(MsgSupportAsset) returns (MsgSupportAssetResponse);
+
+    // RegisterDenom sends a message to the controller to let it know that this host
+    // registers the given denom as a native asset of the host.
+    rpc RegisterDenom(MsgRegisterDenom) returns (MsgRegisterDenomResponse);
+
+    rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
 message MsgSupportAsset {
-    option (cosmos.msg.v1.signer) = "creator";
+    option (cosmos.msg.v1.signer) = "authority";
 
-    string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     string ibc_denom = 2;
 }
 
 message MsgSupportAssetResponse {}
+
+message MsgRegisterDenom {
+    option (cosmos.msg.v1.signer) = "authority";
+
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string ibc_denom = 2;
+}
+
+message MsgRegisterDenomResponse {}
+
+message MsgUpdateParams {
+    option (cosmos.msg.v1.signer) = "authority";
+
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    Params params = 2;
+}
+
+message MsgUpdateParamsResponse {}

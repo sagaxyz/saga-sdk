@@ -24,8 +24,8 @@ var _ types.MsgServer = msgServer{}
 
 // RegisterAssets implements types.MsgServer.
 func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterAssets) (*types.MsgRegisterAssetsResponse, error) {
-	if msg.Creator != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	if msg.Authority != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -45,8 +45,8 @@ func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterA
 
 // UnregisterAssets implements types.MsgServer.
 func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregisterAssets) (*types.MsgUnregisterAssetsResponse, error) {
-	if msg.Creator != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	if msg.Authority != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -64,8 +64,8 @@ func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregis
 
 // ToggleChainletRegistry implements types.MsgServer.
 func (k msgServer) ToggleChainletRegistry(ctx context.Context, msg *types.MsgToggleChainletRegistry) (*types.MsgToggleChainletRegistryResponse, error) {
-	if msg.Creator != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	if msg.Authority != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
 	if msg.ChainletId == "" {
@@ -84,8 +84,8 @@ func (k msgServer) ToggleChainletRegistry(ctx context.Context, msg *types.MsgTog
 }
 
 func (k msgServer) SupportAsset(ctx context.Context, msg *types.MsgSupportAsset) (*types.MsgSupportAssetResponse, error) {
-	if msg.Creator != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("creator is not the authority")
+	if msg.Authority != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
 	chainletId := "" // TODO: get chainlet id from the sender address
@@ -95,7 +95,6 @@ func (k msgServer) SupportAsset(ctx context.Context, msg *types.MsgSupportAsset)
 	}
 
 	exists, err := k.SupportedAssets.Has(ctx, collections.Join(chainletId, msg.IbcDenom))
-
 	if err != nil {
 		return nil, err
 	}
@@ -110,4 +109,22 @@ func (k msgServer) SupportAsset(ctx context.Context, msg *types.MsgSupportAsset)
 	}
 
 	return &types.MsgSupportAssetResponse{}, nil
+}
+
+// UpdateParams implements types.MsgServer.
+func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+	if msg.Authority != k.Authority {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
+	}
+
+	if msg.Params == nil {
+		return nil, sdkerrors.ErrInvalidRequest.Wrap("params cannot be nil")
+	}
+
+	err := k.Params.Set(ctx, *msg.Params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateParamsResponse{}, nil
 }

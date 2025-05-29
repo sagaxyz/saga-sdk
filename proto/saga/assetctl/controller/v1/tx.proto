@@ -16,6 +16,7 @@ service Msg {
   rpc UnregisterAssets(MsgUnregisterAssets) returns (MsgUnregisterAssetsResponse);
   rpc ToggleChainletRegistry(MsgToggleChainletRegistry) returns (MsgToggleChainletRegistryResponse);
   rpc SupportAsset(MsgSupportAsset) returns (MsgSupportAssetResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
 // AssetDetails defines the metadata for a single asset to be registered.
@@ -31,27 +32,27 @@ message AssetDetails {
 }
 
 message MsgRegisterAssets {
-  option (cosmos.msg.v1.signer) = "creator";
+  option (cosmos.msg.v1.signer) = "authority";
 
-  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // Signer (e.g., ICA address or Hub governance address)
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // Signer (e.g., ICA address or Hub governance address)
   repeated AssetDetails assets_to_register = 2 [(gogoproto.nullable) = false];
 }
 
 message MsgRegisterAssetsResponse {}
 
 message MsgUnregisterAssets {
-  option (cosmos.msg.v1.signer) = "creator";
+  option (cosmos.msg.v1.signer) = "authority";
 
-  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // Signer (e.g., ICA address or Hub governance address)
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // Signer (e.g., ICA address or Hub governance address)
   repeated string ibc_denoms_to_unregister = 2;
 }
 
 message MsgUnregisterAssetsResponse {}
 
 message MsgToggleChainletRegistry {
-  option (cosmos.msg.v1.signer) = "creator";
+  option (cosmos.msg.v1.signer) = "authority";
 
-  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];     // Usually the ICA controller address for the chainlet or a designated chainlet admin account.
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];     // Usually the ICA controller address for the chainlet or a designated chainlet admin account.
   string chainlet_id = 2; // The ID of the chainlet to toggle registry status for.
   bool enable = 3;        // True to enable, false to disable.
 }
@@ -59,10 +60,19 @@ message MsgToggleChainletRegistry {
 message MsgToggleChainletRegistryResponse {}
 
 message MsgSupportAsset {
-  option (cosmos.msg.v1.signer) = "creator";
+  option (cosmos.msg.v1.signer) = "authority";
 
-  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
   string ibc_denom = 2;
 }
 
 message MsgSupportAssetResponse {}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  Params params = 2;
+}
+
+message MsgUpdateParamsResponse {}

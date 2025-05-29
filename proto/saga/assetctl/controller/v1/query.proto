@@ -12,17 +12,17 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types";
 service Query {
   // AssetDirectory queries the list of all registered assets on the Hub.
   rpc AssetDirectory(QueryAssetDirectoryRequest) returns (QueryAssetDirectoryResponse) {
-    option (google.api.http).get = "/saga/assetctl/v1/asset_directory";
+    option (google.api.http).get = "/saga/assetctl/controller/v1/asset_directory";
   }
 
   // ChainletRegistryStatus queries if the asset registry is enabled for a specific chainlet.
   rpc ChainletRegistryStatus(QueryChainletRegistryStatusRequest) returns (QueryChainletRegistryStatusResponse) {
-    option (google.api.http).get = "/saga/assetctl/v1/chainlet_status/{chainlet_id}";
+    option (google.api.http).get = "/saga/assetctl/controller/v1/chainlet_status/{chainlet_id}";
   }
 
   // Params queries the controller module parameters.
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/saga/assetctl/v1/params";
+    option (google.api.http).get = "/saga/assetctl/controller/v1/params";
   }
 }
 

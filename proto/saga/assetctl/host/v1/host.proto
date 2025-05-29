@@ -5,3 +5,5 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/host/types";
 
 
 message HostGenesisState {}
+
+message Params {}

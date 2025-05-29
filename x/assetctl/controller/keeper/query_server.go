@@ -30,19 +30,6 @@ func (k Querier) AssetDirectory(ctx context.Context, req *types.QueryAssetDirect
 	}
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	_ = sdkCtx
-	// store := runtime.KVStoreAdapter(k.Keeper.storeService.OpenKVStore(sdkCtx))
-	// постStore := prefix.NewStore(store, types.PostKey)
-	// pageRes, err := query.Paginate(постStore, req.Pagination, func(key, value []byte) error {
-	// 	var пост types.Post
-	// 	if err := k.cdc.Unmarshal(value, &пост); err != nil {
-	// 		return err
-	// 	}
-	// 	posts = append(posts, пост)
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	return nil, status.Error(codes.Internal, err.Error())
-	// }
 
 	return &types.QueryAssetDirectoryResponse{
 		// Asset: posts,

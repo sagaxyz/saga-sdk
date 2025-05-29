@@ -2,9 +2,11 @@ syntax = "proto3";
 package saga.assetctl.controller.v1;
 
 import "gogoproto/gogo.proto";
-import "saga/assetctl/controller/v1/query.proto";
+import "saga/assetctl/controller/v1/assetctl.proto";
 
 option go_package            = "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types";
 
 // GenesisState defines the assetctl module's genesis state.
-message GenesisState {} 
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+} 
