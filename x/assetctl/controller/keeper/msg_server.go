@@ -6,8 +6,6 @@ import (
 	"cosmossdk.io/collections"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type msgServer struct {
@@ -28,8 +26,6 @@ func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterA
 		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
 	// TODO: Iterate through msg.AssetsToRegister
 	// For each asset:
 	// 1. Determine its IBC denom (e.g., types.GetIBCDenom)
@@ -38,7 +34,6 @@ func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterA
 	// 4. Store it: k.EnabledList.Set(ctx, ibcDenom)
 	//    (Note: EnabledList currently stores KeySet[string]. You might need to store the full RegisteredAsset. This might mean changing EnabledList to a collections.Map[string, types.RegisteredAsset] or creating a new Map for the full asset details and keeping EnabledList for quick lookups of allowed denoms.)
 	// 5. Emit event
-	_ = ctx
 
 	return &types.MsgRegisterAssetsResponse{}, nil
 }
@@ -49,15 +44,12 @@ func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregis
 		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
 	// TODO: Iterate through msg.IbcDenomsToUnregister
 	// For each ibcDenom:
 	// 1. Check if it exists in k.EnabledList
 	// 2. If it exists, remove it: k.EnabledList.Delete(ctx, ibcDenom)
 	//    (And remove from the full RegisteredAsset map if you created one)
 	// 3. Emit event
-	_ = ctx
 
 	return &types.MsgUnregisterAssetsResponse{}, nil
 }

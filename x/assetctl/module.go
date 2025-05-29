@@ -15,7 +15,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/keeper"
-	"github.com/sagaxyz/saga-sdk/x/assetctl/types"
+	controllertypes "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
+	hostkeeper "github.com/sagaxyz/saga-sdk/x/assetctl/host/keeper"
+	hosttypes "github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
 )
 
 var (
@@ -41,40 +43,84 @@ func NewAppModuleBasic() AppModuleBasic {
 
 // Name returns the name of the module as a string.
 func (AppModuleBasic) Name() string {
-	return types.ModuleName
+	return "assetctl"
 }
 
 // RegisterLegacyAminoCodec registers the amino codec for the module, which is used
 // to marshal and unmarshal structs to/from []byte in order to persist them in the module's KVStore.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterLegacyAminoCodec(cdc)
+	// Register host types
+	hosttypes.RegisterLegacyAminoCodec(cdc)
+	// Register controller types
+	controllertypes.RegisterLegacyAminoCodec(cdc)
 }
 
 // RegisterInterfaces registers a module's interface types and their concrete implementations as proto.Message.
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {
-	types.RegisterInterfaces(registry)
+	// Register host types
+	hosttypes.RegisterInterfaces(registry)
+	// Register controller types
+	controllertypes.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage.
 // The default GenesisState need to be defined by the module developer and is primarily used for testing.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesis())
+	// Create default genesis states for both host and controller
+	hostGenState := hosttypes.GenesisState{
+		Params: hosttypes.Params{},
+	}
+	controllerGenState := controllertypes.GenesisState{
+		Params: controllertypes.Params{},
+	}
+
+	// Combine both genesis states
+	combinedGenState := struct {
+		Host       hosttypes.GenesisState       `json:"host"`
+		Controller controllertypes.GenesisState `json:"controller"`
+	}{
+		Host:       hostGenState,
+		Controller: controllerGenState,
+	}
+
+	// Marshal the combined state to JSON
+	bz, err := json.Marshal(&combinedGenState)
+	if err != nil {
+		panic(fmt.Errorf("failed to marshal default genesis state: %w", err))
+	}
+	return bz
 }
 
 // ValidateGenesis used to validate the GenesisState, given in json.RawMessage.
 // This method is called at server initialization for genesis validation.
 // Ideally, it allows parallel execution with other modules genesis states.
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
-	var genState types.GenesisState
-	if err := cdc.UnmarshalJSON(bz, &genState); err != nil {
-		return fmt.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
+	var genState struct {
+		Host       hosttypes.GenesisState       `json:"host"`
+		Controller controllertypes.GenesisState `json:"controller"`
 	}
-	return genState.Validate()
+
+	if err := json.Unmarshal(bz, &genState); err != nil {
+		return fmt.Errorf("failed to unmarshal assetctl genesis state: %w", err)
+	}
+
+	// Validate host genesis state
+	if err := genState.Host.Validate(); err != nil {
+		return fmt.Errorf("invalid host genesis state: %w", err)
+	}
+
+	// Validate controller genesis state
+	if err := genState.Controller.Validate(); err != nil {
+		return fmt.Errorf("invalid controller genesis state: %w", err)
+	}
+
+	return nil
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	// types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
+	hosttypes.RegisterQueryHandlerClient(context.Background(), mux, hosttypes.NewQueryClient(clientCtx))
+	controllertypes.RegisterQueryHandlerClient(context.Background(), mux, controllertypes.NewQueryClient(clientCtx))
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this
@@ -99,15 +145,17 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 type AppModule struct {
 	AppModuleBasic
 
-	keeper keeper.Keeper
+	keeper     keeper.Keeper
+	hostKeeper hostkeeper.Keeper
 	// accountKeeper types.AccountKeeper
 	// bankKeeper    types.BankKeeper
 }
 
-func NewAppModule(cdc codec.Codec, keeper keeper.Keeper /*accountKeeper types.AccountKeeper, bankKeeper types.BankKeeper*/) AppModule {
+func NewAppModule(cdc codec.Codec, keeper keeper.Keeper, hostKeeper hostkeeper.Keeper /*accountKeeper types.AccountKeeper, bankKeeper types.BankKeeper*/) AppModule {
 	return AppModule{
 		AppModuleBasic: NewAppModuleBasic(),
 		keeper:         keeper,
+		hostKeeper:     hostKeeper,
 		// accountKeeper:  accountKeeper,
 		// bankKeeper:     bankKeeper,
 	}
@@ -124,8 +172,11 @@ func (am AppModule) Name() string {
 // RegisterServices registers a gRPC query service to respond to the
 // module-specific gRPC queries.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
-	types.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServerImpl(am.keeper))
+	hosttypes.RegisterMsgServer(cfg.MsgServer(), hostkeeper.NewMsgServerImpl(am.hostKeeper))
+	hosttypes.RegisterQueryServer(cfg.QueryServer(), hostkeeper.NewQueryServerImpl(am.hostKeeper))
+
+	controllertypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
+	controllertypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServerImpl(am.keeper))
 
 	// m := keeper.NewMigrator(am.keeper)
 	// if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
@@ -135,17 +186,41 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 
 // InitGenesis performs the module's genesis initialization.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.RawMessage) {
-	var genState types.GenesisState
-	// Initialize global index to index in genesis state
-	cdc.MustUnmarshalJSON(gs, &genState)
+	var genState struct {
+		Host       hosttypes.GenesisState       `json:"host"`
+		Controller controllertypes.GenesisState `json:"controller"`
+	}
 
-	am.keeper.InitGenesis(ctx, genState)
+	if err := json.Unmarshal(gs, &genState); err != nil {
+		panic(fmt.Errorf("failed to unmarshal assetctl genesis state: %w", err))
+	}
+
+	// Initialize host genesis state
+	am.hostKeeper.InitGenesis(ctx, genState.Host)
+
+	// Initialize controller genesis state
+	am.keeper.InitGenesis(ctx, genState.Controller)
 }
 
 // ExportGenesis returns the module's exported genesis state as raw JSON bytes.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	genState := am.keeper.ExportGenesis(ctx)
-	return cdc.MustMarshalJSON(genState)
+	hostGenState := am.hostKeeper.ExportGenesis(ctx)
+	controllerGenState := am.keeper.ExportGenesis(ctx)
+
+	combinedGenState := struct {
+		Host       hosttypes.GenesisState       `json:"host"`
+		Controller controllertypes.GenesisState `json:"controller"`
+	}{
+		Host:       *hostGenState,
+		Controller: *controllerGenState,
+	}
+
+	// Marshal the combined state to JSON
+	bz, err := json.Marshal(&combinedGenState)
+	if err != nil {
+		panic(fmt.Errorf("failed to marshal genesis state: %w", err))
+	}
+	return bz
 }
 
 // ConsensusVersion implements HasConsensusVersion
