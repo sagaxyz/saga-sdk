@@ -25,6 +25,8 @@ type Keeper struct {
 	logger       log.Logger
 	addressCodec address.Codec
 
+	Authority string
+
 	Schema      collections.Schema
 	EnabledList collections.KeySet[string] // Key: ChainletID. Value: presence means enabled.
 	Params      collections.Item[types.Params]

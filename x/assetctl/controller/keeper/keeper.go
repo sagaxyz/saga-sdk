@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	EnabledListPrefix   = collections.NewPrefix(0x00) // Stores ChainletIDs that have enabled the registry
-	AssetMetadataPrefix = collections.NewPrefix(0x01) // Stores global asset metadata keyed by Hub IBC Denom
-	ParamsPrefix        = collections.NewPrefix(0x02) // Stores controller module parameters
+	EnabledListPrefix     = collections.NewPrefix(0x00) // Stores ChainletIDs that have enabled the registry
+	AssetMetadataPrefix   = collections.NewPrefix(0x01) // Stores global asset metadata keyed by Hub IBC Denom
+	ParamsPrefix          = collections.NewPrefix(0x02) // Stores controller module parameters
+	SupportedAssetsPrefix = collections.NewPrefix(0x03) // Stores supported assets keyed by ChainletID and Hub IBC Denom
 )
 
 type IBCInterface interface {
@@ -52,6 +53,10 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 			"asset_metadata",      // Global asset directory
 			collections.StringKey, // Key is Hub IBC Denom
 			codec.CollValue[types.RegisteredAsset](cdc)),
+		SupportedAssets: collections.NewKeySet(sb,
+			SupportedAssetsPrefix,
+			"supported_assets", // Tracks supported assets keyed by ChainletID and Hub IBC Denom
+			collections.PairKeyCodec(collections.StringKey, collections.StringKey)),
 		Params: collections.NewItem(sb,
 			ParamsPrefix,
 			"params",

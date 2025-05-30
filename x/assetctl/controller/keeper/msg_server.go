@@ -26,6 +26,10 @@ func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterA
 		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
 	}
 
+	if len(msg.AssetsToRegister) == 0 {
+		return nil, sdkerrors.ErrInvalidRequest.Wrap("assets to register cannot be empty")
+	}
+
 	// TODO: Iterate through msg.AssetsToRegister
 	// For each asset:
 	// 1. Determine its IBC denom (e.g., types.GetIBCDenom)
@@ -42,6 +46,10 @@ func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterA
 func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregisterAssets) (*types.MsgUnregisterAssetsResponse, error) {
 	if msg.Authority != k.Authority {
 		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
+	}
+
+	if len(msg.IbcDenomsToUnregister) == 0 {
+		return nil, sdkerrors.ErrInvalidRequest.Wrap("ibc denoms to unregister cannot be empty")
 	}
 
 	// TODO: Iterate through msg.IbcDenomsToUnregister

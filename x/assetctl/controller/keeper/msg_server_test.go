@@ -27,7 +27,7 @@ func setupTest(t *testing.T) (sdk.Context, types.MsgServer) {
 	logger := log.NewTestLogger(t)
 	cms := integration.CreateMultiStore(keys, logger)
 
-	storeService := runtime.NewKVStoreService(storetypes.NewKVStoreKey("test"))
+	storeService := runtime.NewKVStoreService(keys[assetctltypes.StoreKey])
 
 	ctx := sdk.NewContext(cms, tmproto.Header{}, true, logger)
 
