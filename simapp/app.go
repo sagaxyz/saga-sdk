@@ -109,6 +109,9 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	"github.com/sagaxyz/saga-sdk/x/acl"
+	aclkeeper "github.com/sagaxyz/saga-sdk/x/acl/keeper"
+	acltypes "github.com/sagaxyz/saga-sdk/x/acl/types"
 	"github.com/sagaxyz/saga-sdk/x/admin"
 	adminkeeper "github.com/sagaxyz/saga-sdk/x/admin/keeper"
 	admintypes "github.com/sagaxyz/saga-sdk/x/admin/types"
@@ -169,6 +172,7 @@ type SimApp struct {
 	NFTKeeper             nftkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 	CircuitKeeper         circuitkeeper.Keeper
+	AclKeeper             aclkeeper.Keeper
 	AdminKeeper           adminkeeper.Keeper
 	// the module manager
 	ModuleManager      *module.Manager
@@ -264,7 +268,7 @@ func NewSimApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, consensusparamtypes.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey,
 		evidencetypes.StoreKey, circuittypes.StoreKey,
-		authzkeeper.StoreKey, nftkeeper.StoreKey, group.StoreKey, admintypes.StoreKey,
+		authzkeeper.StoreKey, nftkeeper.StoreKey, group.StoreKey, acltypes.StoreKey, admintypes.StoreKey,
 	)
 
 	// register streaming services
@@ -395,12 +399,19 @@ func NewSimApp(
 	// If evidence needs to be handled for the app, set routes in router here and seal
 	app.EvidenceKeeper = *evidenceKeeper
 
+	app.AclKeeper = aclkeeper.New(
+		appCodec,
+		keys[acltypes.StoreKey],
+		app.GetSubspace(acltypes.ModuleName),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
 	app.AdminKeeper = adminkeeper.New(
 		appCodec,
 		keys[admintypes.StoreKey],
 		app.GetSubspace(admintypes.ModuleName),
 		app.BankKeeper,
-		nil,
+		app.AclKeeper,
 		"cosmos14znghca2ummf4ey23n7exrvf5e4ztcf2v235kq",
 	)
 
@@ -435,6 +446,7 @@ func NewSimApp(
 		nftmodule.NewAppModule(appCodec, app.NFTKeeper, app.AccountKeeper, app.BankKeeper, app.interfaceRegistry),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 		circuit.NewAppModule(appCodec, app.CircuitKeeper),
+		acl.NewAppModule(appCodec, app.AclKeeper),
 		admin.NewAppModule(
 			appCodec, app.AdminKeeper,
 		),
@@ -473,6 +485,7 @@ func NewSimApp(
 		stakingtypes.ModuleName,
 		genutiltypes.ModuleName,
 		authz.ModuleName,
+		acltypes.ModuleName,
 		admintypes.ModuleName,
 	)
 	app.ModuleManager.SetOrderEndBlockers(
@@ -482,6 +495,7 @@ func NewSimApp(
 		genutiltypes.ModuleName,
 		feegrant.ModuleName,
 		group.ModuleName,
+		acltypes.ModuleName,
 		admintypes.ModuleName,
 	)
 
@@ -493,7 +507,7 @@ func NewSimApp(
 		distrtypes.ModuleName, stakingtypes.ModuleName, slashingtypes.ModuleName, govtypes.ModuleName,
 		minttypes.ModuleName, crisistypes.ModuleName, genutiltypes.ModuleName, evidencetypes.ModuleName, authz.ModuleName,
 		feegrant.ModuleName, nft.ModuleName, group.ModuleName, paramstypes.ModuleName, upgradetypes.ModuleName,
-		vestingtypes.ModuleName, consensusparamtypes.ModuleName, circuittypes.ModuleName, admintypes.ModuleName,
+		vestingtypes.ModuleName, consensusparamtypes.ModuleName, circuittypes.ModuleName, acltypes.ModuleName, admintypes.ModuleName,
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)
@@ -813,6 +827,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(govtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 
+	paramsKeeper.Subspace(acltypes.ModuleName)
 	paramsKeeper.Subspace(admintypes.ModuleName)
 
 	return paramsKeeper
