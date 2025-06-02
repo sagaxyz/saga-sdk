@@ -26,9 +26,11 @@ func (k Keeper) SetMetadata(
 	}
 
 	params := k.GetParams(ctx)
+	accAddr, _ := sdk.AccAddressFromBech32(msg.Authority)
 	isACLAdmin := params.Permissions.SetMetadata &&
 		k.aclKeeper != nil &&
-		k.aclKeeper.IsAdmin(ctx, sdk.AccAddress(msg.Authority))
+		k.aclKeeper.Enabled(ctx) &&
+		k.aclKeeper.IsAdmin(ctx, accAddr)
 	isModuleAuth := msg.Authority == k.GetAuthority()
 
 	if !isACLAdmin && !isModuleAuth {
