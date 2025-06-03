@@ -48,7 +48,7 @@ func (k msgServer) RegisterAssets(ctx context.Context, msg *types.MsgRegisterAss
 			return nil, fmt.Errorf("denom trace not found")
 		}
 
-		// Then get the channel from the path
+		// Then get the channel from the path, which for now we only allow 1 hop
 		pathParts := strings.Split(denomTrace.Path, "/")
 		if len(pathParts) != 2 {
 			return nil, fmt.Errorf("denom trace path is not valid, only 1 hop is allowed")
@@ -57,8 +57,6 @@ func (k msgServer) RegisterAssets(ctx context.Context, msg *types.MsgRegisterAss
 		if pathParts[1] != msg.ChannelId {
 			return nil, fmt.Errorf("denom trace channel does not match the channel id")
 		}
-
-		// TODO: check if the asset is already registered
 
 		// We allow overwriting the asset metadata
 		err = k.AssetMetadata.Set(ctx, asset.IbcDenom, types.RegisteredAsset{
@@ -146,8 +144,8 @@ func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 }
 
 // checkChannelAuthority checks if the address is the authority of the channel.
-// Right now it only checks if the address is from the same chainlet, but we should check
-// if the address is the authority of the channel (admin).
+// Right now it only checks if the address is from the same chainlet, because we
+// trust that the chainlet is prohibiting other accounts from sending these messages.
 func (k Keeper) checkChannelAuthority(ctx context.Context, address, channelId string) error {
 	// TODO: this is an expensive operation, we should allow pre-registration of the
 	// authorities.

@@ -61,6 +61,7 @@ func (m *Middleware) OnChanOpenTry(ctx types.Context, order channeltypes.Order, 
 func (m *Middleware) OnRecvPacket(ctx types.Context, packet channeltypes.Packet, relayer types.AccAddress) exported.Acknowledgement {
 	// This is the only method we need to implement, the rest are just passthrough.
 	var data transfertypes.FungibleTokenPacketData
+	// TODO: use a cdc that we pass in the constructor
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		return m.app.OnRecvPacket(ctx, packet, relayer)
 	}
@@ -81,7 +82,7 @@ func (m *Middleware) OnRecvPacket(ctx types.Context, packet channeltypes.Packet,
 
 	has, err := m.k.SupportedAssets.Has(ctx, collections.Join(pfmmetadata.Forward.Channel, data.Denom))
 	if err != nil {
-		return m.app.OnRecvPacket(ctx, packet, relayer)
+		return newErrorAcknowledgement("error checking if asset is supported")
 	}
 	if !has {
 		return newErrorAcknowledgement("asset not supported by destination chain")
