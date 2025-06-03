@@ -18,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/keeper"
 	"github.com/stretchr/testify/require"
@@ -66,9 +67,41 @@ func TestAnteHandler(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	_, err = antehandler.AnteHandle(ctx, builder.GetTx(), false, func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
+	emptyAnteHandler := func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
 		return ctx, nil
-	})
+	}
+
+	_, err = antehandler.AnteHandle(ctx, builder.GetTx(), false, emptyAnteHandler)
 	require.NoError(t, err)
 
+	// Recursive authz (2 levels of nesting)
+	msg1 := &ibctransfertypes.MsgTransfer{
+		SourcePort:    "transfer",
+		SourceChannel: "channel-0",
+		Sender:        "cosmos1test",
+		Receiver:      "cosmos1test",
+		Token:         sdk.NewCoin("ibc/abcdefNOTREGISTERED", math.NewInt(100)),
+	}
+
+	anyMsg1, err := codectypes.NewAnyWithValue(msg1)
+	require.NoError(t, err)
+
+	msg2 := &authztypes.MsgExec{
+		Grantee: "cosmos1test",
+		Msgs:    []*codectypes.Any{anyMsg1},
+	}
+
+	anyMsg2, err := codectypes.NewAnyWithValue(msg2)
+	require.NoError(t, err)
+
+	authzMsg := &authztypes.MsgExec{
+		Grantee: "cosmos1test",
+		Msgs:    []*codectypes.Any{anyMsg2},
+	}
+
+	builder = txConfig.NewTxBuilder()
+	builder.SetMsgs(authzMsg)
+
+	_, err = antehandler.AnteHandle(ctx, builder.GetTx(), false, emptyAnteHandler)
+	require.Error(t, err)
 }
