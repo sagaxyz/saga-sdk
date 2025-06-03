@@ -47,11 +47,10 @@ message QueryChainletRegistryStatusResponse {
 
 // RegisteredAsset defines the structure of an asset in the directory.
 message RegisteredAsset {
-  string ibc_denom = 1;
-  string original_denom = 2;
-  string display_name = 3;
-  string description = 4;
-  repeated DenomUnit denom_units = 5 [(gogoproto.nullable) = false];
+  string original_denom = 1;
+  string display_name = 2;
+  string description = 3;
+  repeated DenomUnit denom_units = 4 [(gogoproto.nullable) = false];
 }
 
 message QueryParamsRequest {}

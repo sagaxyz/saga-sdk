@@ -18,23 +18,26 @@ var (
 	SupportedAssetsPrefix = collections.NewPrefix(0x03) // Stores supported assets keyed by ChainletID and Hub IBC Denom
 )
 
-type IBCInterface interface {
-}
-
 type Keeper struct {
 	cdc          codec.BinaryCodec
 	storeSvc     corestore.KVStoreService
 	logger       log.Logger
 	addressCodec address.Codec
 
+	ICAHostKeeper     ICAHostKeeper
+	IBCChannelKeeper  IBCChannelKeeper
+	IBCTransferKeeper IBCTransferKeeper
+
 	Authority string
 
 	Schema          collections.Schema
-	EnabledList     collections.KeySet[string]                           // Key: ChainletID. Value: presence means enabled.
 	AssetMetadata   collections.Map[string, types.RegisteredAsset]       // Key: Hub IBC Denom. Value: RegisteredAsset metadata.
-	SupportedAssets collections.KeySet[collections.Pair[string, string]] // Key: ChainletID, Hub IBC Denom. Value: presence means supported.
+	SupportedAssets collections.KeySet[collections.Pair[string, string]] // Key: ChannelID, IBC Denom (on the side of the hub chainlet)
 	Params          collections.Item[types.Params]
 }
+
+// 1. ICA first message, will set it as the "admin" (double-check with Brian)
+// 2. When the ICA sends a SupportAsset message, we will add the asset to the supported assets list, it's key will be the channel-id and the denom on the side of the hub chainlet.
 
 func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {
 	sb := collections.NewSchemaBuilder(storeSvc)
@@ -44,10 +47,6 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 		cdc:          cdc,
 		logger:       logger,
 		addressCodec: addressCodec,
-		EnabledList: collections.NewKeySet(sb,
-			EnabledListPrefix,
-			"enabled_chainlets",    // Tracks chainlets that opted-in
-			collections.StringKey), // Key is ChainletID
 		AssetMetadata: collections.NewMap(sb,
 			AssetMetadataPrefix,
 			"asset_metadata",      // Global asset directory

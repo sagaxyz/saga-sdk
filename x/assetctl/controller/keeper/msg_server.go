@@ -2,9 +2,12 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
+	"strings"
 
 	"cosmossdk.io/collections"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 )
 
@@ -21,104 +24,117 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 var _ types.MsgServer = msgServer{}
 
 // RegisterAssets implements types.MsgServer.
-func (k msgServer) RegisterAssets(goCtx context.Context, msg *types.MsgRegisterAssets) (*types.MsgRegisterAssetsResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
+func (k msgServer) RegisterAssets(ctx context.Context, msg *types.MsgRegisterAssets) (*types.MsgRegisterAssetsResponse, error) {
+	if err := k.checkChannelAuthority(ctx, msg.Authority, msg.ChannelId); err != nil {
+		return nil, err
 	}
 
 	if len(msg.AssetsToRegister) == 0 {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("assets to register cannot be empty")
+		return nil, fmt.Errorf("assets to register cannot be empty")
 	}
 
-	// TODO: Iterate through msg.AssetsToRegister
-	// For each asset:
-	// 1. Determine its IBC denom (e.g., types.GetIBCDenom)
-	// 2. Check for uniqueness in the keeper's asset directory (EnabledList)
-	// 3. If unique, create a types.RegisteredAsset from msg.AssetDetails
-	// 4. Store it: k.EnabledList.Set(ctx, ibcDenom)
-	//    (Note: EnabledList currently stores KeySet[string]. You might need to store the full RegisteredAsset. This might mean changing EnabledList to a collections.Map[string, types.RegisteredAsset] or creating a new Map for the full asset details and keeping EnabledList for quick lookups of allowed denoms.)
-	// 5. Emit event
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	for _, asset := range msg.AssetsToRegister {
+
+		// trim the denomination prefix, by default "ibc/"
+		hexHash := asset.IbcDenom[len("ibc/"):]
+		hash, err := hex.DecodeString(hexHash)
+		if err != nil {
+			return nil, err
+		}
+
+		denomTrace, found := k.IBCTransferKeeper.GetDenomTrace(sdkCtx, hash)
+		if !found {
+			return nil, fmt.Errorf("denom trace not found")
+		}
+
+		// Then get the channel from the path
+		pathParts := strings.Split(denomTrace.Path, "/")
+		if len(pathParts) != 2 {
+			return nil, fmt.Errorf("denom trace path is not valid, only 1 hop is allowed")
+		}
+
+		if pathParts[1] != msg.ChannelId {
+			return nil, fmt.Errorf("denom trace channel does not match the channel id")
+		}
+
+		// TODO: check if the asset is already registered
+
+		// We allow overwriting the asset metadata
+		err = k.AssetMetadata.Set(ctx, asset.IbcDenom, types.RegisteredAsset{
+			OriginalDenom: asset.Denom,
+			DisplayName:   asset.DisplayName,
+			Description:   asset.Description,
+			DenomUnits:    asset.DenomUnits,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &types.MsgRegisterAssetsResponse{}, nil
 }
 
 // UnregisterAssets implements types.MsgServer.
-func (k msgServer) UnregisterAssets(goCtx context.Context, msg *types.MsgUnregisterAssets) (*types.MsgUnregisterAssetsResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
+func (k msgServer) UnregisterAssets(ctx context.Context, msg *types.MsgUnregisterAssets) (*types.MsgUnregisterAssetsResponse, error) {
+	if err := k.checkChannelAuthority(ctx, msg.Authority, msg.ChannelId); err != nil {
+		return nil, err
 	}
 
-	if len(msg.IbcDenomsToUnregister) == 0 {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("ibc denoms to unregister cannot be empty")
+	if len(msg.IbcDenoms) == 0 {
+		return nil, fmt.Errorf("ibc denoms to unregister cannot be empty")
 	}
 
-	// TODO: Iterate through msg.IbcDenomsToUnregister
-	// For each ibcDenom:
-	// 1. Check if it exists in k.EnabledList
-	// 2. If it exists, remove it: k.EnabledList.Delete(ctx, ibcDenom)
-	//    (And remove from the full RegisteredAsset map if you created one)
-	// 3. Emit event
+	for _, ibcDenom := range msg.IbcDenoms {
+		err := k.AssetMetadata.Remove(ctx, ibcDenom)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &types.MsgUnregisterAssetsResponse{}, nil
 }
 
-// ToggleChainletRegistry implements types.MsgServer.
-func (k msgServer) ToggleChainletRegistry(ctx context.Context, msg *types.MsgToggleChainletRegistry) (*types.MsgToggleChainletRegistryResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
-	}
-
-	if msg.ChainletId == "" {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("chainlet_id cannot be empty")
-	}
-
-	// TODO: emit an event
-
-	if msg.Enable {
-		err := k.EnabledList.Set(ctx, msg.ChainletId)
-		return &types.MsgToggleChainletRegistryResponse{}, err
-	}
-
-	err := k.EnabledList.Remove(ctx, msg.ChainletId)
-	return &types.MsgToggleChainletRegistryResponse{}, err
-}
-
-func (k msgServer) SupportAsset(ctx context.Context, msg *types.MsgSupportAsset) (*types.MsgSupportAssetResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
-	}
-
-	chainletId := "" // TODO: get chainlet id from the sender address
-
-	if msg.IbcDenom == "" {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("ibc_denom cannot be empty")
-	}
-
-	exists, err := k.SupportedAssets.Has(ctx, collections.Join(chainletId, msg.IbcDenom))
-	if err != nil {
+// SupportAssets checks if the sender is the authority of the channel and then
+// adds the assets to the supported assets list.
+func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAssets) (*types.MsgSupportAssetsResponse, error) {
+	if err := k.checkChannelAuthority(ctx, msg.Authority, msg.ChannelId); err != nil {
 		return nil, err
 	}
 
-	if exists {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("asset already supported")
+	if len(msg.IbcDenoms) == 0 {
+		return nil, fmt.Errorf("ibc_denoms cannot be empty")
 	}
 
-	err = k.SupportedAssets.Set(ctx, collections.Join(chainletId, msg.IbcDenom))
-	if err != nil {
-		return nil, err
+	for _, ibcDenom := range msg.IbcDenoms {
+		exists, err := k.SupportedAssets.Has(ctx, collections.Join(msg.ChannelId, ibcDenom))
+		if err != nil {
+			return nil, err
+		}
+
+		// not an error, just a warning
+		if exists {
+			k.logger.Debug("asset already supported", "ibc_denom", ibcDenom, "channel_id", msg.ChannelId)
+			continue
+		}
+
+		err = k.SupportedAssets.Set(ctx, collections.Join(msg.ChannelId, ibcDenom))
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return &types.MsgSupportAssetResponse{}, nil
+	return &types.MsgSupportAssetsResponse{}, nil
 }
 
 // UpdateParams implements types.MsgServer.
 func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
 	if msg.Authority != k.Authority {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("the signer is not the authority")
+		return nil, fmt.Errorf("authority does not match")
 	}
 
 	if msg.Params == nil {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("params cannot be nil")
+		return nil, fmt.Errorf("params cannot be nil")
 	}
 
 	err := k.Params.Set(ctx, *msg.Params)
@@ -127,4 +143,38 @@ func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 	}
 
 	return &types.MsgUpdateParamsResponse{}, nil
+}
+
+// checkChannelAuthority checks if the address is the authority of the channel.
+// Right now it only checks if the address is from the same chainlet, but we should check
+// if the address is the authority of the channel (admin).
+func (k Keeper) checkChannelAuthority(ctx context.Context, address, channelId string) error {
+	// TODO: this is an expensive operation, we should allow pre-registration of the
+	// authorities.
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	interchainAccounts := k.ICAHostKeeper.GetAllInterchainAccounts(sdkCtx)
+	connectionId := ""
+	portId := ""
+	for _, interchainAccount := range interchainAccounts {
+		if interchainAccount.AccountAddress == address {
+			connectionId = interchainAccount.ConnectionId
+			portId = interchainAccount.PortId
+			break
+		}
+	}
+
+	if connectionId == "" || portId == "" {
+		return fmt.Errorf("the signer is not the authority")
+	}
+
+	channel, ok := k.IBCChannelKeeper.GetChannel(sdkCtx, portId, channelId)
+	if !ok {
+		return fmt.Errorf("channel not found")
+	}
+
+	if channel.GetConnectionHops()[0] != connectionId {
+		return fmt.Errorf("authority does not match")
+	}
+
+	return nil
 }

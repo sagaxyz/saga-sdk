@@ -11,6 +11,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/integration"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
+	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/genesis/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/sagaxyz/saga-sdk/x/assetctl"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/keeper"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
@@ -18,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupTest(t *testing.T) (sdk.Context, types.MsgServer) {
+func setupTest(t *testing.T) (sdk.Context, *keeper.Keeper) {
 	keys := storetypes.NewKVStoreKeys(
 		assetctltypes.StoreKey,
 	)
@@ -33,28 +36,65 @@ func setupTest(t *testing.T) (sdk.Context, types.MsgServer) {
 
 	var addressCodec address.Codec = nil // Use nil or a mock if not available
 
-	k := keeper.NewKeeper(storeService, cdc, logger, addressCodec)
-	k.Authority = "cosmos1test" // Set a test authority
-	msgServer := keeper.NewMsgServerImpl(*k)
+	// Create mock keepers with realistic test data
+	mockICAHostKeeper := MockICAHostKeeper{
+		Accounts: []icahosttypes.RegisteredInterchainAccount{
+			{
+				AccountAddress: "cosmos1test",
+				ConnectionId:   "connection-0",
+				PortId:         "icahost",
+			},
+		},
+	}
+	mockIBCChannelKeeper := MockIBCChannelKeeper{
+		Channel: channeltypes.Channel{
+			State:    channeltypes.OPEN,
+			Ordering: channeltypes.ORDERED,
+			Counterparty: channeltypes.Counterparty{
+				PortId:    "transfer",
+				ChannelId: "channel-0",
+			},
+			ConnectionHops: []string{"connection-0"},
+			Version:        "ics20-1",
+		},
+		Exists: true,
+	}
+	mockIBCTransferKeeper := MockIBCTransferKeeper{
+		DenomTrace: ibctransfertypes.DenomTrace{
+			Path:      "transfer/channel-0",
+			BaseDenom: "test",
+		},
+		Exists: true,
+	}
 
-	return ctx, msgServer
+	k := keeper.NewKeeper(storeService, cdc, logger, addressCodec)
+	k.ICAHostKeeper = mockICAHostKeeper
+	k.IBCChannelKeeper = mockIBCChannelKeeper
+	k.IBCTransferKeeper = mockIBCTransferKeeper
+	k.Authority = "cosmos1test" // Set a test authority
+
+	return ctx, k
 }
 
 func TestRegisterAssets(t *testing.T) {
-	ctx, msgServer := setupTest(t)
+	ctx, k := setupTest(t)
+	msgServer := keeper.NewMsgServerImpl(*k)
 
 	tests := []struct {
 		name    string
 		msg     *types.MsgRegisterAssets
 		wantErr bool
+		setup   func(*keeper.Keeper)
 	}{
 		{
 			name: "valid registration",
 			msg: &types.MsgRegisterAssets{
 				Authority: "cosmos1test",
+				ChannelId: "channel-0",
 				AssetsToRegister: []types.AssetDetails{
 					{
-						Denom:       "ibc/...",
+						IbcDenom:    "ibc/1234567890abcdef",
+						Denom:       "test",
 						DisplayName: "Test Asset",
 						Description: "Test Description",
 						DenomUnits: []types.DenomUnit{
@@ -72,9 +112,11 @@ func TestRegisterAssets(t *testing.T) {
 			name: "unauthorized",
 			msg: &types.MsgRegisterAssets{
 				Authority: "wrong_authority",
+				ChannelId: "channel-0",
 				AssetsToRegister: []types.AssetDetails{
 					{
-						Denom: "ibc/...",
+						IbcDenom: "ibc/...",
+						Denom:    "test",
 					},
 				},
 			},
@@ -84,14 +126,77 @@ func TestRegisterAssets(t *testing.T) {
 			name: "empty assets",
 			msg: &types.MsgRegisterAssets{
 				Authority:        "cosmos1test",
+				ChannelId:        "channel-0",
 				AssetsToRegister: []types.AssetDetails{},
 			},
 			wantErr: true,
+		},
+		{
+			name: "channel not found",
+			msg: &types.MsgRegisterAssets{
+				Authority: "cosmos1test",
+				ChannelId: "channel-0",
+				AssetsToRegister: []types.AssetDetails{
+					{
+						IbcDenom: "ibc/...",
+						Denom:    "test",
+					},
+				},
+			},
+			wantErr: true,
+			setup: func(k *keeper.Keeper) {
+				k.IBCChannelKeeper = MockIBCChannelKeeper{
+					Channel: channeltypes.Channel{},
+					Exists:  false,
+				}
+			},
+		},
+		{
+			name: "denom trace not found",
+			msg: &types.MsgRegisterAssets{
+				Authority: "cosmos1test",
+				ChannelId: "channel-0",
+				AssetsToRegister: []types.AssetDetails{
+					{
+						IbcDenom: "ibc/...",
+						Denom:    "test",
+					},
+				},
+			},
+			wantErr: true,
+			setup: func(k *keeper.Keeper) {
+				k.IBCTransferKeeper = MockIBCTransferKeeper{
+					DenomTrace: ibctransfertypes.DenomTrace{},
+					Exists:     false,
+				}
+			},
+		},
+		{
+			name: "interchain account not found",
+			msg: &types.MsgRegisterAssets{
+				Authority: "cosmos1test",
+				ChannelId: "channel-0",
+				AssetsToRegister: []types.AssetDetails{
+					{
+						IbcDenom: "ibc/...",
+						Denom:    "test",
+					},
+				},
+			},
+			wantErr: true,
+			setup: func(k *keeper.Keeper) {
+				k.ICAHostKeeper = MockICAHostKeeper{
+					Accounts: []icahosttypes.RegisteredInterchainAccount{},
+				}
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.setup != nil {
+				tt.setup(k)
+			}
 			_, err := msgServer.RegisterAssets(ctx, tt.msg)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -103,7 +208,8 @@ func TestRegisterAssets(t *testing.T) {
 }
 
 func TestUnregisterAssets(t *testing.T) {
-	ctx, msgServer := setupTest(t)
+	ctx, k := setupTest(t)
+	msgServer := keeper.NewMsgServerImpl(*k)
 
 	tests := []struct {
 		name    string
@@ -113,24 +219,27 @@ func TestUnregisterAssets(t *testing.T) {
 		{
 			name: "valid unregistration",
 			msg: &types.MsgUnregisterAssets{
-				Authority:             "cosmos1test",
-				IbcDenomsToUnregister: []string{"ibc/..."},
+				Authority: "cosmos1test",
+				ChannelId: "channel-0",
+				IbcDenoms: []string{"ibc/..."},
 			},
 			wantErr: false,
 		},
 		{
 			name: "unauthorized",
 			msg: &types.MsgUnregisterAssets{
-				Authority:             "wrong_authority",
-				IbcDenomsToUnregister: []string{"ibc/..."},
+				Authority: "wrong_authority",
+				ChannelId: "channel-0",
+				IbcDenoms: []string{"ibc/..."},
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty denoms",
 			msg: &types.MsgUnregisterAssets{
-				Authority:             "cosmos1test",
-				IbcDenomsToUnregister: []string{},
+				Authority: "cosmos1test",
+				ChannelId: "channel-0",
+				IbcDenoms: []string{},
 			},
 			wantErr: true,
 		},
@@ -148,84 +257,39 @@ func TestUnregisterAssets(t *testing.T) {
 	}
 }
 
-func TestToggleChainletRegistry(t *testing.T) {
-	ctx, msgServer := setupTest(t)
-
-	tests := []struct {
-		name    string
-		msg     *types.MsgToggleChainletRegistry
-		wantErr bool
-	}{
-		{
-			name: "valid toggle",
-			msg: &types.MsgToggleChainletRegistry{
-				Authority:  "cosmos1test",
-				ChainletId: "chain-1",
-				Enable:     true,
-			},
-			wantErr: false,
-		},
-		{
-			name: "unauthorized",
-			msg: &types.MsgToggleChainletRegistry{
-				Authority:  "wrong_authority",
-				ChainletId: "chain-1",
-				Enable:     true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "empty chainlet id",
-			msg: &types.MsgToggleChainletRegistry{
-				Authority:  "cosmos1test",
-				ChainletId: "",
-				Enable:     true,
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := msgServer.ToggleChainletRegistry(ctx, tt.msg)
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestSupportAsset(t *testing.T) {
-	ctx, msgServer := setupTest(t)
+	ctx, k := setupTest(t)
+	msgServer := keeper.NewMsgServerImpl(*k)
 
 	tests := []struct {
 		name    string
-		msg     *types.MsgSupportAsset
+		msg     *types.MsgSupportAssets
 		wantErr bool
 	}{
 		{
 			name: "valid support",
-			msg: &types.MsgSupportAsset{
+			msg: &types.MsgSupportAssets{
 				Authority: "cosmos1test",
-				IbcDenom:  "ibc/...",
+				ChannelId: "channel-0",
+				IbcDenoms: []string{"ibc/..."},
 			},
 			wantErr: false,
 		},
 		{
 			name: "unauthorized",
-			msg: &types.MsgSupportAsset{
+			msg: &types.MsgSupportAssets{
 				Authority: "wrong_authority",
-				IbcDenom:  "ibc/...",
+				ChannelId: "channel-0",
+				IbcDenoms: []string{"ibc/..."},
 			},
 			wantErr: true,
 		},
 		{
-			name: "empty denom",
-			msg: &types.MsgSupportAsset{
+			name: "empty denoms",
+			msg: &types.MsgSupportAssets{
 				Authority: "cosmos1test",
-				IbcDenom:  "",
+				ChannelId: "channel-0",
+				IbcDenoms: []string{},
 			},
 			wantErr: true,
 		},
@@ -233,7 +297,7 @@ func TestSupportAsset(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := msgServer.SupportAsset(ctx, tt.msg)
+			_, err := msgServer.SupportAssets(ctx, tt.msg)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -244,7 +308,8 @@ func TestSupportAsset(t *testing.T) {
 }
 
 func TestUpdateParams(t *testing.T) {
-	ctx, msgServer := setupTest(t)
+	ctx, k := setupTest(t)
+	msgServer := keeper.NewMsgServerImpl(*k)
 
 	tests := []struct {
 		name    string

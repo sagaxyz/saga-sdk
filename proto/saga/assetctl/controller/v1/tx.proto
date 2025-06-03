@@ -14,17 +14,17 @@ service Msg {
 
   rpc RegisterAssets(MsgRegisterAssets) returns (MsgRegisterAssetsResponse);
   rpc UnregisterAssets(MsgUnregisterAssets) returns (MsgUnregisterAssetsResponse);
-  rpc ToggleChainletRegistry(MsgToggleChainletRegistry) returns (MsgToggleChainletRegistryResponse);
-  rpc SupportAsset(MsgSupportAsset) returns (MsgSupportAssetResponse);
+  rpc SupportAssets(MsgSupportAssets) returns (MsgSupportAssetsResponse);
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
 // AssetDetails defines the metadata for a single asset to be registered.
 message AssetDetails {
-  string denom = 1; // E.g., uatom, or an IBC hash on the source chain
-  string display_name = 2;
-  string description = 3;
-  repeated DenomUnit denom_units = 4 [(gogoproto.nullable) = false];
+  string ibc_denom = 1; // IBC denom on the hub chainlet
+  string denom = 2; // Denom on the source chain
+  string display_name = 3;
+  string description = 4;
+  repeated DenomUnit denom_units = 5 [(gogoproto.nullable) = false];
   // string base = 5; // Base denom unit, e.g., uatom (can be derived from denom_units)
   // string display = 6; // Display denom unit, e.g., atom (can be derived from denom_units)
   // string name = 7; // Full asset name, e.g., Cosmos Hub Atom (can be same as display_name or derived)
@@ -35,7 +35,8 @@ message MsgRegisterAssets {
   option (cosmos.msg.v1.signer) = "authority";
 
   string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // Signer (e.g., ICA address or Hub governance address)
-  repeated AssetDetails assets_to_register = 2 [(gogoproto.nullable) = false];
+  string channel_id = 2;
+  repeated AssetDetails assets_to_register = 3 [(gogoproto.nullable) = false];
 }
 
 message MsgRegisterAssetsResponse {}
@@ -44,29 +45,21 @@ message MsgUnregisterAssets {
   option (cosmos.msg.v1.signer) = "authority";
 
   string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // Signer (e.g., ICA address or Hub governance address)
-  repeated string ibc_denoms_to_unregister = 2;
+  string channel_id = 2;
+  repeated string ibc_denoms = 3;
 }
 
 message MsgUnregisterAssetsResponse {}
 
-message MsgToggleChainletRegistry {
-  option (cosmos.msg.v1.signer) = "authority";
-
-  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];     // Usually the ICA controller address for the chainlet or a designated chainlet admin account.
-  string chainlet_id = 2; // The ID of the chainlet to toggle registry status for.
-  bool enable = 3;        // True to enable, false to disable.
-}
-
-message MsgToggleChainletRegistryResponse {}
-
-message MsgSupportAsset {
+message MsgSupportAssets {
   option (cosmos.msg.v1.signer) = "authority";
 
   string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-  string ibc_denom = 2;
+  string channel_id = 2;
+  repeated string ibc_denoms = 3;
 }
 
-message MsgSupportAssetResponse {}
+message MsgSupportAssetsResponse {}
 
 message MsgUpdateParams {
   option (cosmos.msg.v1.signer) = "authority";
