@@ -6,4 +6,7 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/host/types";
 
 message HostGenesisState {}
 
-message Params {}
+message Params {
+    string hub_connection_id = 1;
+    string hub_channel_id = 2; // This is the channel id on the hub's side, so from the chainlet's perspective it is the destination channel id.
+}

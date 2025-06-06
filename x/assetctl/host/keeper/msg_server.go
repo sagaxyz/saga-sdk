@@ -2,8 +2,14 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/errors"
+	ibccontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
+	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
+
+	controllertypes "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
 )
 
@@ -20,32 +26,88 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 var _ types.MsgServer = msgServer{}
 
 // RegisterDenom implements types.MsgServer.
-func (k msgServer) RegisterDenom(ctx context.Context, msg *types.MsgRegisterDenom) (*types.MsgRegisterDenomResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, errors.ErrUnauthorized.Wrap("the signer is not the authority")
+func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDenoms) (*types.MsgRegisterDenomsResponse, error) {
+	addr, err := k.addressCodec.StringToBytes(msg.Authority)
+	if err != nil {
+		return nil, err
 	}
 
-	if msg.IbcDenom == "" {
-		return nil, errors.ErrInvalidRequest.Wrap("ibc_denom cannot be empty")
+	if !k.aclKeeper.Admin(sdk.UnwrapSDKContext(ctx), addr) {
+		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
-	// TODO: Add logic to register the denom as a native asset
-	// This would typically involve storing the denom in the keeper's state
+	if len(msg.IbcDenoms) == 0 {
+		return nil, errors.ErrInvalidRequest.Wrap("ibc_denoms cannot be empty")
+	}
 
-	return &types.MsgRegisterDenomResponse{}, nil
+	params, err := k.Params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	assetsToRegister := make([]controllertypes.AssetDetails, len(msg.IbcDenoms))
+	for i, denom := range msg.IbcDenoms {
+		assetsToRegister[i] = controllertypes.AssetDetails{
+			// TODO: Add logic to get the asset details
+			Denom: denom,
+		}
+	}
+
+	controllerMsg := &controllertypes.MsgRegisterAssets{
+		Authority:        k.Authority,
+		AssetsToRegister: assetsToRegister,
+	}
+
+	controllerMsgBytes, err := controllerMsg.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	wrapperMsg := &ibccontrollertypes.MsgSendTx{
+		Owner:           k.Authority,
+		ConnectionId:    params.HubConnectionId,
+		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
+		PacketData: icatypes.InterchainAccountPacketData{
+			Type: icatypes.EXECUTE_TX,
+			Data: controllerMsgBytes,
+		},
+	}
+
+	handler := k.router.Handler(wrapperMsg)
+	if handler == nil {
+		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(msg))
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	msgResp, err := handler(sdkCtx, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute message; message %v", msg)
+	}
+
+	// We expect a single response, check if there is only one and return it
+	if len(msgResp.MsgResponses) != 1 {
+		return nil, fmt.Errorf("expected a single response, got %d", len(msgResp.MsgResponses))
+	}
+
+	return &types.MsgRegisterDenomsResponse{MsgResponse: msgResp.MsgResponses[0]}, nil
 }
 
 // UpdateParams implements types.MsgServer.
 func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, errors.ErrUnauthorized.Wrap("the signer is not the authority")
+	addr, err := k.addressCodec.StringToBytes(msg.Authority)
+	if err != nil {
+		return nil, err
+	}
+
+	if !k.aclKeeper.Admin(sdk.UnwrapSDKContext(ctx), addr) {
+		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
 	if msg.Params == nil {
 		return nil, errors.ErrInvalidRequest.Wrap("params cannot be nil")
 	}
 
-	err := k.Params.Set(ctx, *msg.Params)
+	err = k.Params.Set(ctx, *msg.Params)
 	if err != nil {
 		return nil, err
 	}
@@ -54,17 +116,61 @@ func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 }
 
 // SupportAsset implements types.MsgServer.
-func (k msgServer) SupportAsset(ctx context.Context, msg *types.MsgSupportAsset) (*types.MsgSupportAssetResponse, error) {
-	if msg.Authority != k.Authority {
-		return nil, errors.ErrUnauthorized.Wrap("the signer is not the authority")
+func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAssets) (*types.MsgSupportAssetsResponse, error) {
+	addr, err := k.addressCodec.StringToBytes(msg.Authority)
+	if err != nil {
+		return nil, err
 	}
 
-	if msg.IbcDenom == "" {
-		return nil, errors.ErrInvalidRequest.Wrap("ibc_denom cannot be empty")
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	if !k.aclKeeper.Admin(sdkCtx, addr) {
+		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
-	// TODO: Add logic to notify the controller that this host supports the asset
-	// This would typically involve sending a message to the controller module
+	if len(msg.IbcDenoms) == 0 {
+		return nil, errors.ErrInvalidRequest.Wrap("ibc_denoms cannot be empty")
+	}
 
-	return &types.MsgSupportAssetResponse{}, nil
+	params, err := k.Params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	controllerMsg := &controllertypes.MsgSupportAssets{
+		Authority: k.Authority,
+		ChannelId: params.HubChannelId,
+		IbcDenoms: msg.IbcDenoms,
+	}
+
+	controllerMsgBytes, err := controllerMsg.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	wrapperMsg := &ibccontrollertypes.MsgSendTx{
+		Owner:           k.Authority,
+		ConnectionId:    params.HubConnectionId,
+		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
+		PacketData: icatypes.InterchainAccountPacketData{
+			Type: icatypes.EXECUTE_TX,
+			Data: controllerMsgBytes,
+		},
+	}
+
+	handler := k.router.Handler(wrapperMsg)
+	if handler == nil {
+		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(msg))
+	}
+
+	msgResp, err := handler(sdkCtx, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute message; message %v", msg)
+	}
+
+	// We expect a single response, check if there is only one and return it
+	if len(msgResp.MsgResponses) != 1 {
+		return nil, fmt.Errorf("expected a single response, got %d", len(msgResp.MsgResponses))
+	}
+
+	return &types.MsgSupportAssetsResponse{MsgResponse: msgResp.MsgResponses[0]}, nil
 }

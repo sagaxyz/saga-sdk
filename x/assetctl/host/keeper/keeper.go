@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/core/address"
 	corestore "cosmossdk.io/core/store"
 	"cosmossdk.io/log"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -16,7 +17,8 @@ var (
 	ParamsPrefix      = collections.NewPrefix(0x01) // Stores global asset metadata keyed by Hub IBC Denom
 )
 
-type IBCInterface interface {
+type ACLKeeper interface {
+	Admin(ctx sdk.Context, addr sdk.AccAddress) bool
 }
 
 type Keeper struct {
@@ -25,11 +27,13 @@ type Keeper struct {
 	logger       log.Logger
 	addressCodec address.Codec
 
+	router    baseapp.MessageRouter
+	aclKeeper ACLKeeper
+
 	Authority string
 
-	Schema      collections.Schema
-	EnabledList collections.KeySet[string] // Key: ChainletID. Value: presence means enabled.
-	Params      collections.Item[types.Params]
+	Schema collections.Schema
+	Params collections.Item[types.Params]
 }
 
 func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {
@@ -40,12 +44,6 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 		cdc:          cdc,
 		logger:       logger,
 		addressCodec: addressCodec,
-		EnabledList: collections.NewKeySet(
-			sb,
-			EnabledListPrefix,
-			"enabled_chainlets", // Tracks chainlets that opted-in
-			collections.StringKey,
-		),
 		Params: collections.NewItem(sb,
 			ParamsPrefix,
 			"params",

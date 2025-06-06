@@ -25,10 +25,6 @@ message AssetDetails {
   string display_name = 3;
   string description = 4;
   repeated DenomUnit denom_units = 5 [(gogoproto.nullable) = false];
-  // string base = 5; // Base denom unit, e.g., uatom (can be derived from denom_units)
-  // string display = 6; // Display denom unit, e.g., atom (can be derived from denom_units)
-  // string name = 7; // Full asset name, e.g., Cosmos Hub Atom (can be same as display_name or derived)
-  // string symbol = 8; // Asset symbol, e.g., ATOM (can be derived from denom_units or display_name)
 }
 
 message MsgRegisterAssets {

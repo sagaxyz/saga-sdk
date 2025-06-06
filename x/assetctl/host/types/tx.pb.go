@@ -7,6 +7,7 @@ import (
 	context "context"
 	fmt "fmt"
 	_ "github.com/cosmos/cosmos-proto"
+	types "github.com/cosmos/cosmos-sdk/codec/types"
 	_ "github.com/cosmos/cosmos-sdk/types/msgservice"
 	_ "github.com/cosmos/gogoproto/gogoproto"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
@@ -30,23 +31,23 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type MsgSupportAsset struct {
-	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
-	IbcDenom  string `protobuf:"bytes,2,opt,name=ibc_denom,json=ibcDenom,proto3" json:"ibc_denom,omitempty"`
+type MsgSupportAssets struct {
+	Authority string   `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	IbcDenoms []string `protobuf:"bytes,2,rep,name=ibc_denoms,json=ibcDenoms,proto3" json:"ibc_denoms,omitempty"`
 }
 
-func (m *MsgSupportAsset) Reset()         { *m = MsgSupportAsset{} }
-func (m *MsgSupportAsset) String() string { return proto.CompactTextString(m) }
-func (*MsgSupportAsset) ProtoMessage()    {}
-func (*MsgSupportAsset) Descriptor() ([]byte, []int) {
+func (m *MsgSupportAssets) Reset()         { *m = MsgSupportAssets{} }
+func (m *MsgSupportAssets) String() string { return proto.CompactTextString(m) }
+func (*MsgSupportAssets) ProtoMessage()    {}
+func (*MsgSupportAssets) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37bd8a6c69b6a6e1, []int{0}
 }
-func (m *MsgSupportAsset) XXX_Unmarshal(b []byte) error {
+func (m *MsgSupportAssets) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgSupportAsset) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgSupportAssets) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgSupportAsset.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgSupportAssets.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -56,47 +57,48 @@ func (m *MsgSupportAsset) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *MsgSupportAsset) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgSupportAsset.Merge(m, src)
+func (m *MsgSupportAssets) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgSupportAssets.Merge(m, src)
 }
-func (m *MsgSupportAsset) XXX_Size() int {
+func (m *MsgSupportAssets) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgSupportAsset) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgSupportAsset.DiscardUnknown(m)
+func (m *MsgSupportAssets) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgSupportAssets.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgSupportAsset proto.InternalMessageInfo
+var xxx_messageInfo_MsgSupportAssets proto.InternalMessageInfo
 
-func (m *MsgSupportAsset) GetAuthority() string {
+func (m *MsgSupportAssets) GetAuthority() string {
 	if m != nil {
 		return m.Authority
 	}
 	return ""
 }
 
-func (m *MsgSupportAsset) GetIbcDenom() string {
+func (m *MsgSupportAssets) GetIbcDenoms() []string {
 	if m != nil {
-		return m.IbcDenom
+		return m.IbcDenoms
 	}
-	return ""
+	return nil
 }
 
-type MsgSupportAssetResponse struct {
+type MsgSupportAssetsResponse struct {
+	MsgResponse *types.Any `protobuf:"bytes,1,opt,name=msg_response,json=msgResponse,proto3" json:"msg_response,omitempty"`
 }
 
-func (m *MsgSupportAssetResponse) Reset()         { *m = MsgSupportAssetResponse{} }
-func (m *MsgSupportAssetResponse) String() string { return proto.CompactTextString(m) }
-func (*MsgSupportAssetResponse) ProtoMessage()    {}
-func (*MsgSupportAssetResponse) Descriptor() ([]byte, []int) {
+func (m *MsgSupportAssetsResponse) Reset()         { *m = MsgSupportAssetsResponse{} }
+func (m *MsgSupportAssetsResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgSupportAssetsResponse) ProtoMessage()    {}
+func (*MsgSupportAssetsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37bd8a6c69b6a6e1, []int{1}
 }
-func (m *MsgSupportAssetResponse) XXX_Unmarshal(b []byte) error {
+func (m *MsgSupportAssetsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgSupportAssetResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgSupportAssetsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgSupportAssetResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgSupportAssetsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -106,35 +108,42 @@ func (m *MsgSupportAssetResponse) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *MsgSupportAssetResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgSupportAssetResponse.Merge(m, src)
+func (m *MsgSupportAssetsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgSupportAssetsResponse.Merge(m, src)
 }
-func (m *MsgSupportAssetResponse) XXX_Size() int {
+func (m *MsgSupportAssetsResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgSupportAssetResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgSupportAssetResponse.DiscardUnknown(m)
+func (m *MsgSupportAssetsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgSupportAssetsResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgSupportAssetResponse proto.InternalMessageInfo
+var xxx_messageInfo_MsgSupportAssetsResponse proto.InternalMessageInfo
 
-type MsgRegisterDenom struct {
-	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
-	IbcDenom  string `protobuf:"bytes,2,opt,name=ibc_denom,json=ibcDenom,proto3" json:"ibc_denom,omitempty"`
+func (m *MsgSupportAssetsResponse) GetMsgResponse() *types.Any {
+	if m != nil {
+		return m.MsgResponse
+	}
+	return nil
 }
 
-func (m *MsgRegisterDenom) Reset()         { *m = MsgRegisterDenom{} }
-func (m *MsgRegisterDenom) String() string { return proto.CompactTextString(m) }
-func (*MsgRegisterDenom) ProtoMessage()    {}
-func (*MsgRegisterDenom) Descriptor() ([]byte, []int) {
+type MsgRegisterDenoms struct {
+	Authority string   `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	IbcDenoms []string `protobuf:"bytes,2,rep,name=ibc_denoms,json=ibcDenoms,proto3" json:"ibc_denoms,omitempty"`
+}
+
+func (m *MsgRegisterDenoms) Reset()         { *m = MsgRegisterDenoms{} }
+func (m *MsgRegisterDenoms) String() string { return proto.CompactTextString(m) }
+func (*MsgRegisterDenoms) ProtoMessage()    {}
+func (*MsgRegisterDenoms) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37bd8a6c69b6a6e1, []int{2}
 }
-func (m *MsgRegisterDenom) XXX_Unmarshal(b []byte) error {
+func (m *MsgRegisterDenoms) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgRegisterDenom) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgRegisterDenoms) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgRegisterDenom.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgRegisterDenoms.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -144,47 +153,48 @@ func (m *MsgRegisterDenom) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *MsgRegisterDenom) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgRegisterDenom.Merge(m, src)
+func (m *MsgRegisterDenoms) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgRegisterDenoms.Merge(m, src)
 }
-func (m *MsgRegisterDenom) XXX_Size() int {
+func (m *MsgRegisterDenoms) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgRegisterDenom) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgRegisterDenom.DiscardUnknown(m)
+func (m *MsgRegisterDenoms) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgRegisterDenoms.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgRegisterDenom proto.InternalMessageInfo
+var xxx_messageInfo_MsgRegisterDenoms proto.InternalMessageInfo
 
-func (m *MsgRegisterDenom) GetAuthority() string {
+func (m *MsgRegisterDenoms) GetAuthority() string {
 	if m != nil {
 		return m.Authority
 	}
 	return ""
 }
 
-func (m *MsgRegisterDenom) GetIbcDenom() string {
+func (m *MsgRegisterDenoms) GetIbcDenoms() []string {
 	if m != nil {
-		return m.IbcDenom
+		return m.IbcDenoms
 	}
-	return ""
+	return nil
 }
 
-type MsgRegisterDenomResponse struct {
+type MsgRegisterDenomsResponse struct {
+	MsgResponse *types.Any `protobuf:"bytes,1,opt,name=msg_response,json=msgResponse,proto3" json:"msg_response,omitempty"`
 }
 
-func (m *MsgRegisterDenomResponse) Reset()         { *m = MsgRegisterDenomResponse{} }
-func (m *MsgRegisterDenomResponse) String() string { return proto.CompactTextString(m) }
-func (*MsgRegisterDenomResponse) ProtoMessage()    {}
-func (*MsgRegisterDenomResponse) Descriptor() ([]byte, []int) {
+func (m *MsgRegisterDenomsResponse) Reset()         { *m = MsgRegisterDenomsResponse{} }
+func (m *MsgRegisterDenomsResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgRegisterDenomsResponse) ProtoMessage()    {}
+func (*MsgRegisterDenomsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37bd8a6c69b6a6e1, []int{3}
 }
-func (m *MsgRegisterDenomResponse) XXX_Unmarshal(b []byte) error {
+func (m *MsgRegisterDenomsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgRegisterDenomResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgRegisterDenomsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgRegisterDenomResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgRegisterDenomsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -194,17 +204,24 @@ func (m *MsgRegisterDenomResponse) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *MsgRegisterDenomResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgRegisterDenomResponse.Merge(m, src)
+func (m *MsgRegisterDenomsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgRegisterDenomsResponse.Merge(m, src)
 }
-func (m *MsgRegisterDenomResponse) XXX_Size() int {
+func (m *MsgRegisterDenomsResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgRegisterDenomResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgRegisterDenomResponse.DiscardUnknown(m)
+func (m *MsgRegisterDenomsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgRegisterDenomsResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgRegisterDenomResponse proto.InternalMessageInfo
+var xxx_messageInfo_MsgRegisterDenomsResponse proto.InternalMessageInfo
+
+func (m *MsgRegisterDenomsResponse) GetMsgResponse() *types.Any {
+	if m != nil {
+		return m.MsgResponse
+	}
+	return nil
+}
 
 type MsgUpdateParams struct {
 	Authority string  `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
@@ -295,10 +312,10 @@ func (m *MsgUpdateParamsResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_MsgUpdateParamsResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*MsgSupportAsset)(nil), "saga.assetctl.host.v1.MsgSupportAsset")
-	proto.RegisterType((*MsgSupportAssetResponse)(nil), "saga.assetctl.host.v1.MsgSupportAssetResponse")
-	proto.RegisterType((*MsgRegisterDenom)(nil), "saga.assetctl.host.v1.MsgRegisterDenom")
-	proto.RegisterType((*MsgRegisterDenomResponse)(nil), "saga.assetctl.host.v1.MsgRegisterDenomResponse")
+	proto.RegisterType((*MsgSupportAssets)(nil), "saga.assetctl.host.v1.MsgSupportAssets")
+	proto.RegisterType((*MsgSupportAssetsResponse)(nil), "saga.assetctl.host.v1.MsgSupportAssetsResponse")
+	proto.RegisterType((*MsgRegisterDenoms)(nil), "saga.assetctl.host.v1.MsgRegisterDenoms")
+	proto.RegisterType((*MsgRegisterDenomsResponse)(nil), "saga.assetctl.host.v1.MsgRegisterDenomsResponse")
 	proto.RegisterType((*MsgUpdateParams)(nil), "saga.assetctl.host.v1.MsgUpdateParams")
 	proto.RegisterType((*MsgUpdateParamsResponse)(nil), "saga.assetctl.host.v1.MsgUpdateParamsResponse")
 }
@@ -306,34 +323,38 @@ func init() {
 func init() { proto.RegisterFile("saga/assetctl/host/v1/tx.proto", fileDescriptor_37bd8a6c69b6a6e1) }
 
 var fileDescriptor_37bd8a6c69b6a6e1 = []byte{
-	// 432 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x93, 0xcd, 0xce, 0xd2, 0x40,
-	0x14, 0x86, 0xe9, 0x67, 0xfc, 0x22, 0xe3, 0xe7, 0x4f, 0x1a, 0x0c, 0xa5, 0xc6, 0x86, 0xb0, 0x50,
-	0x43, 0xc2, 0x4c, 0xc0, 0xe8, 0xc2, 0x1d, 0xc4, 0x9d, 0x21, 0x31, 0x25, 0x6e, 0xdc, 0x90, 0xfe,
-	0x0c, 0x43, 0xa3, 0x65, 0x9a, 0x9e, 0x01, 0xc1, 0x95, 0xf1, 0x0a, 0xb8, 0x14, 0x16, 0xde, 0x83,
-	0x2e, 0x89, 0x2b, 0x97, 0x06, 0x16, 0xdc, 0x86, 0x99, 0x69, 0xf9, 0x69, 0x03, 0x84, 0xb8, 0x70,
-	0x05, 0x93, 0xf7, 0x39, 0xe7, 0x7d, 0xe7, 0x9c, 0x0e, 0xb2, 0xc0, 0x61, 0x0e, 0x71, 0x00, 0xa8,
-	0xf0, 0xc4, 0x27, 0x32, 0xe4, 0x20, 0xc8, 0xa4, 0x49, 0xc4, 0x14, 0x47, 0x31, 0x17, 0x5c, 0x7f,
-	0x24, 0x75, 0xbc, 0xd5, 0xb1, 0xd4, 0xf1, 0xa4, 0x69, 0x96, 0x18, 0x67, 0x5c, 0x11, 0x44, 0xfe,
-	0x4b, 0x60, 0xb3, 0xec, 0x71, 0x08, 0x39, 0x90, 0x10, 0x98, 0x6c, 0x12, 0x02, 0x4b, 0x85, 0x4a,
-	0x22, 0xf4, 0x93, 0x8a, 0xe4, 0x90, 0x4a, 0xd5, 0xe3, 0x01, 0x94, 0x91, 0x22, 0x6a, 0x13, 0xf4,
-	0xa0, 0x0b, 0xac, 0x37, 0x8e, 0x22, 0x1e, 0x8b, 0xb6, 0x04, 0xf5, 0x57, 0xa8, 0xe8, 0x8c, 0xc5,
-	0x90, 0xc7, 0x81, 0x98, 0x19, 0x5a, 0x55, 0x7b, 0x5e, 0xec, 0x18, 0xbf, 0xbe, 0x37, 0x4a, 0x69,
-	0xe7, 0xb6, 0xef, 0xc7, 0x14, 0xa0, 0x27, 0xe2, 0x60, 0xc4, 0xec, 0x3d, 0xaa, 0x3f, 0x46, 0xc5,
-	0xc0, 0xf5, 0xfa, 0x3e, 0x1d, 0xf1, 0xd0, 0xb8, 0x92, 0x75, 0xf6, 0x9d, 0xc0, 0xf5, 0xde, 0xc8,
-	0xf3, 0xeb, 0xfb, 0xdf, 0x36, 0x8b, 0xfa, 0x1e, 0xae, 0x55, 0x50, 0x39, 0xe7, 0x6b, 0x53, 0x88,
-	0xf8, 0x08, 0x68, 0xed, 0x33, 0x7a, 0xd8, 0x05, 0x66, 0x53, 0x16, 0x80, 0xa0, 0xb1, 0x2a, 0xff,
-	0x3f, 0x99, 0x4c, 0x64, 0xe4, 0x8d, 0x77, 0xa1, 0xe6, 0x9a, 0x1a, 0xd4, 0xfb, 0xc8, 0x77, 0x04,
-	0x7d, 0xe7, 0xc4, 0x4e, 0x08, 0xff, 0x1c, 0xea, 0x25, 0xba, 0x8e, 0x54, 0x07, 0x95, 0xe8, 0x6e,
-	0xeb, 0x09, 0x3e, 0xfa, 0x1d, 0xe0, 0xc4, 0xc6, 0x4e, 0xe1, 0x13, 0x23, 0x3c, 0x4c, 0xb4, 0x4d,
-	0xdb, 0xfa, 0x71, 0x85, 0x6e, 0x75, 0x81, 0xe9, 0x03, 0x74, 0x93, 0x59, 0xed, 0xd3, 0x13, 0x4e,
-	0xb9, 0x55, 0x98, 0xf8, 0x32, 0x6e, 0xeb, 0xa7, 0x07, 0xe8, 0x5e, 0x76, 0x5f, 0xcf, 0x4e, 0x37,
-	0xc8, 0x80, 0x26, 0xb9, 0x10, 0xdc, 0x59, 0x0d, 0xd0, 0x4d, 0x66, 0x09, 0x67, 0xae, 0x74, 0xc8,
-	0x9d, 0xbb, 0xd2, 0xb1, 0x11, 0x9a, 0xb7, 0xbf, 0x6e, 0x16, 0x75, 0xad, 0xf3, 0xf6, 0xe7, 0xca,
-	0xd2, 0x96, 0x2b, 0x4b, 0xfb, 0xb3, 0xb2, 0xb4, 0xf9, 0xda, 0x2a, 0x2c, 0xd7, 0x56, 0xe1, 0xf7,
-	0xda, 0x2a, 0x7c, 0x68, 0xb2, 0x40, 0x0c, 0xc7, 0x2e, 0xf6, 0x78, 0x48, 0x64, 0xeb, 0xe9, 0xec,
-	0x8b, 0xfa, 0x6d, 0x80, 0xff, 0x91, 0x4c, 0x73, 0x8f, 0x4e, 0xcc, 0x22, 0x0a, 0xee, 0xb5, 0x7a,
-	0x73, 0x2f, 0xfe, 0x06, 0x00, 0x00, 0xff, 0xff, 0x56, 0x2c, 0xb6, 0x80, 0x18, 0x04, 0x00, 0x00,
+	// 482 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x54, 0x4d, 0x6b, 0xdb, 0x40,
+	0x10, 0xb5, 0x1c, 0x1a, 0xf0, 0x24, 0x4d, 0x5b, 0xe1, 0x12, 0x59, 0x10, 0x61, 0x7c, 0x68, 0x4d,
+	0x20, 0xbb, 0x75, 0x4a, 0x5b, 0xe8, 0xcd, 0xa1, 0xb7, 0x62, 0x28, 0x72, 0x7b, 0xe9, 0xc5, 0xe8,
+	0x63, 0xb3, 0x16, 0xb5, 0xb4, 0x42, 0xb3, 0x0e, 0x56, 0x4e, 0xa5, 0xbf, 0x20, 0x3f, 0x25, 0x87,
+	0xfe, 0x88, 0x5e, 0x0a, 0xa1, 0xa7, 0x1e, 0x8b, 0x7d, 0xc8, 0xdf, 0x28, 0x5a, 0x49, 0x49, 0xad,
+	0xc4, 0x60, 0x30, 0xf4, 0x24, 0x8d, 0xde, 0x9b, 0xf7, 0xe6, 0x69, 0x87, 0x05, 0x0b, 0x1d, 0xee,
+	0x50, 0x07, 0x91, 0x49, 0x4f, 0x4e, 0xe8, 0x58, 0xa0, 0xa4, 0x67, 0x3d, 0x2a, 0x67, 0x24, 0x4e,
+	0x84, 0x14, 0xfa, 0xd3, 0x0c, 0x27, 0x25, 0x4e, 0x32, 0x9c, 0x9c, 0xf5, 0xcc, 0x26, 0x17, 0x5c,
+	0x28, 0x06, 0xcd, 0xde, 0x72, 0xb2, 0xb9, 0xef, 0x09, 0x0c, 0x05, 0xd2, 0x10, 0x79, 0x26, 0x12,
+	0x22, 0x2f, 0x80, 0x56, 0x0e, 0x8c, 0xf2, 0x8e, 0xbc, 0x28, 0xa0, 0xf6, 0xfd, 0x03, 0x28, 0xa3,
+	0xa2, 0x99, 0x0b, 0xc1, 0x27, 0x8c, 0xaa, 0xca, 0x9d, 0x9e, 0x52, 0x27, 0x4a, 0x73, 0xa8, 0x93,
+	0xc2, 0xe3, 0x01, 0xf2, 0xe1, 0x34, 0x8e, 0x45, 0x22, 0xfb, 0x99, 0x06, 0xea, 0xaf, 0xa1, 0xe1,
+	0x4c, 0xe5, 0x58, 0x24, 0x81, 0x4c, 0x0d, 0xad, 0xad, 0x75, 0x1b, 0x27, 0xc6, 0xaf, 0xef, 0x47,
+	0xcd, 0xc2, 0xb5, 0xef, 0xfb, 0x09, 0x43, 0x1c, 0xca, 0x24, 0x88, 0xb8, 0x7d, 0x4b, 0xd5, 0x0f,
+	0x00, 0x02, 0xd7, 0x1b, 0xf9, 0x2c, 0x12, 0x21, 0x1a, 0xf5, 0xf6, 0x56, 0xb7, 0x61, 0x37, 0x02,
+	0xd7, 0x7b, 0xa7, 0x3e, 0xbc, 0xdd, 0xfb, 0x76, 0x7d, 0x79, 0x78, 0x4b, 0xef, 0x0c, 0xc1, 0xa8,
+	0x5a, 0xdb, 0x0c, 0x63, 0x11, 0x21, 0xd3, 0xdf, 0xc0, 0x6e, 0x88, 0x7c, 0x94, 0x14, 0xb5, 0x9a,
+	0x62, 0xe7, 0xb8, 0x49, 0xf2, 0x20, 0xa4, 0x0c, 0x42, 0xfa, 0x51, 0x6a, 0xef, 0x84, 0xc8, 0xcb,
+	0xc6, 0xce, 0x39, 0x3c, 0x19, 0x64, 0x25, 0x0f, 0x50, 0xb2, 0x24, 0x77, 0xfe, 0x5f, 0x81, 0x3e,
+	0x42, 0xeb, 0x8e, 0xf7, 0xe6, 0x89, 0x2e, 0x34, 0x78, 0x34, 0x40, 0xfe, 0x29, 0xf6, 0x1d, 0xc9,
+	0x3e, 0x38, 0x89, 0xb3, 0x41, 0xa0, 0x57, 0xb0, 0x1d, 0x2b, 0x05, 0xa3, 0xae, 0xec, 0x0f, 0xc8,
+	0xbd, 0xcb, 0x49, 0x72, 0x1b, 0xbb, 0x20, 0xdf, 0x09, 0xda, 0x82, 0xfd, 0xca, 0x44, 0xe5, 0xb4,
+	0xc7, 0x3f, 0xeb, 0xb0, 0x35, 0x40, 0xae, 0x07, 0xf0, 0x70, 0x79, 0xa9, 0x9e, 0xaf, 0xb0, 0xaa,
+	0xae, 0x80, 0x49, 0xd7, 0x24, 0xde, 0xfc, 0xd9, 0x09, 0xec, 0x55, 0xce, 0xbb, 0xbb, 0x5a, 0x62,
+	0x99, 0x69, 0xbe, 0x58, 0x97, 0x79, 0xe3, 0x76, 0x0a, 0xbb, 0x4b, 0x47, 0xf1, 0x6c, 0xb5, 0xc2,
+	0xbf, 0x3c, 0x93, 0xac, 0xc7, 0x2b, 0x7d, 0xcc, 0x07, 0x5f, 0xaf, 0x2f, 0x0f, 0xb5, 0x93, 0xf7,
+	0x3f, 0xe6, 0x96, 0x76, 0x35, 0xb7, 0xb4, 0x3f, 0x73, 0x4b, 0xbb, 0x58, 0x58, 0xb5, 0xab, 0x85,
+	0x55, 0xfb, 0xbd, 0xb0, 0x6a, 0x9f, 0x7b, 0x3c, 0x90, 0xe3, 0xa9, 0x4b, 0x3c, 0x11, 0xd2, 0x4c,
+	0x7a, 0x96, 0x9e, 0xab, 0xe7, 0x11, 0xfa, 0x5f, 0xe8, 0xac, 0x72, 0x1f, 0xc8, 0x34, 0x66, 0xe8,
+	0x6e, 0xab, 0x2d, 0x7b, 0xf9, 0x37, 0x00, 0x00, 0xff, 0xff, 0x3c, 0x38, 0xc2, 0xc7, 0xb3, 0x04,
+	0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -348,12 +369,12 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type MsgClient interface {
-	// SupportAsset sends an message to the controller to let it know that this host
-	// supports the given asset.
-	SupportAsset(ctx context.Context, in *MsgSupportAsset, opts ...grpc.CallOption) (*MsgSupportAssetResponse, error)
+	// SupportAssets sends a message to the controller to let it know that this host
+	// supports the given assets.
+	SupportAssets(ctx context.Context, in *MsgSupportAssets, opts ...grpc.CallOption) (*MsgSupportAssetsResponse, error)
 	// RegisterDenom sends a message to the controller to let it know that this host
 	// registers the given denom as a native asset of the host.
-	RegisterDenom(ctx context.Context, in *MsgRegisterDenom, opts ...grpc.CallOption) (*MsgRegisterDenomResponse, error)
+	RegisterDenoms(ctx context.Context, in *MsgRegisterDenoms, opts ...grpc.CallOption) (*MsgRegisterDenomsResponse, error)
 	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
 }
 
@@ -365,18 +386,18 @@ func NewMsgClient(cc grpc1.ClientConn) MsgClient {
 	return &msgClient{cc}
 }
 
-func (c *msgClient) SupportAsset(ctx context.Context, in *MsgSupportAsset, opts ...grpc.CallOption) (*MsgSupportAssetResponse, error) {
-	out := new(MsgSupportAssetResponse)
-	err := c.cc.Invoke(ctx, "/saga.assetctl.host.v1.Msg/SupportAsset", in, out, opts...)
+func (c *msgClient) SupportAssets(ctx context.Context, in *MsgSupportAssets, opts ...grpc.CallOption) (*MsgSupportAssetsResponse, error) {
+	out := new(MsgSupportAssetsResponse)
+	err := c.cc.Invoke(ctx, "/saga.assetctl.host.v1.Msg/SupportAssets", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) RegisterDenom(ctx context.Context, in *MsgRegisterDenom, opts ...grpc.CallOption) (*MsgRegisterDenomResponse, error) {
-	out := new(MsgRegisterDenomResponse)
-	err := c.cc.Invoke(ctx, "/saga.assetctl.host.v1.Msg/RegisterDenom", in, out, opts...)
+func (c *msgClient) RegisterDenoms(ctx context.Context, in *MsgRegisterDenoms, opts ...grpc.CallOption) (*MsgRegisterDenomsResponse, error) {
+	out := new(MsgRegisterDenomsResponse)
+	err := c.cc.Invoke(ctx, "/saga.assetctl.host.v1.Msg/RegisterDenoms", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -394,12 +415,12 @@ func (c *msgClient) UpdateParams(ctx context.Context, in *MsgUpdateParams, opts 
 
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
-	// SupportAsset sends an message to the controller to let it know that this host
-	// supports the given asset.
-	SupportAsset(context.Context, *MsgSupportAsset) (*MsgSupportAssetResponse, error)
+	// SupportAssets sends a message to the controller to let it know that this host
+	// supports the given assets.
+	SupportAssets(context.Context, *MsgSupportAssets) (*MsgSupportAssetsResponse, error)
 	// RegisterDenom sends a message to the controller to let it know that this host
 	// registers the given denom as a native asset of the host.
-	RegisterDenom(context.Context, *MsgRegisterDenom) (*MsgRegisterDenomResponse, error)
+	RegisterDenoms(context.Context, *MsgRegisterDenoms) (*MsgRegisterDenomsResponse, error)
 	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
 }
 
@@ -407,11 +428,11 @@ type MsgServer interface {
 type UnimplementedMsgServer struct {
 }
 
-func (*UnimplementedMsgServer) SupportAsset(ctx context.Context, req *MsgSupportAsset) (*MsgSupportAssetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SupportAsset not implemented")
+func (*UnimplementedMsgServer) SupportAssets(ctx context.Context, req *MsgSupportAssets) (*MsgSupportAssetsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SupportAssets not implemented")
 }
-func (*UnimplementedMsgServer) RegisterDenom(ctx context.Context, req *MsgRegisterDenom) (*MsgRegisterDenomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RegisterDenom not implemented")
+func (*UnimplementedMsgServer) RegisterDenoms(ctx context.Context, req *MsgRegisterDenoms) (*MsgRegisterDenomsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterDenoms not implemented")
 }
 func (*UnimplementedMsgServer) UpdateParams(ctx context.Context, req *MsgUpdateParams) (*MsgUpdateParamsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateParams not implemented")
@@ -421,38 +442,38 @@ func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
 	s.RegisterService(&_Msg_serviceDesc, srv)
 }
 
-func _Msg_SupportAsset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgSupportAsset)
+func _Msg_SupportAssets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSupportAssets)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).SupportAsset(ctx, in)
+		return srv.(MsgServer).SupportAssets(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/saga.assetctl.host.v1.Msg/SupportAsset",
+		FullMethod: "/saga.assetctl.host.v1.Msg/SupportAssets",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).SupportAsset(ctx, req.(*MsgSupportAsset))
+		return srv.(MsgServer).SupportAssets(ctx, req.(*MsgSupportAssets))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_RegisterDenom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRegisterDenom)
+func _Msg_RegisterDenoms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRegisterDenoms)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).RegisterDenom(ctx, in)
+		return srv.(MsgServer).RegisterDenoms(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/saga.assetctl.host.v1.Msg/RegisterDenom",
+		FullMethod: "/saga.assetctl.host.v1.Msg/RegisterDenoms",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RegisterDenom(ctx, req.(*MsgRegisterDenom))
+		return srv.(MsgServer).RegisterDenoms(ctx, req.(*MsgRegisterDenoms))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -480,12 +501,12 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*MsgServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SupportAsset",
-			Handler:    _Msg_SupportAsset_Handler,
+			MethodName: "SupportAssets",
+			Handler:    _Msg_SupportAssets_Handler,
 		},
 		{
-			MethodName: "RegisterDenom",
-			Handler:    _Msg_RegisterDenom_Handler,
+			MethodName: "RegisterDenoms",
+			Handler:    _Msg_RegisterDenoms_Handler,
 		},
 		{
 			MethodName: "UpdateParams",
@@ -496,7 +517,7 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 	Metadata: "saga/assetctl/host/v1/tx.proto",
 }
 
-func (m *MsgSupportAsset) Marshal() (dAtA []byte, err error) {
+func (m *MsgSupportAssets) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -506,22 +527,24 @@ func (m *MsgSupportAsset) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgSupportAsset) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgSupportAssets) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgSupportAsset) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgSupportAssets) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.IbcDenom) > 0 {
-		i -= len(m.IbcDenom)
-		copy(dAtA[i:], m.IbcDenom)
-		i = encodeVarintTx(dAtA, i, uint64(len(m.IbcDenom)))
-		i--
-		dAtA[i] = 0x12
+	if len(m.IbcDenoms) > 0 {
+		for iNdEx := len(m.IbcDenoms) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.IbcDenoms[iNdEx])
+			copy(dAtA[i:], m.IbcDenoms[iNdEx])
+			i = encodeVarintTx(dAtA, i, uint64(len(m.IbcDenoms[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
 	}
 	if len(m.Authority) > 0 {
 		i -= len(m.Authority)
@@ -533,7 +556,7 @@ func (m *MsgSupportAsset) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MsgSupportAssetResponse) Marshal() (dAtA []byte, err error) {
+func (m *MsgSupportAssetsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -543,20 +566,32 @@ func (m *MsgSupportAssetResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgSupportAssetResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgSupportAssetsResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgSupportAssetResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgSupportAssetsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.MsgResponse != nil {
+		{
+			size, err := m.MsgResponse.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTx(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
 	return len(dAtA) - i, nil
 }
 
-func (m *MsgRegisterDenom) Marshal() (dAtA []byte, err error) {
+func (m *MsgRegisterDenoms) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -566,22 +601,24 @@ func (m *MsgRegisterDenom) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgRegisterDenom) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgRegisterDenoms) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgRegisterDenom) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgRegisterDenoms) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.IbcDenom) > 0 {
-		i -= len(m.IbcDenom)
-		copy(dAtA[i:], m.IbcDenom)
-		i = encodeVarintTx(dAtA, i, uint64(len(m.IbcDenom)))
-		i--
-		dAtA[i] = 0x12
+	if len(m.IbcDenoms) > 0 {
+		for iNdEx := len(m.IbcDenoms) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.IbcDenoms[iNdEx])
+			copy(dAtA[i:], m.IbcDenoms[iNdEx])
+			i = encodeVarintTx(dAtA, i, uint64(len(m.IbcDenoms[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
 	}
 	if len(m.Authority) > 0 {
 		i -= len(m.Authority)
@@ -593,7 +630,7 @@ func (m *MsgRegisterDenom) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MsgRegisterDenomResponse) Marshal() (dAtA []byte, err error) {
+func (m *MsgRegisterDenomsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -603,16 +640,28 @@ func (m *MsgRegisterDenomResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgRegisterDenomResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgRegisterDenomsResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgRegisterDenomResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgRegisterDenomsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.MsgResponse != nil {
+		{
+			size, err := m.MsgResponse.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTx(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -692,7 +741,7 @@ func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *MsgSupportAsset) Size() (n int) {
+func (m *MsgSupportAssets) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -702,23 +751,29 @@ func (m *MsgSupportAsset) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovTx(uint64(l))
 	}
-	l = len(m.IbcDenom)
-	if l > 0 {
-		n += 1 + l + sovTx(uint64(l))
+	if len(m.IbcDenoms) > 0 {
+		for _, s := range m.IbcDenoms {
+			l = len(s)
+			n += 1 + l + sovTx(uint64(l))
+		}
 	}
 	return n
 }
 
-func (m *MsgSupportAssetResponse) Size() (n int) {
+func (m *MsgSupportAssetsResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
+	if m.MsgResponse != nil {
+		l = m.MsgResponse.Size()
+		n += 1 + l + sovTx(uint64(l))
+	}
 	return n
 }
 
-func (m *MsgRegisterDenom) Size() (n int) {
+func (m *MsgRegisterDenoms) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -728,19 +783,25 @@ func (m *MsgRegisterDenom) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovTx(uint64(l))
 	}
-	l = len(m.IbcDenom)
-	if l > 0 {
-		n += 1 + l + sovTx(uint64(l))
+	if len(m.IbcDenoms) > 0 {
+		for _, s := range m.IbcDenoms {
+			l = len(s)
+			n += 1 + l + sovTx(uint64(l))
+		}
 	}
 	return n
 }
 
-func (m *MsgRegisterDenomResponse) Size() (n int) {
+func (m *MsgRegisterDenomsResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
+	if m.MsgResponse != nil {
+		l = m.MsgResponse.Size()
+		n += 1 + l + sovTx(uint64(l))
+	}
 	return n
 }
 
@@ -776,7 +837,7 @@ func sovTx(x uint64) (n int) {
 func sozTx(x uint64) (n int) {
 	return sovTx(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *MsgSupportAsset) Unmarshal(dAtA []byte) error {
+func (m *MsgSupportAssets) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -799,10 +860,10 @@ func (m *MsgSupportAsset) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgSupportAsset: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgSupportAssets: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgSupportAsset: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgSupportAssets: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -839,7 +900,7 @@ func (m *MsgSupportAsset) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IbcDenom", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IbcDenoms", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -867,7 +928,7 @@ func (m *MsgSupportAsset) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.IbcDenom = string(dAtA[iNdEx:postIndex])
+			m.IbcDenoms = append(m.IbcDenoms, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -890,7 +951,7 @@ func (m *MsgSupportAsset) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MsgSupportAssetResponse) Unmarshal(dAtA []byte) error {
+func (m *MsgSupportAssetsResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -913,12 +974,48 @@ func (m *MsgSupportAssetResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgSupportAssetResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgSupportAssetsResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgSupportAssetResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgSupportAssetsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MsgResponse", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.MsgResponse == nil {
+				m.MsgResponse = &types.Any{}
+			}
+			if err := m.MsgResponse.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])
@@ -940,7 +1037,7 @@ func (m *MsgSupportAssetResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MsgRegisterDenom) Unmarshal(dAtA []byte) error {
+func (m *MsgRegisterDenoms) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -963,10 +1060,10 @@ func (m *MsgRegisterDenom) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgRegisterDenom: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgRegisterDenoms: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgRegisterDenom: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgRegisterDenoms: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1003,7 +1100,7 @@ func (m *MsgRegisterDenom) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IbcDenom", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IbcDenoms", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1031,7 +1128,7 @@ func (m *MsgRegisterDenom) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.IbcDenom = string(dAtA[iNdEx:postIndex])
+			m.IbcDenoms = append(m.IbcDenoms, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1054,7 +1151,7 @@ func (m *MsgRegisterDenom) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MsgRegisterDenomResponse) Unmarshal(dAtA []byte) error {
+func (m *MsgRegisterDenomsResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1077,12 +1174,48 @@ func (m *MsgRegisterDenomResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgRegisterDenomResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgRegisterDenomsResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgRegisterDenomResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgRegisterDenomsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MsgResponse", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.MsgResponse == nil {
+				m.MsgResponse = &types.Any{}
+			}
+			if err := m.MsgResponse.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])
