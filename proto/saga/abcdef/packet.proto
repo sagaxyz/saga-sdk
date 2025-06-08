@@ -7,17 +7,18 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/abcdef/types";
 message AbcdefPacketData {
   oneof packet {
     NoData            noData        = 1;
-    UpgradePacketData upgradePacket = 2;
+    ConfirmUpgradePacketData confirmUpgradePacket = 2;
   }
 }
 
 message NoData {}
 
-// UpgradePacketData defines a struct for the packet payload
-message UpgradePacketData {
+// ConfirmUpgradePacketData defines a struct for the packet payload
+message ConfirmUpgradePacketData {
     uint64 height = 1;
+    string plan = 2;
 }
 
 // UpgradePacketAck defines a struct for the packet acknowledgment
-message UpgradePacketAck {}
+message ConfirmUpgradePacketAck {}
 

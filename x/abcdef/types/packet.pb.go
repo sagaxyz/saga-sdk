@@ -26,7 +26,7 @@ type AbcdefPacketData struct {
 	// Types that are valid to be assigned to Packet:
 	//
 	//	*AbcdefPacketData_NoData
-	//	*AbcdefPacketData_UpgradePacket
+	//	*AbcdefPacketData_ConfirmUpgradePacket
 	Packet isAbcdefPacketData_Packet `protobuf_oneof:"packet"`
 }
 
@@ -72,12 +72,12 @@ type isAbcdefPacketData_Packet interface {
 type AbcdefPacketData_NoData struct {
 	NoData *NoData `protobuf:"bytes,1,opt,name=noData,proto3,oneof" json:"noData,omitempty"`
 }
-type AbcdefPacketData_UpgradePacket struct {
-	UpgradePacket *UpgradePacketData `protobuf:"bytes,2,opt,name=upgradePacket,proto3,oneof" json:"upgradePacket,omitempty"`
+type AbcdefPacketData_ConfirmUpgradePacket struct {
+	ConfirmUpgradePacket *ConfirmUpgradePacketData `protobuf:"bytes,2,opt,name=confirmUpgradePacket,proto3,oneof" json:"confirmUpgradePacket,omitempty"`
 }
 
-func (*AbcdefPacketData_NoData) isAbcdefPacketData_Packet()        {}
-func (*AbcdefPacketData_UpgradePacket) isAbcdefPacketData_Packet() {}
+func (*AbcdefPacketData_NoData) isAbcdefPacketData_Packet()               {}
+func (*AbcdefPacketData_ConfirmUpgradePacket) isAbcdefPacketData_Packet() {}
 
 func (m *AbcdefPacketData) GetPacket() isAbcdefPacketData_Packet {
 	if m != nil {
@@ -93,9 +93,9 @@ func (m *AbcdefPacketData) GetNoData() *NoData {
 	return nil
 }
 
-func (m *AbcdefPacketData) GetUpgradePacket() *UpgradePacketData {
-	if x, ok := m.GetPacket().(*AbcdefPacketData_UpgradePacket); ok {
-		return x.UpgradePacket
+func (m *AbcdefPacketData) GetConfirmUpgradePacket() *ConfirmUpgradePacketData {
+	if x, ok := m.GetPacket().(*AbcdefPacketData_ConfirmUpgradePacket); ok {
+		return x.ConfirmUpgradePacket
 	}
 	return nil
 }
@@ -104,7 +104,7 @@ func (m *AbcdefPacketData) GetUpgradePacket() *UpgradePacketData {
 func (*AbcdefPacketData) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
 		(*AbcdefPacketData_NoData)(nil),
-		(*AbcdefPacketData_UpgradePacket)(nil),
+		(*AbcdefPacketData_ConfirmUpgradePacket)(nil),
 	}
 }
 
@@ -144,23 +144,24 @@ func (m *NoData) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_NoData proto.InternalMessageInfo
 
-// UpgradePacketData defines a struct for the packet payload
-type UpgradePacketData struct {
+// ConfirmUpgradePacketData defines a struct for the packet payload
+type ConfirmUpgradePacketData struct {
 	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Plan   string `protobuf:"bytes,2,opt,name=plan,proto3" json:"plan,omitempty"`
 }
 
-func (m *UpgradePacketData) Reset()         { *m = UpgradePacketData{} }
-func (m *UpgradePacketData) String() string { return proto.CompactTextString(m) }
-func (*UpgradePacketData) ProtoMessage()    {}
-func (*UpgradePacketData) Descriptor() ([]byte, []int) {
+func (m *ConfirmUpgradePacketData) Reset()         { *m = ConfirmUpgradePacketData{} }
+func (m *ConfirmUpgradePacketData) String() string { return proto.CompactTextString(m) }
+func (*ConfirmUpgradePacketData) ProtoMessage()    {}
+func (*ConfirmUpgradePacketData) Descriptor() ([]byte, []int) {
 	return fileDescriptor_64a9d78dc558c490, []int{2}
 }
-func (m *UpgradePacketData) XXX_Unmarshal(b []byte) error {
+func (m *ConfirmUpgradePacketData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *UpgradePacketData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ConfirmUpgradePacketData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_UpgradePacketData.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ConfirmUpgradePacketData.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -170,41 +171,48 @@ func (m *UpgradePacketData) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *UpgradePacketData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpgradePacketData.Merge(m, src)
+func (m *ConfirmUpgradePacketData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ConfirmUpgradePacketData.Merge(m, src)
 }
-func (m *UpgradePacketData) XXX_Size() int {
+func (m *ConfirmUpgradePacketData) XXX_Size() int {
 	return m.Size()
 }
-func (m *UpgradePacketData) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpgradePacketData.DiscardUnknown(m)
+func (m *ConfirmUpgradePacketData) XXX_DiscardUnknown() {
+	xxx_messageInfo_ConfirmUpgradePacketData.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_UpgradePacketData proto.InternalMessageInfo
+var xxx_messageInfo_ConfirmUpgradePacketData proto.InternalMessageInfo
 
-func (m *UpgradePacketData) GetHeight() uint64 {
+func (m *ConfirmUpgradePacketData) GetHeight() uint64 {
 	if m != nil {
 		return m.Height
 	}
 	return 0
 }
 
-// UpgradePacketAck defines a struct for the packet acknowledgment
-type UpgradePacketAck struct {
+func (m *ConfirmUpgradePacketData) GetPlan() string {
+	if m != nil {
+		return m.Plan
+	}
+	return ""
 }
 
-func (m *UpgradePacketAck) Reset()         { *m = UpgradePacketAck{} }
-func (m *UpgradePacketAck) String() string { return proto.CompactTextString(m) }
-func (*UpgradePacketAck) ProtoMessage()    {}
-func (*UpgradePacketAck) Descriptor() ([]byte, []int) {
+// UpgradePacketAck defines a struct for the packet acknowledgment
+type ConfirmUpgradePacketAck struct {
+}
+
+func (m *ConfirmUpgradePacketAck) Reset()         { *m = ConfirmUpgradePacketAck{} }
+func (m *ConfirmUpgradePacketAck) String() string { return proto.CompactTextString(m) }
+func (*ConfirmUpgradePacketAck) ProtoMessage()    {}
+func (*ConfirmUpgradePacketAck) Descriptor() ([]byte, []int) {
 	return fileDescriptor_64a9d78dc558c490, []int{3}
 }
-func (m *UpgradePacketAck) XXX_Unmarshal(b []byte) error {
+func (m *ConfirmUpgradePacketAck) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *UpgradePacketAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ConfirmUpgradePacketAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_UpgradePacketAck.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ConfirmUpgradePacketAck.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -214,44 +222,46 @@ func (m *UpgradePacketAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *UpgradePacketAck) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpgradePacketAck.Merge(m, src)
+func (m *ConfirmUpgradePacketAck) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ConfirmUpgradePacketAck.Merge(m, src)
 }
-func (m *UpgradePacketAck) XXX_Size() int {
+func (m *ConfirmUpgradePacketAck) XXX_Size() int {
 	return m.Size()
 }
-func (m *UpgradePacketAck) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpgradePacketAck.DiscardUnknown(m)
+func (m *ConfirmUpgradePacketAck) XXX_DiscardUnknown() {
+	xxx_messageInfo_ConfirmUpgradePacketAck.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_UpgradePacketAck proto.InternalMessageInfo
+var xxx_messageInfo_ConfirmUpgradePacketAck proto.InternalMessageInfo
 
 func init() {
 	proto.RegisterType((*AbcdefPacketData)(nil), "saga.abcdef.AbcdefPacketData")
 	proto.RegisterType((*NoData)(nil), "saga.abcdef.NoData")
-	proto.RegisterType((*UpgradePacketData)(nil), "saga.abcdef.UpgradePacketData")
-	proto.RegisterType((*UpgradePacketAck)(nil), "saga.abcdef.UpgradePacketAck")
+	proto.RegisterType((*ConfirmUpgradePacketData)(nil), "saga.abcdef.ConfirmUpgradePacketData")
+	proto.RegisterType((*ConfirmUpgradePacketAck)(nil), "saga.abcdef.ConfirmUpgradePacketAck")
 }
 
 func init() { proto.RegisterFile("saga/abcdef/packet.proto", fileDescriptor_64a9d78dc558c490) }
 
 var fileDescriptor_64a9d78dc558c490 = []byte{
-	// 237 bytes of a gzipped FileDescriptorProto
+	// 259 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0x28, 0x4e, 0x4c, 0x4f,
 	0xd4, 0x4f, 0x4c, 0x4a, 0x4e, 0x49, 0x4d, 0xd3, 0x2f, 0x48, 0x4c, 0xce, 0x4e, 0x2d, 0xd1, 0x2b,
-	0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x06, 0xc9, 0xe8, 0x41, 0x64, 0x94, 0x26, 0x33, 0x72, 0x09,
+	0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x06, 0xc9, 0xe8, 0x41, 0x64, 0x94, 0x56, 0x30, 0x72, 0x09,
 	0x38, 0x82, 0x99, 0x01, 0x60, 0x35, 0x2e, 0x89, 0x25, 0x89, 0x42, 0xba, 0x5c, 0x6c, 0x79, 0xf9,
 	0x20, 0x96, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0xb7, 0x91, 0xb0, 0x1e, 0x92, 0x16, 0x3d, 0x3f, 0xb0,
-	0x94, 0x07, 0x43, 0x10, 0x54, 0x91, 0x90, 0x1b, 0x17, 0x6f, 0x69, 0x41, 0x7a, 0x51, 0x62, 0x4a,
-	0x2a, 0xc4, 0x0c, 0x09, 0x26, 0xb0, 0x2e, 0x39, 0x14, 0x5d, 0xa1, 0xc8, 0x2a, 0xa0, 0x06, 0xa0,
-	0x6a, 0x73, 0xe2, 0xe0, 0x62, 0x83, 0x38, 0x54, 0x89, 0x83, 0x8b, 0x0d, 0x62, 0x8b, 0x92, 0x36,
-	0x97, 0x20, 0x86, 0x4e, 0x21, 0x31, 0x2e, 0xb6, 0x8c, 0xd4, 0xcc, 0xf4, 0x8c, 0x12, 0xb0, 0xfb,
-	0x58, 0x82, 0xa0, 0x3c, 0x25, 0x21, 0x2e, 0x01, 0x14, 0xc5, 0x8e, 0xc9, 0xd9, 0x4e, 0x2e, 0x27,
-	0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x84, 0xc7, 0x72, 0x0c,
-	0x17, 0x1e, 0xcb, 0x31, 0xdc, 0x78, 0x2c, 0xc7, 0x10, 0xa5, 0x95, 0x9e, 0x59, 0x92, 0x51, 0x9a,
-	0xa4, 0x97, 0x9c, 0x9f, 0xab, 0x0f, 0x72, 0x69, 0x45, 0x65, 0x15, 0x98, 0xd6, 0x2d, 0x4e, 0xc9,
-	0xd6, 0xaf, 0x80, 0x05, 0x5d, 0x49, 0x65, 0x41, 0x6a, 0x71, 0x12, 0x1b, 0x38, 0xe8, 0x8c, 0x01,
-	0x01, 0x00, 0x00, 0xff, 0xff, 0xca, 0xe9, 0x0b, 0x7e, 0x56, 0x01, 0x00, 0x00,
+	0x94, 0x07, 0x43, 0x10, 0x54, 0x91, 0x50, 0x34, 0x97, 0x48, 0x72, 0x7e, 0x5e, 0x5a, 0x66, 0x51,
+	0x6e, 0x68, 0x41, 0x7a, 0x51, 0x62, 0x4a, 0x2a, 0xc4, 0x28, 0x09, 0x26, 0xb0, 0x66, 0x55, 0x14,
+	0xcd, 0xce, 0x58, 0x14, 0x42, 0x8d, 0xc3, 0x6a, 0x88, 0x13, 0x07, 0x17, 0x1b, 0xc4, 0xf5, 0x4a,
+	0x1c, 0x5c, 0x6c, 0x10, 0xab, 0x95, 0xdc, 0xb8, 0x24, 0x70, 0x99, 0x23, 0x24, 0xc6, 0xc5, 0x96,
+	0x91, 0x9a, 0x99, 0x9e, 0x51, 0x02, 0x76, 0x3b, 0x4b, 0x10, 0x94, 0x27, 0x24, 0xc4, 0xc5, 0x52,
+	0x90, 0x93, 0x98, 0x07, 0x76, 0x14, 0x67, 0x10, 0x98, 0xad, 0x24, 0xc9, 0x25, 0x8e, 0xcd, 0x1c,
+	0xc7, 0xe4, 0x6c, 0x27, 0x97, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48,
+	0x8e, 0x71, 0xc2, 0x63, 0x39, 0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e, 0x3c, 0x96, 0x63, 0x88, 0xd2,
+	0x4a, 0xcf, 0x2c, 0xc9, 0x28, 0x4d, 0xd2, 0x4b, 0xce, 0xcf, 0xd5, 0x07, 0xf9, 0xac, 0xa2, 0xb2,
+	0x0a, 0x4c, 0xeb, 0x16, 0xa7, 0x64, 0xeb, 0x57, 0xc0, 0x42, 0xbc, 0xa4, 0xb2, 0x20, 0xb5, 0x38,
+	0x89, 0x0d, 0x1c, 0xe2, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb9, 0xf3, 0x67, 0xaf, 0x8d,
+	0x01, 0x00, 0x00,
 }
 
 func (m *AbcdefPacketData) Marshal() (dAtA []byte, err error) {
@@ -307,16 +317,16 @@ func (m *AbcdefPacketData_NoData) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	}
 	return len(dAtA) - i, nil
 }
-func (m *AbcdefPacketData_UpgradePacket) MarshalTo(dAtA []byte) (int, error) {
+func (m *AbcdefPacketData_ConfirmUpgradePacket) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *AbcdefPacketData_UpgradePacket) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AbcdefPacketData_ConfirmUpgradePacket) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
-	if m.UpgradePacket != nil {
+	if m.ConfirmUpgradePacket != nil {
 		{
-			size, err := m.UpgradePacket.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.ConfirmUpgradePacket.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -351,7 +361,7 @@ func (m *NoData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *UpgradePacketData) Marshal() (dAtA []byte, err error) {
+func (m *ConfirmUpgradePacketData) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -361,16 +371,23 @@ func (m *UpgradePacketData) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *UpgradePacketData) MarshalTo(dAtA []byte) (int, error) {
+func (m *ConfirmUpgradePacketData) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *UpgradePacketData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ConfirmUpgradePacketData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if len(m.Plan) > 0 {
+		i -= len(m.Plan)
+		copy(dAtA[i:], m.Plan)
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Plan)))
+		i--
+		dAtA[i] = 0x12
+	}
 	if m.Height != 0 {
 		i = encodeVarintPacket(dAtA, i, uint64(m.Height))
 		i--
@@ -379,7 +396,7 @@ func (m *UpgradePacketData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *UpgradePacketAck) Marshal() (dAtA []byte, err error) {
+func (m *ConfirmUpgradePacketAck) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -389,12 +406,12 @@ func (m *UpgradePacketAck) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *UpgradePacketAck) MarshalTo(dAtA []byte) (int, error) {
+func (m *ConfirmUpgradePacketAck) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *UpgradePacketAck) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ConfirmUpgradePacketAck) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -437,14 +454,14 @@ func (m *AbcdefPacketData_NoData) Size() (n int) {
 	}
 	return n
 }
-func (m *AbcdefPacketData_UpgradePacket) Size() (n int) {
+func (m *AbcdefPacketData_ConfirmUpgradePacket) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.UpgradePacket != nil {
-		l = m.UpgradePacket.Size()
+	if m.ConfirmUpgradePacket != nil {
+		l = m.ConfirmUpgradePacket.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
 	return n
@@ -458,7 +475,7 @@ func (m *NoData) Size() (n int) {
 	return n
 }
 
-func (m *UpgradePacketData) Size() (n int) {
+func (m *ConfirmUpgradePacketData) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -467,10 +484,14 @@ func (m *UpgradePacketData) Size() (n int) {
 	if m.Height != 0 {
 		n += 1 + sovPacket(uint64(m.Height))
 	}
+	l = len(m.Plan)
+	if l > 0 {
+		n += 1 + l + sovPacket(uint64(l))
+	}
 	return n
 }
 
-func (m *UpgradePacketAck) Size() (n int) {
+func (m *ConfirmUpgradePacketAck) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -551,7 +572,7 @@ func (m *AbcdefPacketData) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UpgradePacket", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ConfirmUpgradePacket", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -578,11 +599,11 @@ func (m *AbcdefPacketData) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &UpgradePacketData{}
+			v := &ConfirmUpgradePacketData{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Packet = &AbcdefPacketData_UpgradePacket{v}
+			m.Packet = &AbcdefPacketData_ConfirmUpgradePacket{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -655,7 +676,7 @@ func (m *NoData) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *UpgradePacketData) Unmarshal(dAtA []byte) error {
+func (m *ConfirmUpgradePacketData) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -678,10 +699,10 @@ func (m *UpgradePacketData) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UpgradePacketData: wiretype end group for non-group")
+			return fmt.Errorf("proto: ConfirmUpgradePacketData: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UpgradePacketData: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ConfirmUpgradePacketData: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -703,6 +724,38 @@ func (m *UpgradePacketData) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Plan", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Plan = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPacket(dAtA[iNdEx:])
@@ -724,7 +777,7 @@ func (m *UpgradePacketData) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *UpgradePacketAck) Unmarshal(dAtA []byte) error {
+func (m *ConfirmUpgradePacketAck) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -747,10 +800,10 @@ func (m *UpgradePacketAck) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UpgradePacketAck: wiretype end group for non-group")
+			return fmt.Errorf("proto: ConfirmUpgradePacketAck: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UpgradePacketAck: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ConfirmUpgradePacketAck: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
