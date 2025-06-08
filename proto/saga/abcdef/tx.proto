@@ -19,7 +19,6 @@ service Msg {
   
   // Since: cosmos-sdk 0.47
   rpc UpdateParams (MsgUpdateParams) returns (MsgUpdateParamsResponse);
-  rpc SendUpgrade  (MsgSendUpgrade ) returns (MsgSendUpgradeResponse );
 }
 // MsgUpdateParams is the Msg/UpdateParams request type.
 //
@@ -42,15 +41,3 @@ message MsgUpdateParams {
 //
 // Since: cosmos-sdk 0.47
 message MsgUpdateParamsResponse {}
-
-message MsgSendUpgrade {
-  string creator          = 1;
-  string port             = 2;
-  string channelID        = 3;
-  uint64 timeoutTimestamp = 4;
-
-  uint64 height = 5;
-}
-
-message MsgSendUpgradeResponse {}
-
