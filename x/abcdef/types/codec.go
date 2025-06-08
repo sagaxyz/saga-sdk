@@ -12,7 +12,6 @@ import (
 
 // RegisterLegacyAminoCodec registers concrete types on the LegacyAmino codec
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(&MsgSendUpgrade{}, "abcdef/SendUpgrade", nil)
 // this line is used by starport scaffolding # 2
 
 	cdc.RegisterConcrete(Params{}, "saga-sdk/x/abcdef/Params", nil)
@@ -22,7 +21,6 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
-	&MsgSendUpgrade{},
 )
 // this line is used by starport scaffolding # 3
 
