@@ -15,10 +15,15 @@ import (
 var (
 	EnabledListPrefix = collections.NewPrefix(0x00) // Stores ChainletIDs that have enabled the registry
 	ParamsPrefix      = collections.NewPrefix(0x01) // Stores global asset metadata keyed by Hub IBC Denom
+	ICAOnHubPrefix    = collections.NewPrefix(0x02) // Stores the ICA on the hub
 )
 
 type ACLKeeper interface {
 	Admin(ctx sdk.Context, addr sdk.AccAddress) bool
+}
+
+type AccountKeeper interface {
+	GetModuleAddress(name string) sdk.AccAddress
 }
 
 type Keeper struct {
@@ -27,13 +32,15 @@ type Keeper struct {
 	logger       log.Logger
 	addressCodec address.Codec
 
-	router    baseapp.MessageRouter
-	aclKeeper ACLKeeper
+	router        baseapp.MessageRouter
+	aclKeeper     ACLKeeper
+	accountKeeper AccountKeeper
 
 	Authority string
 
-	Schema collections.Schema
-	Params collections.Item[types.Params]
+	Schema   collections.Schema
+	Params   collections.Item[types.Params]
+	ICAOnHub collections.Item[types.ICAOnHub]
 }
 
 func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {

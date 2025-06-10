@@ -10,3 +10,8 @@ message Params {
     string hub_connection_id = 1;
     string hub_channel_id = 2; // This is the channel id on the hub's side, so from the chainlet's perspective it is the destination channel id.
 }
+
+message ICAOnHub {
+    string channel_id = 1;
+    string port_id = 2;
+}

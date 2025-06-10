@@ -110,15 +110,68 @@ func (m *Params) GetHubChannelId() string {
 	return ""
 }
 
+type ICAOnHub struct {
+	ChannelId string `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	PortId    string `protobuf:"bytes,2,opt,name=port_id,json=portId,proto3" json:"port_id,omitempty"`
+}
+
+func (m *ICAOnHub) Reset()         { *m = ICAOnHub{} }
+func (m *ICAOnHub) String() string { return proto.CompactTextString(m) }
+func (*ICAOnHub) ProtoMessage()    {}
+func (*ICAOnHub) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f2b5fee7d34b5924, []int{2}
+}
+func (m *ICAOnHub) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ICAOnHub) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ICAOnHub.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ICAOnHub) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ICAOnHub.Merge(m, src)
+}
+func (m *ICAOnHub) XXX_Size() int {
+	return m.Size()
+}
+func (m *ICAOnHub) XXX_DiscardUnknown() {
+	xxx_messageInfo_ICAOnHub.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ICAOnHub proto.InternalMessageInfo
+
+func (m *ICAOnHub) GetChannelId() string {
+	if m != nil {
+		return m.ChannelId
+	}
+	return ""
+}
+
+func (m *ICAOnHub) GetPortId() string {
+	if m != nil {
+		return m.PortId
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*HostGenesisState)(nil), "saga.assetctl.host.v1.HostGenesisState")
 	proto.RegisterType((*Params)(nil), "saga.assetctl.host.v1.Params")
+	proto.RegisterType((*ICAOnHub)(nil), "saga.assetctl.host.v1.ICAOnHub")
 }
 
 func init() { proto.RegisterFile("saga/assetctl/host/v1/host.proto", fileDescriptor_f2b5fee7d34b5924) }
 
 var fileDescriptor_f2b5fee7d34b5924 = []byte{
-	// 223 bytes of a gzipped FileDescriptorProto
+	// 263 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x28, 0x4e, 0x4c, 0x4f,
 	0xd4, 0x4f, 0x2c, 0x2e, 0x4e, 0x2d, 0x49, 0x2e, 0xc9, 0xd1, 0xcf, 0xc8, 0x2f, 0x2e, 0xd1, 0x2f,
 	0x33, 0x04, 0xd3, 0x7a, 0x05, 0x45, 0xf9, 0x25, 0xf9, 0x42, 0xa2, 0x20, 0x15, 0x7a, 0x30, 0x15,
@@ -127,12 +180,15 @@ var fileDescriptor_f2b5fee7d34b5924 = []byte{
 	0xc4, 0xdc, 0x62, 0x21, 0x2d, 0x2e, 0xc1, 0x8c, 0xd2, 0xa4, 0xf8, 0xe4, 0xfc, 0xbc, 0xbc, 0xd4,
 	0xe4, 0x92, 0xcc, 0xfc, 0xbc, 0xf8, 0xcc, 0x14, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0xfe,
 	0x8c, 0xd2, 0x24, 0x67, 0xb8, 0xb8, 0x67, 0x8a, 0x90, 0x0a, 0x17, 0x1f, 0x58, 0x6d, 0x46, 0x62,
-	0x5e, 0x5e, 0x6a, 0x0e, 0x48, 0x21, 0x13, 0x58, 0x21, 0x0f, 0x48, 0x21, 0x44, 0xd0, 0x33, 0xc5,
-	0xc9, 0xfb, 0xc4, 0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x9c, 0xf0,
-	0x58, 0x8e, 0xe1, 0xc2, 0x63, 0x39, 0x86, 0x1b, 0x8f, 0xe5, 0x18, 0xa2, 0x0c, 0xd3, 0x33, 0x4b,
-	0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0x41, 0x6e, 0xad, 0xa8, 0xac, 0x02, 0xd3, 0xba,
-	0xc5, 0x29, 0xd9, 0xfa, 0x15, 0x68, 0x7e, 0x2b, 0xa9, 0x2c, 0x48, 0x2d, 0x4e, 0x62, 0x03, 0x7b,
-	0xcd, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xad, 0x66, 0x96, 0x82, 0xfe, 0x00, 0x00, 0x00,
+	0x5e, 0x5e, 0x6a, 0x0e, 0x48, 0x21, 0x13, 0x58, 0x21, 0x0f, 0x48, 0x21, 0x44, 0xd0, 0x33, 0x45,
+	0xc9, 0x89, 0x8b, 0xc3, 0xd3, 0xd9, 0xd1, 0x3f, 0xcf, 0xa3, 0x34, 0x49, 0x48, 0x96, 0x8b, 0x0b,
+	0x49, 0x35, 0xc4, 0x58, 0xce, 0x64, 0x98, 0x52, 0x21, 0x71, 0x2e, 0xf6, 0x82, 0xfc, 0xa2, 0x12,
+	0x84, 0x49, 0x6c, 0x20, 0xae, 0x67, 0x8a, 0x93, 0xf7, 0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e, 0xc9,
+	0x31, 0x3e, 0x78, 0x24, 0xc7, 0x38, 0xe1, 0xb1, 0x1c, 0xc3, 0x85, 0xc7, 0x72, 0x0c, 0x37, 0x1e,
+	0xcb, 0x31, 0x44, 0x19, 0xa6, 0x67, 0x96, 0x64, 0x94, 0x26, 0xe9, 0x25, 0xe7, 0xe7, 0xea, 0x83,
+	0xfc, 0x5b, 0x51, 0x59, 0x05, 0xa6, 0x75, 0x8b, 0x53, 0xb2, 0xf5, 0x2b, 0xd0, 0xc2, 0xa7, 0xa4,
+	0xb2, 0x20, 0xb5, 0x38, 0x89, 0x0d, 0x1c, 0x3c, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x6f,
+	0x4f, 0xfe, 0x1a, 0x42, 0x01, 0x00, 0x00,
 }
 
 func (m *HostGenesisState) Marshal() (dAtA []byte, err error) {
@@ -195,6 +251,43 @@ func (m *Params) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ICAOnHub) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ICAOnHub) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ICAOnHub) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PortId) > 0 {
+		i -= len(m.PortId)
+		copy(dAtA[i:], m.PortId)
+		i = encodeVarintHost(dAtA, i, uint64(len(m.PortId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.ChannelId) > 0 {
+		i -= len(m.ChannelId)
+		copy(dAtA[i:], m.ChannelId)
+		i = encodeVarintHost(dAtA, i, uint64(len(m.ChannelId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintHost(dAtA []byte, offset int, v uint64) int {
 	offset -= sovHost(v)
 	base := offset
@@ -226,6 +319,23 @@ func (m *Params) Size() (n int) {
 		n += 1 + l + sovHost(uint64(l))
 	}
 	l = len(m.HubChannelId)
+	if l > 0 {
+		n += 1 + l + sovHost(uint64(l))
+	}
+	return n
+}
+
+func (m *ICAOnHub) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ChannelId)
+	if l > 0 {
+		n += 1 + l + sovHost(uint64(l))
+	}
+	l = len(m.PortId)
 	if l > 0 {
 		n += 1 + l + sovHost(uint64(l))
 	}
@@ -380,6 +490,120 @@ func (m *Params) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.HubChannelId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipHost(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthHost
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ICAOnHub) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowHost
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ICAOnHub: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ICAOnHub: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChannelId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHost
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthHost
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthHost
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChannelId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PortId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHost
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthHost
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthHost
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PortId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
