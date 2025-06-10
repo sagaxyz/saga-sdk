@@ -94,8 +94,6 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis used to validate the GenesisState, given in json.RawMessage.
-// This method is called at server initialization for genesis validation.
-// Ideally, it allows parallel execution with other modules genesis states.
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
 	var genState struct {
 		Host       hosttypes.GenesisState       `json:"host"`
@@ -147,8 +145,20 @@ func (ab AppModuleBasic) GetTxCmd() *cobra.Command {
 // GetQueryCmd returns the root query command for the module. The subcommands of this
 // command are returned by default (if cobra.CommandContexthor Viper !== nil).
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	// return cli.GetQueryCmd(types.StoreKey)
-	return nil // Placeholder
+	cmd := &cobra.Command{
+		Use:                        "assetctl",
+		Short:                      "Asset control query subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	cmd.AddCommand(
+		controllercli.GetQueryCmd(),
+		hostcli.GetQueryCmd(),
+	)
+
+	return cmd
 }
 
 // ----------------------------------------------------------------------------
@@ -170,8 +180,6 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper, hostKeeper hostkeeper.K
 		AppModuleBasic: NewAppModuleBasic(),
 		keeper:         keeper,
 		hostKeeper:     hostKeeper,
-		// accountKeeper:  accountKeeper,
-		// bankKeeper:     bankKeeper,
 	}
 }
 
@@ -191,11 +199,6 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 
 	controllertypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
 	controllertypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServerImpl(am.keeper))
-
-	// m := keeper.NewMigrator(am.keeper)
-	// if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
-	// 	panic(fmt.Sprintf("failed to migrate x/%s from version 1 to 2: %v", types.ModuleName, err))
-	// }
 }
 
 // InitGenesis performs the module's genesis initialization.
@@ -241,18 +244,12 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 // BeginBlock contains the logic that is automatically executed at the beginning of each block.
-// The BeginBlock implementation logic varies between modules and some modules may not need to implement it.
 func (am AppModule) BeginBlock(ctx context.Context) error {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	_ = sdkCtx
 	return nil
 }
 
 // EndBlock contains the logic that is automatically executed at the end of each block.
-// The EndBlock implementation logic varies between modules and some modules may not need to implement it.
 func (am AppModule) EndBlock(ctx context.Context) error {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	_ = sdkCtx
 	return nil
 }
 
@@ -261,16 +258,4 @@ func (am AppModule) IsOnePerModuleType() {}
 
 // GenerateGenesisState creates a randomized GenState of the module.
 func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
-	// simulation.RandomizedGenState(simState)
 }
-
-// // RegisterStoreDecoder registers a decoder for the module's types.
-// func (am AppModule) RegisterStoreDecoder(sdr registry.StoreDecoderRegistry) {
-// 	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
-// }
-
-// // WeightedOperations returns the all the module operations with their respective weights.
-// func (am AppModule) WeightedOperations(simState module.SimulationState) []simulation.WeightedOperation {
-// 	// return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.accountKeeper, am.bankKeeper, am.keeper)
-// 	return nil
-// }
