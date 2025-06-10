@@ -14,8 +14,10 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
+	controllercli "github.com/sagaxyz/saga-sdk/x/assetctl/controller/client/cli"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/keeper"
 	controllertypes "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
+	hostcli "github.com/sagaxyz/saga-sdk/x/assetctl/host/client/cli"
 	hostkeeper "github.com/sagaxyz/saga-sdk/x/assetctl/host/keeper"
 	hosttypes "github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
 )
@@ -124,10 +126,22 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this
-// command are returned by default (ifcobra.CommandContexthor Viper !== nil).
+// command are returned by default (if cobra.CommandContexthor Viper !== nil).
 func (ab AppModuleBasic) GetTxCmd() *cobra.Command {
-	// return cli.GetTxCmd()
-	return nil // Placeholder
+	cmd := &cobra.Command{
+		Use:                        "assetctl",
+		Short:                      "Asset control transaction subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	cmd.AddCommand(
+		controllercli.GetTxCmd(),
+		hostcli.GetTxCmd(),
+	)
+
+	return cmd
 }
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this

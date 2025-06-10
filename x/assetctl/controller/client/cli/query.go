@@ -2,9 +2,28 @@ package cli
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 	"github.com/spf13/cobra"
 )
+
+// GetQueryCmd returns the query commands for the controller module
+func GetQueryCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                        "controller",
+		Short:                      "Controller query subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	cmd.AddCommand(
+		GetParamsCmd(),
+	)
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
 
 func GetParamsCmd() *cobra.Command {
 	cmd := &cobra.Command{
