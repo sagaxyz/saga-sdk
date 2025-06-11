@@ -83,11 +83,11 @@ func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDen
 
 	handler := k.router.Handler(wrapperMsg)
 	if handler == nil {
-		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(msg))
+		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(wrapperMsg))
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	msgResp, err := handler(sdkCtx, msg)
+	msgResp, err := handler(sdkCtx, wrapperMsg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute message; message %v", msg)
 	}
@@ -172,10 +172,10 @@ func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAsset
 
 	handler := k.router.Handler(wrapperMsg)
 	if handler == nil {
-		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(msg))
+		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(wrapperMsg))
 	}
 
-	msgResp, err := handler(sdkCtx, msg)
+	msgResp, err := handler(sdkCtx, wrapperMsg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute message; message %v", msg)
 	}
@@ -191,7 +191,7 @@ func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAsset
 // CreateICAOnHub is a helper function to create an ICA on the hub, should be used only once.
 func (k msgServer) CreateICAOnHub(ctx context.Context, msg *types.MsgCreateICAOnHub) (*types.MsgCreateICAOnHubResponse, error) {
 	// check if the ica on hub already exists, if it does, return an error
-	has, err := k.ICAOnHub.Has(ctx)
+	has, err := k.ICAData.Has(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -239,13 +239,13 @@ func (k msgServer) CreateICAOnHub(ctx context.Context, msg *types.MsgCreateICAOn
 	}
 
 	// get the response as icacontrollertypes.MsgRegisterInterchainAccountResponse
-	registerResponse := icacontrollertypes.MsgRegisterInterchainAccountResponse{}
+	registerResponse := &icacontrollertypes.MsgRegisterInterchainAccountResponse{}
 	err = k.cdc.UnpackAny(res.MsgResponses[0], &registerResponse)
 	if err != nil {
 		return nil, err
 	}
 
-	err = k.ICAOnHub.Set(sdkCtx, types.ICAOnHub{
+	err = k.ICAData.Set(sdkCtx, types.ICAOnHub{
 		ChannelId: registerResponse.ChannelId,
 		PortId:    registerResponse.PortId,
 	})

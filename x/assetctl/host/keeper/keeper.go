@@ -37,9 +37,9 @@ type Keeper struct {
 
 	Authority string
 
-	Schema   collections.Schema
-	Params   collections.Item[types.Params]
-	ICAOnHub collections.Item[types.ICAOnHub]
+	Schema  collections.Schema
+	Params  collections.Item[types.Params]
+	ICAData collections.Item[types.ICAOnHub]
 }
 
 func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {
@@ -55,7 +55,7 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 			"params",
 			codec.CollValue[types.Params](cdc),
 		),
-		ICAOnHub: collections.NewItem(sb,
+		ICAData: collections.NewItem(sb,
 			ICAOnHubPrefix,
 			"ica",
 			codec.CollValue[types.ICAOnHub](cdc),

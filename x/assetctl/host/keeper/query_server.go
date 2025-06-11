@@ -26,3 +26,11 @@ func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*ty
 	}
 	return &types.QueryParamsResponse{Params: params}, nil
 }
+
+func (k Querier) ICAOnHub(ctx context.Context, req *types.QueryICAOnHubRequest) (*types.QueryICAOnHubResponse, error) {
+	ica, err := k.Keeper.ICAData.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryICAOnHubResponse{IcaOnHub: ica}, nil
+}
