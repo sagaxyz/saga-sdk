@@ -15,10 +15,21 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/saga/assetctl/v1/host/params";
   }
+
+  // ICAOnHub queries the ICA on the hub.
+  rpc ICAOnHub(QueryICAOnHubRequest) returns (QueryICAOnHubResponse) {
+    option (google.api.http).get = "/saga/assetctl/v1/host/ica-on-hub";
+  }
 }
 	
 message QueryParamsRequest {}
 
 message QueryParamsResponse {
   Params params = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryICAOnHubRequest {}
+
+message QueryICAOnHubResponse {
+  ICAOnHub ica_on_hub = 1 [(gogoproto.nullable) = false];
 }

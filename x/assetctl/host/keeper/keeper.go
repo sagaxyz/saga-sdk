@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	EnabledListPrefix = collections.NewPrefix(0x00) // Stores ChainletIDs that have enabled the registry
-	ParamsPrefix      = collections.NewPrefix(0x01) // Stores global asset metadata keyed by Hub IBC Denom
-	ICAOnHubPrefix    = collections.NewPrefix(0x02) // Stores the ICA on the hub
+	ParamsPrefix   = collections.NewPrefix(0) // Stores params
+	ICAOnHubPrefix = collections.NewPrefix(1) // Stores the ICA on the hub
 )
 
 type ACLKeeper interface {
@@ -55,6 +54,11 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 			ParamsPrefix,
 			"params",
 			codec.CollValue[types.Params](cdc),
+		),
+		ICAOnHub: collections.NewItem(sb,
+			ICAOnHubPrefix,
+			"ica",
+			codec.CollValue[types.ICAOnHub](cdc),
 		),
 	}
 

@@ -66,8 +66,13 @@ func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDen
 		return nil, err
 	}
 
+	owner := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	if owner == nil {
+		return nil, fmt.Errorf("owner address not found")
+	}
+
 	wrapperMsg := &ibccontrollertypes.MsgSendTx{
-		Owner:           k.Authority,
+		Owner:           owner.String(),
 		ConnectionId:    params.HubConnectionId,
 		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
 		PacketData: icatypes.InterchainAccountPacketData{
@@ -150,8 +155,13 @@ func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAsset
 		return nil, err
 	}
 
+	owner := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	if owner == nil {
+		return nil, fmt.Errorf("owner address not found")
+	}
+
 	wrapperMsg := &ibccontrollertypes.MsgSendTx{
-		Owner:           k.Authority,
+		Owner:           owner.String(),
 		ConnectionId:    params.HubConnectionId,
 		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
 		PacketData: icatypes.InterchainAccountPacketData{
