@@ -1,0 +1,58 @@
+syntax = "proto3";
+package saga.assetctl.controller.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "saga/assetctl/controller/v1/assetctl.proto";
+import "cosmos/bank/v1beta1/bank.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // AssetDirectory queries the list of all registered assets on the Hub.
+  rpc AssetDirectory(QueryAssetDirectoryRequest) returns (QueryAssetDirectoryResponse) {
+    option (google.api.http).get = "/saga/assetctl/controller/v1/asset_directory";
+  }
+
+  // ChainletRegistryStatus queries if the asset registry is enabled for a specific chainlet.
+  rpc ChainletRegistryStatus(QueryChainletRegistryStatusRequest) returns (QueryChainletRegistryStatusResponse) {
+    option (google.api.http).get = "/saga/assetctl/controller/v1/chainlet_status/{chainlet_id}";
+  }
+
+  // Params queries the controller module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/saga/assetctl/controller/v1/params";
+  }
+}
+
+// QueryAssetDirectoryRequest is the request type for the Query/AssetDirectory RPC method.
+message QueryAssetDirectoryRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// QueryAssetDirectoryResponse is the response type for the Query/AssetDirectory RPC method.
+message QueryAssetDirectoryResponse {
+  repeated RegisteredAsset assets = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryChainletRegistryStatusRequest {
+  string chainlet_id = 1;
+}
+
+message QueryChainletRegistryStatusResponse {
+  bool is_enabled = 1;
+}
+
+// RegisteredAsset defines the structure of an asset in the directory.
+message RegisteredAsset {
+  cosmos.bank.v1beta1.Metadata metadata = 1;
+}
+
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1;
+}
