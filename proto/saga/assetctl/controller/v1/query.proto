@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "saga/assetctl/controller/v1/assetctl.proto";
+import "cosmos/bank/v1beta1/bank.proto";
 
 option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/controller/types";
 
@@ -47,10 +48,7 @@ message QueryChainletRegistryStatusResponse {
 
 // RegisteredAsset defines the structure of an asset in the directory.
 message RegisteredAsset {
-  string original_denom = 1;
-  string display_name = 2;
-  string description = 3;
-  repeated DenomUnit denom_units = 4 [(gogoproto.nullable) = false];
+  cosmos.bank.v1beta1.Metadata metadata = 1;
 }
 
 message QueryParamsRequest {}

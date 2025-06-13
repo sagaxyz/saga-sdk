@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/errors"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	proto "github.com/cosmos/gogoproto/proto"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 
@@ -29,7 +30,7 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 var _ types.MsgServer = msgServer{}
 
 // RegisterDenom implements types.MsgServer.
-func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDenoms) (*types.MsgRegisterDenomsResponse, error) {
+func (k msgServer) ManageRegisteredAssets(ctx context.Context, msg *types.MsgManageRegisteredAssets) (*types.MsgManageRegisteredAssetsResponse, error) {
 	addr, err := k.addressCodec.StringToBytes(msg.Authority)
 	if err != nil {
 		return nil, err
@@ -40,21 +41,34 @@ func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDen
 		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
-	if len(msg.IbcDenoms) == 0 {
-		return nil, errors.ErrInvalidRequest.Wrap("ibc_denoms cannot be empty")
+	if len(msg.AssetsToRegister) == 0 && len(msg.AssetsToUnregister) == 0 {
+		return nil, errors.ErrInvalidRequest.Wrap("assets_to_register and assets_to_unregister cannot be empty")
 	}
 
-	assetsToRegister := make([]controllertypes.AssetDetails, len(msg.IbcDenoms))
-	for i, denom := range msg.IbcDenoms {
-		assetsToRegister[i] = controllertypes.AssetDetails{
-			// TODO: Add logic to get the asset details
-			Denom: denom,
+	assetsToRegister := make([]banktypes.Metadata, len(msg.AssetsToRegister))
+	for i, denom := range msg.AssetsToRegister {
+		meta, ok := k.BankKeeper.GetDenomMetaData(sdkCtx, denom)
+		if !ok {
+			return nil, errors.ErrInvalidRequest.Wrapf("denom %s not found", denom)
 		}
+		assetsToRegister[i] = meta
+	}
+
+	params, err := k.Params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	moduleAddress := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	if moduleAddress == nil {
+		return nil, fmt.Errorf("module address not found")
 	}
 
 	sequence, err := k.sendMsgThroughICA(ctx, &controllertypes.MsgManageRegisteredAssets{
-		Authority:        k.Authority,
-		AssetsToRegister: assetsToRegister,
+		Authority:          moduleAddress.String(),
+		ChannelId:          params.HubChannelId,
+		AssetsToRegister:   assetsToRegister,
+		AssetsToUnregister: msg.AssetsToUnregister, // we don't need to send any metadata here, just the denom
 	})
 	if err != nil {
 		return nil, err
@@ -65,7 +79,7 @@ func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDen
 		return nil, err
 	}
 
-	return &types.MsgRegisterDenomsResponse{Sequence: sequence}, nil
+	return &types.MsgManageRegisteredAssetsResponse{Sequence: sequence}, nil
 }
 
 // UpdateParams implements types.MsgServer.

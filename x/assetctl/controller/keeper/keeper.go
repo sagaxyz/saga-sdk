@@ -18,6 +18,10 @@ var (
 	SupportedAssetsPrefix = collections.NewPrefix(0x03) // Stores supported assets keyed by ChainletID and Hub IBC Denom
 )
 
+type AccountKeeper interface {
+	GetModuleAddress(name string) sdk.AccAddress
+}
+
 type Keeper struct {
 	cdc          codec.BinaryCodec
 	storeSvc     corestore.KVStoreService
@@ -27,8 +31,8 @@ type Keeper struct {
 	ICAHostKeeper     ICAHostKeeper
 	IBCChannelKeeper  IBCChannelKeeper
 	IBCTransferKeeper IBCTransferKeeper
-
-	Authority string
+	AccountKeeper     AccountKeeper
+	Authority         string
 
 	Schema          collections.Schema
 	AssetMetadata   collections.Map[string, types.RegisteredAsset]       // Key: Hub IBC Denom. Value: RegisteredAsset metadata.

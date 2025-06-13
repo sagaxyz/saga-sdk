@@ -9,6 +9,7 @@ import (
 	"cosmossdk.io/collections"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
+	assetctltypes "github.com/sagaxyz/saga-sdk/x/assetctl/types"
 )
 
 type msgServer struct {
@@ -24,7 +25,7 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 var _ types.MsgServer = msgServer{}
 
 // RegisterAssets implements types.MsgServer.
-func (k msgServer) RegisterAssets(ctx context.Context, msg *types.MsgRegisterAssets) (*types.MsgRegisterAssetsResponse, error) {
+func (k msgServer) ManageRegisteredAssets(ctx context.Context, msg *types.MsgManageRegisteredAssets) (*types.MsgManageRegisteredAssetsResponse, error) {
 	if err := k.checkChannelAuthority(ctx, msg.Authority, msg.ChannelId); err != nil {
 		return nil, err
 	}
@@ -35,9 +36,8 @@ func (k msgServer) RegisterAssets(ctx context.Context, msg *types.MsgRegisterAss
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	for _, asset := range msg.AssetsToRegister {
-
 		// trim the denomination prefix, by default "ibc/"
-		hexHash := asset.IbcDenom[len("ibc/"):]
+		hexHash := asset.Base[len("ibc/"):]
 		hash, err := hex.DecodeString(hexHash)
 		if err != nil {
 			return nil, err
@@ -59,52 +59,27 @@ func (k msgServer) RegisterAssets(ctx context.Context, msg *types.MsgRegisterAss
 		}
 
 		// We allow overwriting the asset metadata
-		err = k.AssetMetadata.Set(ctx, asset.IbcDenom, types.RegisteredAsset{
-			OriginalDenom: asset.Denom,
-			DisplayName:   asset.DisplayName,
-			Description:   asset.Description,
-			DenomUnits:    asset.DenomUnits,
-		})
+		err = k.AssetMetadata.Set(ctx, asset.Base, types.RegisteredAsset{Metadata: &asset})
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &types.MsgRegisterAssetsResponse{}, nil
-}
-
-// UnregisterAssets implements types.MsgServer.
-func (k msgServer) UnregisterAssets(ctx context.Context, msg *types.MsgUnregisterAssets) (*types.MsgUnregisterAssetsResponse, error) {
-	if err := k.checkChannelAuthority(ctx, msg.Authority, msg.ChannelId); err != nil {
-		return nil, err
-	}
-
-	if len(msg.IbcDenoms) == 0 {
-		return nil, fmt.Errorf("ibc denoms to unregister cannot be empty")
-	}
-
-	for _, ibcDenom := range msg.IbcDenoms {
-		err := k.AssetMetadata.Remove(ctx, ibcDenom)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &types.MsgUnregisterAssetsResponse{}, nil
+	return &types.MsgManageRegisteredAssetsResponse{}, nil
 }
 
 // SupportAssets checks if the sender is the authority of the channel and then
 // adds the assets to the supported assets list.
-func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAssets) (*types.MsgSupportAssetsResponse, error) {
+func (k msgServer) ManageSupportedAssets(ctx context.Context, msg *types.MsgManageSupportedAssets) (*types.MsgManageSupportedAssetsResponse, error) {
 	if err := k.checkChannelAuthority(ctx, msg.Authority, msg.ChannelId); err != nil {
 		return nil, err
 	}
 
-	if len(msg.IbcDenoms) == 0 {
-		return nil, fmt.Errorf("ibc_denoms cannot be empty")
+	if len(msg.AddIbcDenoms) == 0 && len(msg.RemoveIbcDenoms) == 0 {
+		return nil, fmt.Errorf("add_ibc_denoms and remove_ibc_denoms cannot be empty")
 	}
 
-	for _, ibcDenom := range msg.IbcDenoms {
+	for _, ibcDenom := range msg.AddIbcDenoms {
 		exists, err := k.SupportedAssets.Has(ctx, collections.Join(msg.ChannelId, ibcDenom))
 		if err != nil {
 			return nil, err
@@ -122,7 +97,14 @@ func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAsset
 		}
 	}
 
-	return &types.MsgSupportAssetsResponse{}, nil
+	for _, ibcDenom := range msg.RemoveIbcDenoms {
+		err := k.SupportedAssets.Remove(ctx, collections.Join(msg.ChannelId, ibcDenom))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &types.MsgManageSupportedAssetsResponse{}, nil
 }
 
 // UpdateParams implements types.MsgServer.
@@ -149,6 +131,16 @@ func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 func (k Keeper) checkChannelAuthority(ctx context.Context, address, channelId string) error {
 	// TODO: this is an expensive operation, we should allow pre-registration of the
 	// authorities.
+
+	moduleAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	if moduleAddress == nil {
+		return fmt.Errorf("module address not found")
+	}
+
+	if address != moduleAddress.String() {
+		return fmt.Errorf("address is not the authority")
+	}
+
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	interchainAccounts := k.ICAHostKeeper.GetAllInterchainAccounts(sdkCtx)
 	connectionId := ""

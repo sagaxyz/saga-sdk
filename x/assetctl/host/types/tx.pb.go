@@ -135,23 +135,24 @@ func (m *MsgManageSupportedAssetsResponse) GetSequence() uint64 {
 	return 0
 }
 
-type MsgRegisterDenoms struct {
-	Authority string   `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
-	IbcDenoms []string `protobuf:"bytes,2,rep,name=ibc_denoms,json=ibcDenoms,proto3" json:"ibc_denoms,omitempty"`
+type MsgManageRegisteredAssets struct {
+	Authority          string   `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	AssetsToRegister   []string `protobuf:"bytes,2,rep,name=assets_to_register,json=assetsToRegister,proto3" json:"assets_to_register,omitempty"`
+	AssetsToUnregister []string `protobuf:"bytes,3,rep,name=assets_to_unregister,json=assetsToUnregister,proto3" json:"assets_to_unregister,omitempty"`
 }
 
-func (m *MsgRegisterDenoms) Reset()         { *m = MsgRegisterDenoms{} }
-func (m *MsgRegisterDenoms) String() string { return proto.CompactTextString(m) }
-func (*MsgRegisterDenoms) ProtoMessage()    {}
-func (*MsgRegisterDenoms) Descriptor() ([]byte, []int) {
+func (m *MsgManageRegisteredAssets) Reset()         { *m = MsgManageRegisteredAssets{} }
+func (m *MsgManageRegisteredAssets) String() string { return proto.CompactTextString(m) }
+func (*MsgManageRegisteredAssets) ProtoMessage()    {}
+func (*MsgManageRegisteredAssets) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37bd8a6c69b6a6e1, []int{2}
 }
-func (m *MsgRegisterDenoms) XXX_Unmarshal(b []byte) error {
+func (m *MsgManageRegisteredAssets) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgRegisterDenoms) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgManageRegisteredAssets) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgRegisterDenoms.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgManageRegisteredAssets.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -161,48 +162,55 @@ func (m *MsgRegisterDenoms) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *MsgRegisterDenoms) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgRegisterDenoms.Merge(m, src)
+func (m *MsgManageRegisteredAssets) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgManageRegisteredAssets.Merge(m, src)
 }
-func (m *MsgRegisterDenoms) XXX_Size() int {
+func (m *MsgManageRegisteredAssets) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgRegisterDenoms) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgRegisterDenoms.DiscardUnknown(m)
+func (m *MsgManageRegisteredAssets) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgManageRegisteredAssets.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgRegisterDenoms proto.InternalMessageInfo
+var xxx_messageInfo_MsgManageRegisteredAssets proto.InternalMessageInfo
 
-func (m *MsgRegisterDenoms) GetAuthority() string {
+func (m *MsgManageRegisteredAssets) GetAuthority() string {
 	if m != nil {
 		return m.Authority
 	}
 	return ""
 }
 
-func (m *MsgRegisterDenoms) GetIbcDenoms() []string {
+func (m *MsgManageRegisteredAssets) GetAssetsToRegister() []string {
 	if m != nil {
-		return m.IbcDenoms
+		return m.AssetsToRegister
 	}
 	return nil
 }
 
-type MsgRegisterDenomsResponse struct {
+func (m *MsgManageRegisteredAssets) GetAssetsToUnregister() []string {
+	if m != nil {
+		return m.AssetsToUnregister
+	}
+	return nil
+}
+
+type MsgManageRegisteredAssetsResponse struct {
 	Sequence uint64 `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
 }
 
-func (m *MsgRegisterDenomsResponse) Reset()         { *m = MsgRegisterDenomsResponse{} }
-func (m *MsgRegisterDenomsResponse) String() string { return proto.CompactTextString(m) }
-func (*MsgRegisterDenomsResponse) ProtoMessage()    {}
-func (*MsgRegisterDenomsResponse) Descriptor() ([]byte, []int) {
+func (m *MsgManageRegisteredAssetsResponse) Reset()         { *m = MsgManageRegisteredAssetsResponse{} }
+func (m *MsgManageRegisteredAssetsResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgManageRegisteredAssetsResponse) ProtoMessage()    {}
+func (*MsgManageRegisteredAssetsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37bd8a6c69b6a6e1, []int{3}
 }
-func (m *MsgRegisterDenomsResponse) XXX_Unmarshal(b []byte) error {
+func (m *MsgManageRegisteredAssetsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgRegisterDenomsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgManageRegisteredAssetsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgRegisterDenomsResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgManageRegisteredAssetsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -212,19 +220,19 @@ func (m *MsgRegisterDenomsResponse) XXX_Marshal(b []byte, deterministic bool) ([
 		return b[:n], nil
 	}
 }
-func (m *MsgRegisterDenomsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgRegisterDenomsResponse.Merge(m, src)
+func (m *MsgManageRegisteredAssetsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgManageRegisteredAssetsResponse.Merge(m, src)
 }
-func (m *MsgRegisterDenomsResponse) XXX_Size() int {
+func (m *MsgManageRegisteredAssetsResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgRegisterDenomsResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgRegisterDenomsResponse.DiscardUnknown(m)
+func (m *MsgManageRegisteredAssetsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgManageRegisteredAssetsResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgRegisterDenomsResponse proto.InternalMessageInfo
+var xxx_messageInfo_MsgManageRegisteredAssetsResponse proto.InternalMessageInfo
 
-func (m *MsgRegisterDenomsResponse) GetSequence() uint64 {
+func (m *MsgManageRegisteredAssetsResponse) GetSequence() uint64 {
 	if m != nil {
 		return m.Sequence
 	}
@@ -418,8 +426,8 @@ var xxx_messageInfo_MsgUpdateParamsResponse proto.InternalMessageInfo
 func init() {
 	proto.RegisterType((*MsgManageSupportedAssets)(nil), "saga.assetctl.host.v1.MsgManageSupportedAssets")
 	proto.RegisterType((*MsgManageSupportedAssetsResponse)(nil), "saga.assetctl.host.v1.MsgManageSupportedAssetsResponse")
-	proto.RegisterType((*MsgRegisterDenoms)(nil), "saga.assetctl.host.v1.MsgRegisterDenoms")
-	proto.RegisterType((*MsgRegisterDenomsResponse)(nil), "saga.assetctl.host.v1.MsgRegisterDenomsResponse")
+	proto.RegisterType((*MsgManageRegisteredAssets)(nil), "saga.assetctl.host.v1.MsgManageRegisteredAssets")
+	proto.RegisterType((*MsgManageRegisteredAssetsResponse)(nil), "saga.assetctl.host.v1.MsgManageRegisteredAssetsResponse")
 	proto.RegisterType((*MsgCreateICAOnHub)(nil), "saga.assetctl.host.v1.MsgCreateICAOnHub")
 	proto.RegisterType((*MsgCreateICAOnHubResponse)(nil), "saga.assetctl.host.v1.MsgCreateICAOnHubResponse")
 	proto.RegisterType((*MsgUpdateParams)(nil), "saga.assetctl.host.v1.MsgUpdateParams")
@@ -429,44 +437,47 @@ func init() {
 func init() { proto.RegisterFile("saga/assetctl/host/v1/tx.proto", fileDescriptor_37bd8a6c69b6a6e1) }
 
 var fileDescriptor_37bd8a6c69b6a6e1 = []byte{
-	// 582 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x54, 0x4f, 0x6f, 0xd3, 0x30,
-	0x1c, 0x5d, 0x56, 0x18, 0xd4, 0x4c, 0x9d, 0x16, 0x6d, 0x6a, 0x1b, 0xa9, 0x51, 0x55, 0x21, 0x54,
-	0x55, 0x5a, 0x4c, 0x87, 0x60, 0x12, 0x07, 0xa4, 0x6e, 0x1c, 0xa8, 0x50, 0x05, 0x4a, 0xc5, 0x05,
-	0x0e, 0x95, 0x13, 0x7b, 0x6e, 0x44, 0x13, 0x87, 0xd8, 0xa9, 0xda, 0x9d, 0x80, 0x4f, 0xb0, 0x8f,
-	0xb2, 0xc3, 0x3e, 0x04, 0xc7, 0x09, 0x71, 0xe0, 0x88, 0xda, 0xc3, 0xbe, 0x06, 0x8a, 0x93, 0x76,
-	0xfd, 0x97, 0xa9, 0x8c, 0x53, 0xfb, 0xf3, 0x7b, 0x7e, 0xef, 0xfd, 0x9c, 0x9f, 0x0d, 0x74, 0x8e,
-	0x28, 0x82, 0x88, 0x73, 0x22, 0x6c, 0xd1, 0x83, 0x5d, 0xc6, 0x05, 0xec, 0xd7, 0xa1, 0x18, 0x18,
-	0x7e, 0xc0, 0x04, 0x53, 0xf7, 0x23, 0xdc, 0x98, 0xe0, 0x46, 0x84, 0x1b, 0xfd, 0xba, 0xb6, 0x47,
-	0x19, 0x65, 0x92, 0x01, 0xa3, 0x7f, 0x31, 0x59, 0xcb, 0xdb, 0x8c, 0xbb, 0x8c, 0x43, 0x97, 0xd3,
-	0x48, 0xc4, 0xe5, 0x34, 0x01, 0x8a, 0x31, 0xd0, 0x89, 0x77, 0xc4, 0x45, 0x02, 0x95, 0x57, 0x07,
-	0x90, 0x46, 0xc9, 0x66, 0xca, 0x18, 0xed, 0x11, 0x28, 0x2b, 0x2b, 0x3c, 0x85, 0xc8, 0x1b, 0xc6,
-	0x50, 0xe5, 0x52, 0x01, 0x85, 0x16, 0xa7, 0x2d, 0xe4, 0x21, 0x4a, 0xda, 0xa1, 0xef, 0xb3, 0x40,
-	0x10, 0xdc, 0x88, 0xc4, 0xb8, 0xfa, 0x02, 0x64, 0x51, 0x28, 0xba, 0x2c, 0x70, 0xc4, 0xb0, 0xa0,
-	0x94, 0x95, 0x6a, 0xf6, 0xb8, 0xf0, 0xf3, 0xf2, 0x60, 0x2f, 0xb1, 0x6f, 0x60, 0x1c, 0x10, 0xce,
-	0xdb, 0x22, 0x70, 0x3c, 0x6a, 0xde, 0x50, 0xd5, 0xc7, 0x20, 0x87, 0x30, 0xee, 0x38, 0x96, 0xdd,
-	0xc1, 0xc4, 0x63, 0x2e, 0x2f, 0x6c, 0x96, 0x33, 0xd5, 0xac, 0xb9, 0x8d, 0x30, 0x6e, 0x5a, 0xf6,
-	0x6b, 0xb9, 0xa6, 0xd6, 0xc0, 0x6e, 0x40, 0x5c, 0xd6, 0x27, 0xb3, 0xc4, 0x8c, 0x24, 0xee, 0xc4,
-	0xc0, 0x94, 0xfb, 0x32, 0xf7, 0xfd, 0xfa, 0xa2, 0x76, 0xe3, 0x50, 0x79, 0x05, 0xca, 0x69, 0xa9,
-	0x4d, 0xc2, 0x7d, 0xe6, 0x71, 0xa2, 0x6a, 0xe0, 0x21, 0x27, 0x5f, 0x42, 0xe2, 0xd9, 0x44, 0x86,
-	0xbf, 0x67, 0x4e, 0xeb, 0xca, 0x19, 0xd8, 0x6d, 0x71, 0x6a, 0x12, 0xea, 0x70, 0x41, 0x82, 0x24,
-	0xd0, 0x5d, 0xdb, 0x2d, 0x01, 0xb0, 0xd4, 0x6a, 0xd6, 0x49, 0xcd, 0x7e, 0x04, 0x8a, 0x4b, 0xde,
-	0x6b, 0x85, 0xfe, 0x24, 0x43, 0x9f, 0x04, 0x04, 0x09, 0xd2, 0x3c, 0x69, 0xbc, 0xf3, 0xde, 0x84,
-	0xd6, 0x5d, 0x43, 0x2f, 0xa5, 0x6a, 0xcb, 0x54, 0xf3, 0xe2, 0xd3, 0x54, 0x25, 0x00, 0xec, 0x2e,
-	0xf2, 0x3c, 0xd2, 0xeb, 0x38, 0x38, 0x76, 0x31, 0xb3, 0xc9, 0x4a, 0x13, 0xab, 0x79, 0xf0, 0x20,
-	0xfa, 0x02, 0x11, 0xb6, 0x29, 0xb1, 0xad, 0xa8, 0x6c, 0xe2, 0xca, 0xb9, 0x02, 0x76, 0x5a, 0x9c,
-	0x7e, 0xf0, 0x31, 0x12, 0xe4, 0x3d, 0x0a, 0xd0, 0x7f, 0x9c, 0xf2, 0x73, 0xb0, 0xe5, 0x4b, 0x05,
-	0xe9, 0xf1, 0xe8, 0xb0, 0x64, 0xac, 0xbc, 0x58, 0x46, 0x6c, 0x63, 0x26, 0xe4, 0xa5, 0x3e, 0x8b,
-	0x20, 0xbf, 0x90, 0x68, 0xd2, 0xe5, 0xe1, 0xaf, 0x0c, 0xc8, 0xb4, 0x38, 0x55, 0xbf, 0x29, 0x60,
-	0x7f, 0xf5, 0x85, 0x80, 0x29, 0x9e, 0x69, 0xb3, 0xa8, 0x1d, 0xfd, 0xe3, 0x86, 0xe9, 0x89, 0xf7,
-	0x40, 0x6e, 0x61, 0x3a, 0xab, 0xe9, 0x52, 0xf3, 0x4c, 0xed, 0xe9, 0xba, 0xcc, 0x59, 0xb7, 0x85,
-	0xb1, 0xba, 0xc5, 0x6d, 0x9e, 0x79, 0x9b, 0x5b, 0xca, 0x34, 0x9d, 0x82, 0xed, 0xb9, 0x89, 0x78,
-	0x92, 0xae, 0x30, 0xcb, 0xd3, 0x8c, 0xf5, 0x78, 0x13, 0x1f, 0xed, 0xfe, 0xd7, 0xeb, 0x8b, 0x9a,
-	0x72, 0xfc, 0xf6, 0xc7, 0x48, 0x57, 0xae, 0x46, 0xba, 0xf2, 0x67, 0xa4, 0x2b, 0xe7, 0x63, 0x7d,
-	0xe3, 0x6a, 0xac, 0x6f, 0xfc, 0x1e, 0xeb, 0x1b, 0x1f, 0xeb, 0xd4, 0x11, 0xdd, 0xd0, 0x32, 0x6c,
-	0xe6, 0xc2, 0x48, 0x7a, 0x30, 0x3c, 0x93, 0xbf, 0x07, 0x1c, 0x7f, 0x86, 0x83, 0x85, 0x27, 0x55,
-	0x0c, 0x7d, 0xc2, 0xad, 0x2d, 0xf9, 0x6c, 0x3e, 0xfb, 0x1b, 0x00, 0x00, 0xff, 0xff, 0x23, 0x54,
-	0x0a, 0x9d, 0xf6, 0x05, 0x00, 0x00,
+	// 625 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x54, 0xcd, 0x6e, 0xd3, 0x4c,
+	0x14, 0xad, 0x9b, 0xef, 0x2b, 0x64, 0xa8, 0x5a, 0x6a, 0xb5, 0x34, 0xb5, 0x54, 0x2b, 0x44, 0x08,
+	0x55, 0x11, 0xb5, 0x93, 0x22, 0x7e, 0xc4, 0x02, 0x94, 0x96, 0x05, 0x11, 0x8a, 0x40, 0x0e, 0xdd,
+	0xc0, 0xc2, 0x1a, 0x7b, 0xa6, 0x13, 0x8b, 0xd8, 0x63, 0x3c, 0xe3, 0x28, 0x61, 0x05, 0x88, 0x07,
+	0xe8, 0xa3, 0x74, 0xd1, 0x37, 0x60, 0xc3, 0xb2, 0x62, 0xc5, 0x12, 0x25, 0x8b, 0xae, 0x78, 0x07,
+	0xe4, 0xb1, 0xe3, 0x34, 0x3f, 0x16, 0x69, 0x59, 0x25, 0xd7, 0xe7, 0xdc, 0x73, 0xee, 0xbd, 0x73,
+	0x67, 0x80, 0xca, 0x20, 0x81, 0x3a, 0x64, 0x0c, 0x73, 0x9b, 0xb7, 0xf5, 0x16, 0x65, 0x5c, 0xef,
+	0x54, 0x75, 0xde, 0xd5, 0xfc, 0x80, 0x72, 0x2a, 0x6f, 0x44, 0xb8, 0x36, 0xc4, 0xb5, 0x08, 0xd7,
+	0x3a, 0x55, 0x65, 0x9d, 0x50, 0x42, 0x05, 0x43, 0x8f, 0xfe, 0xc5, 0x64, 0x65, 0xd3, 0xa6, 0xcc,
+	0xa5, 0x4c, 0x77, 0x19, 0x89, 0x44, 0x5c, 0x46, 0x12, 0x60, 0x2b, 0x06, 0xcc, 0x38, 0x23, 0x0e,
+	0x12, 0xa8, 0x38, 0xbb, 0x00, 0x61, 0x94, 0x24, 0x13, 0x4a, 0x49, 0x1b, 0xeb, 0x22, 0xb2, 0xc2,
+	0x23, 0x1d, 0x7a, 0xbd, 0x18, 0x2a, 0x9d, 0x4a, 0xa0, 0xd0, 0x60, 0xa4, 0x01, 0x3d, 0x48, 0x70,
+	0x33, 0xf4, 0x7d, 0x1a, 0x70, 0x8c, 0x6a, 0x91, 0x18, 0x93, 0x1f, 0x82, 0x3c, 0x0c, 0x79, 0x8b,
+	0x06, 0x0e, 0xef, 0x15, 0xa4, 0xa2, 0xb4, 0x93, 0xdf, 0x2f, 0xfc, 0x38, 0xdd, 0x5d, 0x4f, 0xec,
+	0x6b, 0x08, 0x05, 0x98, 0xb1, 0x26, 0x0f, 0x1c, 0x8f, 0x18, 0x23, 0xaa, 0x7c, 0x07, 0xac, 0x40,
+	0x84, 0x4c, 0xc7, 0xb2, 0x4d, 0x84, 0x3d, 0xea, 0xb2, 0xc2, 0x62, 0x31, 0xb7, 0x93, 0x37, 0x96,
+	0x21, 0x42, 0x75, 0xcb, 0x7e, 0x2e, 0xbe, 0xc9, 0x65, 0xb0, 0x16, 0x60, 0x97, 0x76, 0xf0, 0x45,
+	0x62, 0x4e, 0x10, 0x57, 0x63, 0x20, 0xe5, 0x3e, 0x59, 0xf9, 0x72, 0x7e, 0x52, 0x1e, 0x39, 0x94,
+	0x9e, 0x82, 0x62, 0x56, 0xd5, 0x06, 0x66, 0x3e, 0xf5, 0x18, 0x96, 0x15, 0x70, 0x9d, 0xe1, 0x0f,
+	0x21, 0xf6, 0x6c, 0x2c, 0x8a, 0xff, 0xcf, 0x48, 0xe3, 0xd2, 0x37, 0x09, 0x6c, 0xa5, 0x02, 0x06,
+	0x26, 0x0e, 0xe3, 0x38, 0xf8, 0xe7, 0xbe, 0xef, 0x01, 0x59, 0x1c, 0x03, 0x33, 0x39, 0x35, 0x83,
+	0x44, 0x35, 0xe9, 0xfd, 0x66, 0x8c, 0xbc, 0xa1, 0x43, 0x37, 0xb9, 0x02, 0xd6, 0x47, 0xec, 0xd0,
+	0x4b, 0xf9, 0xf1, 0x08, 0xe4, 0x21, 0xff, 0x30, 0x45, 0xa6, 0xa6, 0xf0, 0x0c, 0xdc, 0xce, 0x6c,
+	0x62, 0xae, 0x31, 0xbc, 0x03, 0x6b, 0x0d, 0x46, 0x0e, 0x02, 0x0c, 0x39, 0xae, 0x1f, 0xd4, 0x5e,
+	0x79, 0x2f, 0x42, 0xeb, 0xaa, 0xdd, 0x4f, 0x55, 0xd7, 0x14, 0x23, 0x1e, 0x17, 0x4f, 0xab, 0xda,
+	0x06, 0xc0, 0x6e, 0x41, 0xcf, 0xc3, 0x6d, 0xd3, 0x41, 0xb1, 0x8b, 0x91, 0x4f, 0xbe, 0xd4, 0x91,
+	0xbc, 0x09, 0xae, 0x45, 0x67, 0x1a, 0x61, 0x8b, 0x02, 0x5b, 0x8a, 0xc2, 0x3a, 0x2a, 0x1d, 0x4b,
+	0x60, 0xb5, 0xc1, 0xc8, 0xa1, 0x8f, 0x20, 0xc7, 0xaf, 0x61, 0x00, 0xdd, 0xab, 0x1f, 0xd7, 0x03,
+	0xb0, 0xe4, 0x0b, 0x05, 0xe1, 0x71, 0x63, 0x6f, 0x5b, 0x9b, 0x79, 0x55, 0xb5, 0xd8, 0xc6, 0x48,
+	0xc8, 0x53, 0x7d, 0x6e, 0x81, 0xcd, 0x89, 0x8a, 0x86, 0x5d, 0xee, 0xfd, 0xce, 0x81, 0x5c, 0x83,
+	0x11, 0xf9, 0xb3, 0x04, 0x36, 0x66, 0x5f, 0x31, 0x3d, 0xc3, 0x33, 0x6b, 0xbb, 0x95, 0x47, 0x97,
+	0x4c, 0x48, 0x27, 0xfe, 0x55, 0x02, 0xb7, 0x32, 0xf6, 0xbd, 0xf2, 0x37, 0xcd, 0xc9, 0x0c, 0xe5,
+	0xf1, 0x65, 0x33, 0xd2, 0x32, 0xda, 0x60, 0x65, 0x62, 0xdf, 0x76, 0xb2, 0xb5, 0xc6, 0x99, 0x4a,
+	0x65, 0x5e, 0x66, 0xea, 0x76, 0x04, 0x96, 0xc7, 0x56, 0xe5, 0x6e, 0xb6, 0xc2, 0x45, 0x9e, 0xa2,
+	0xcd, 0xc7, 0x1b, 0xfa, 0x28, 0xff, 0x7f, 0x3a, 0x3f, 0x29, 0x4b, 0xfb, 0x2f, 0xbf, 0xf7, 0x55,
+	0xe9, 0xac, 0xaf, 0x4a, 0xbf, 0xfa, 0xaa, 0x74, 0x3c, 0x50, 0x17, 0xce, 0x06, 0xea, 0xc2, 0xcf,
+	0x81, 0xba, 0xf0, 0xb6, 0x4a, 0x1c, 0xde, 0x0a, 0x2d, 0xcd, 0xa6, 0xae, 0x1e, 0x49, 0x77, 0x7b,
+	0x1f, 0xc5, 0xef, 0x2e, 0x43, 0xef, 0xf5, 0xee, 0xc4, 0xeb, 0xcd, 0x7b, 0x3e, 0x66, 0xd6, 0x92,
+	0x78, 0xa1, 0xef, 0xff, 0x09, 0x00, 0x00, 0xff, 0xff, 0xe6, 0x71, 0x63, 0xc3, 0x61, 0x06, 0x00,
+	0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -486,7 +497,7 @@ type MsgClient interface {
 	ManageSupportedAssets(ctx context.Context, in *MsgManageSupportedAssets, opts ...grpc.CallOption) (*MsgManageSupportedAssetsResponse, error)
 	// RegisterDenom sends a message to the controller to let it know that this host
 	// registers the given denom as a native asset of the host.
-	RegisterDenoms(ctx context.Context, in *MsgRegisterDenoms, opts ...grpc.CallOption) (*MsgRegisterDenomsResponse, error)
+	ManageRegisteredAssets(ctx context.Context, in *MsgManageRegisteredAssets, opts ...grpc.CallOption) (*MsgManageRegisteredAssetsResponse, error)
 	CreateICAOnHub(ctx context.Context, in *MsgCreateICAOnHub, opts ...grpc.CallOption) (*MsgCreateICAOnHubResponse, error)
 	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
 }
@@ -508,9 +519,9 @@ func (c *msgClient) ManageSupportedAssets(ctx context.Context, in *MsgManageSupp
 	return out, nil
 }
 
-func (c *msgClient) RegisterDenoms(ctx context.Context, in *MsgRegisterDenoms, opts ...grpc.CallOption) (*MsgRegisterDenomsResponse, error) {
-	out := new(MsgRegisterDenomsResponse)
-	err := c.cc.Invoke(ctx, "/saga.assetctl.host.v1.Msg/RegisterDenoms", in, out, opts...)
+func (c *msgClient) ManageRegisteredAssets(ctx context.Context, in *MsgManageRegisteredAssets, opts ...grpc.CallOption) (*MsgManageRegisteredAssetsResponse, error) {
+	out := new(MsgManageRegisteredAssetsResponse)
+	err := c.cc.Invoke(ctx, "/saga.assetctl.host.v1.Msg/ManageRegisteredAssets", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -542,7 +553,7 @@ type MsgServer interface {
 	ManageSupportedAssets(context.Context, *MsgManageSupportedAssets) (*MsgManageSupportedAssetsResponse, error)
 	// RegisterDenom sends a message to the controller to let it know that this host
 	// registers the given denom as a native asset of the host.
-	RegisterDenoms(context.Context, *MsgRegisterDenoms) (*MsgRegisterDenomsResponse, error)
+	ManageRegisteredAssets(context.Context, *MsgManageRegisteredAssets) (*MsgManageRegisteredAssetsResponse, error)
 	CreateICAOnHub(context.Context, *MsgCreateICAOnHub) (*MsgCreateICAOnHubResponse, error)
 	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
 }
@@ -554,8 +565,8 @@ type UnimplementedMsgServer struct {
 func (*UnimplementedMsgServer) ManageSupportedAssets(ctx context.Context, req *MsgManageSupportedAssets) (*MsgManageSupportedAssetsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ManageSupportedAssets not implemented")
 }
-func (*UnimplementedMsgServer) RegisterDenoms(ctx context.Context, req *MsgRegisterDenoms) (*MsgRegisterDenomsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RegisterDenoms not implemented")
+func (*UnimplementedMsgServer) ManageRegisteredAssets(ctx context.Context, req *MsgManageRegisteredAssets) (*MsgManageRegisteredAssetsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ManageRegisteredAssets not implemented")
 }
 func (*UnimplementedMsgServer) CreateICAOnHub(ctx context.Context, req *MsgCreateICAOnHub) (*MsgCreateICAOnHubResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateICAOnHub not implemented")
@@ -586,20 +597,20 @@ func _Msg_ManageSupportedAssets_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_RegisterDenoms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRegisterDenoms)
+func _Msg_ManageRegisteredAssets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgManageRegisteredAssets)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).RegisterDenoms(ctx, in)
+		return srv.(MsgServer).ManageRegisteredAssets(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/saga.assetctl.host.v1.Msg/RegisterDenoms",
+		FullMethod: "/saga.assetctl.host.v1.Msg/ManageRegisteredAssets",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RegisterDenoms(ctx, req.(*MsgRegisterDenoms))
+		return srv.(MsgServer).ManageRegisteredAssets(ctx, req.(*MsgManageRegisteredAssets))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -649,8 +660,8 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_ManageSupportedAssets_Handler,
 		},
 		{
-			MethodName: "RegisterDenoms",
-			Handler:    _Msg_RegisterDenoms_Handler,
+			MethodName: "ManageRegisteredAssets",
+			Handler:    _Msg_ManageRegisteredAssets_Handler,
 		},
 		{
 			MethodName: "CreateICAOnHub",
@@ -741,7 +752,7 @@ func (m *MsgManageSupportedAssetsResponse) MarshalToSizedBuffer(dAtA []byte) (in
 	return len(dAtA) - i, nil
 }
 
-func (m *MsgRegisterDenoms) Marshal() (dAtA []byte, err error) {
+func (m *MsgManageRegisteredAssets) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -751,21 +762,30 @@ func (m *MsgRegisterDenoms) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgRegisterDenoms) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgManageRegisteredAssets) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgRegisterDenoms) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgManageRegisteredAssets) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.IbcDenoms) > 0 {
-		for iNdEx := len(m.IbcDenoms) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.IbcDenoms[iNdEx])
-			copy(dAtA[i:], m.IbcDenoms[iNdEx])
-			i = encodeVarintTx(dAtA, i, uint64(len(m.IbcDenoms[iNdEx])))
+	if len(m.AssetsToUnregister) > 0 {
+		for iNdEx := len(m.AssetsToUnregister) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AssetsToUnregister[iNdEx])
+			copy(dAtA[i:], m.AssetsToUnregister[iNdEx])
+			i = encodeVarintTx(dAtA, i, uint64(len(m.AssetsToUnregister[iNdEx])))
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.AssetsToRegister) > 0 {
+		for iNdEx := len(m.AssetsToRegister) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AssetsToRegister[iNdEx])
+			copy(dAtA[i:], m.AssetsToRegister[iNdEx])
+			i = encodeVarintTx(dAtA, i, uint64(len(m.AssetsToRegister[iNdEx])))
 			i--
 			dAtA[i] = 0x12
 		}
@@ -780,7 +800,7 @@ func (m *MsgRegisterDenoms) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MsgRegisterDenomsResponse) Marshal() (dAtA []byte, err error) {
+func (m *MsgManageRegisteredAssetsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -790,12 +810,12 @@ func (m *MsgRegisterDenomsResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgRegisterDenomsResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgManageRegisteredAssetsResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgRegisterDenomsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgManageRegisteredAssetsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -988,7 +1008,7 @@ func (m *MsgManageSupportedAssetsResponse) Size() (n int) {
 	return n
 }
 
-func (m *MsgRegisterDenoms) Size() (n int) {
+func (m *MsgManageRegisteredAssets) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -998,8 +1018,14 @@ func (m *MsgRegisterDenoms) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovTx(uint64(l))
 	}
-	if len(m.IbcDenoms) > 0 {
-		for _, s := range m.IbcDenoms {
+	if len(m.AssetsToRegister) > 0 {
+		for _, s := range m.AssetsToRegister {
+			l = len(s)
+			n += 1 + l + sovTx(uint64(l))
+		}
+	}
+	if len(m.AssetsToUnregister) > 0 {
+		for _, s := range m.AssetsToUnregister {
 			l = len(s)
 			n += 1 + l + sovTx(uint64(l))
 		}
@@ -1007,7 +1033,7 @@ func (m *MsgRegisterDenoms) Size() (n int) {
 	return n
 }
 
-func (m *MsgRegisterDenomsResponse) Size() (n int) {
+func (m *MsgManageRegisteredAssetsResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1296,7 +1322,7 @@ func (m *MsgManageSupportedAssetsResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MsgRegisterDenoms) Unmarshal(dAtA []byte) error {
+func (m *MsgManageRegisteredAssets) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1319,10 +1345,10 @@ func (m *MsgRegisterDenoms) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgRegisterDenoms: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgManageRegisteredAssets: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgRegisterDenoms: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgManageRegisteredAssets: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1359,7 +1385,7 @@ func (m *MsgRegisterDenoms) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IbcDenoms", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field AssetsToRegister", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1387,7 +1413,39 @@ func (m *MsgRegisterDenoms) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.IbcDenoms = append(m.IbcDenoms, string(dAtA[iNdEx:postIndex]))
+			m.AssetsToRegister = append(m.AssetsToRegister, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AssetsToUnregister", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AssetsToUnregister = append(m.AssetsToUnregister, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1410,7 +1468,7 @@ func (m *MsgRegisterDenoms) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MsgRegisterDenomsResponse) Unmarshal(dAtA []byte) error {
+func (m *MsgManageRegisteredAssetsResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1433,10 +1491,10 @@ func (m *MsgRegisterDenomsResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgRegisterDenomsResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgManageRegisteredAssetsResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgRegisterDenomsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgManageRegisteredAssetsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
