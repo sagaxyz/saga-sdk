@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"context"
+
 	"github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
 
 	"cosmossdk.io/collections"
@@ -10,11 +12,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 )
 
 var (
-	ParamsPrefix   = collections.NewPrefix(0) // Stores params
-	ICAOnHubPrefix = collections.NewPrefix(1) // Stores the ICA on the hub
+	ParamsPrefix           = collections.NewPrefix(0) // Stores params
+	ICAOnHubPrefix         = collections.NewPrefix(1) // Stores the ICA on the hub
+	InFlightRequestsPrefix = collections.NewPrefix(2) // Stores the in-flight requests
 )
 
 type ACLKeeper interface {
@@ -25,31 +30,69 @@ type AccountKeeper interface {
 	GetModuleAddress(name string) sdk.AccAddress
 }
 
+type ICAControllerKeeper interface {
+	GetInterchainAccountAddress(ctx sdk.Context, connectionID, portID string) (string, bool)
+	IsActiveChannel(ctx sdk.Context, connectionID, portID string) bool
+}
+
+type ERC20Keeper interface {
+	RegisterERC20Extension(ctx sdk.Context, denom string) (*erc20types.TokenPair, error)
+}
+
+type BankKeeper interface {
+	GetDenomMetaData(ctx context.Context, denom string) (banktypes.Metadata, bool)
+	HasDenomMetaData(ctx context.Context, denom string) bool
+	SetDenomMetaData(ctx context.Context, denomMetaData banktypes.Metadata)
+}
+
 type Keeper struct {
 	cdc          codec.BinaryCodec
 	storeSvc     corestore.KVStoreService
 	logger       log.Logger
 	addressCodec address.Codec
 
-	router        baseapp.MessageRouter
-	aclKeeper     ACLKeeper
-	accountKeeper AccountKeeper
+	router              baseapp.MessageRouter
+	aclKeeper           ACLKeeper
+	accountKeeper       AccountKeeper
+	icaControllerKeeper ICAControllerKeeper
+	Erc20Keeper         ERC20Keeper
+	BankKeeper          BankKeeper
 
 	Authority string
 
-	Schema  collections.Schema
-	Params  collections.Item[types.Params]
-	ICAData collections.Item[types.ICAOnHub]
+	Schema           collections.Schema
+	Params           collections.Item[types.Params]
+	ICAData          collections.Item[types.ICAOnHub]
+	InFlightRequests collections.Map[uint64, string] // sequence -> message type url
 }
 
-func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger log.Logger, addressCodec address.Codec) *Keeper {
+func NewKeeper(
+	storeSvc corestore.KVStoreService,
+	cdc codec.BinaryCodec,
+	logger log.Logger,
+	addressCodec address.Codec,
+	router baseapp.MessageRouter,
+	aclKeeper ACLKeeper,
+	accountKeeper AccountKeeper,
+	icaControllerKeeper ICAControllerKeeper,
+	erc20Keeper ERC20Keeper,
+	bankKeeper BankKeeper,
+	authority string,
+) *Keeper {
 	sb := collections.NewSchemaBuilder(storeSvc)
 
 	k := &Keeper{
-		storeSvc:     storeSvc,
-		cdc:          cdc,
-		logger:       logger,
-		addressCodec: addressCodec,
+		storeSvc:            storeSvc,
+		cdc:                 cdc,
+		logger:              logger,
+		addressCodec:        addressCodec,
+		router:              router,
+		aclKeeper:           aclKeeper,
+		accountKeeper:       accountKeeper,
+		icaControllerKeeper: icaControllerKeeper,
+		erc20Keeper:         erc20Keeper,
+		bankKeeper:          bankKeeper,
+		Authority:           authority,
 		Params: collections.NewItem(sb,
 			ParamsPrefix,
 			"params",
@@ -59,6 +102,12 @@ func NewKeeper(storeSvc corestore.KVStoreService, cdc codec.BinaryCodec, logger 
 			ICAOnHubPrefix,
 			"ica",
 			codec.CollValue[types.ICAOnHub](cdc),
+		),
+		InFlightRequests: collections.NewMap(sb,
+			InFlightRequestsPrefix,
+			"in_flight_requests",
+			collections.Uint64Key,
+			collections.StringValue,
 		),
 	}
 

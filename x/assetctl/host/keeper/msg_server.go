@@ -6,7 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/errors"
-	ibccontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
+	proto "github.com/cosmos/gogoproto/proto"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
@@ -35,17 +35,13 @@ func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDen
 		return nil, err
 	}
 
-	if !k.aclKeeper.Admin(sdk.UnwrapSDKContext(ctx), addr) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	if !k.aclKeeper.Admin(sdkCtx, addr) {
 		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
 	if len(msg.IbcDenoms) == 0 {
 		return nil, errors.ErrInvalidRequest.Wrap("ibc_denoms cannot be empty")
-	}
-
-	params, err := k.Params.Get(ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	assetsToRegister := make([]controllertypes.AssetDetails, len(msg.IbcDenoms))
@@ -56,48 +52,20 @@ func (k msgServer) RegisterDenoms(ctx context.Context, msg *types.MsgRegisterDen
 		}
 	}
 
-	controllerMsg := &controllertypes.MsgRegisterAssets{
+	sequence, err := k.sendMsgThroughICA(ctx, &controllertypes.MsgManageRegisteredAssets{
 		Authority:        k.Authority,
 		AssetsToRegister: assetsToRegister,
-	}
-
-	controllerMsgBytes, err := controllerMsg.Marshal()
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	owner := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
-	if owner == nil {
-		return nil, fmt.Errorf("owner address not found")
-	}
-
-	wrapperMsg := &ibccontrollertypes.MsgSendTx{
-		Owner:           owner.String(),
-		ConnectionId:    params.HubConnectionId,
-		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
-		PacketData: icatypes.InterchainAccountPacketData{
-			Type: icatypes.EXECUTE_TX,
-			Data: controllerMsgBytes,
-		},
-	}
-
-	handler := k.router.Handler(wrapperMsg)
-	if handler == nil {
-		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(wrapperMsg))
-	}
-
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	msgResp, err := handler(sdkCtx, wrapperMsg)
+	err = k.InFlightRequests.Set(ctx, sequence, sdk.MsgTypeURL(msg))
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute message; message %v", msg)
+		return nil, err
 	}
 
-	// We expect a single response, check if there is only one and return it
-	if len(msgResp.MsgResponses) != 1 {
-		return nil, fmt.Errorf("expected a single response, got %d", len(msgResp.MsgResponses))
-	}
-
-	return &types.MsgRegisterDenomsResponse{MsgResponse: msgResp.MsgResponses[0]}, nil
+	return &types.MsgRegisterDenomsResponse{Sequence: sequence}, nil
 }
 
 // UpdateParams implements types.MsgServer.
@@ -124,7 +92,7 @@ func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 }
 
 // SupportAsset implements types.MsgServer.
-func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAssets) (*types.MsgSupportAssetsResponse, error) {
+func (k msgServer) ManageSupportedAssets(ctx context.Context, msg *types.MsgManageSupportedAssets) (*types.MsgManageSupportedAssetsResponse, error) {
 	addr, err := k.addressCodec.StringToBytes(msg.Authority)
 	if err != nil {
 		return nil, err
@@ -135,8 +103,8 @@ func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAsset
 		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
-	if len(msg.IbcDenoms) == 0 {
-		return nil, errors.ErrInvalidRequest.Wrap("ibc_denoms cannot be empty")
+	if len(msg.AddIbcDenoms) == 0 && len(msg.RemoveIbcDenoms) == 0 {
+		return nil, errors.ErrInvalidRequest.Wrap("add_ibc_denoms and remove_ibc_denoms cannot be empty")
 	}
 
 	params, err := k.Params.Get(ctx)
@@ -144,48 +112,22 @@ func (k msgServer) SupportAssets(ctx context.Context, msg *types.MsgSupportAsset
 		return nil, err
 	}
 
-	controllerMsg := &controllertypes.MsgSupportAssets{
-		Authority: k.Authority,
-		ChannelId: params.HubChannelId,
-		IbcDenoms: msg.IbcDenoms,
-	}
-
-	controllerMsgBytes, err := controllerMsg.Marshal()
+	sequence, err := k.sendMsgThroughICA(ctx, &controllertypes.MsgManageSupportedAssets{
+		Authority:       k.Authority,
+		ChannelId:       params.HubChannelId,
+		AddIbcDenoms:    msg.AddIbcDenoms,
+		RemoveIbcDenoms: msg.RemoveIbcDenoms,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	owner := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
-	if owner == nil {
-		return nil, fmt.Errorf("owner address not found")
-	}
-
-	wrapperMsg := &ibccontrollertypes.MsgSendTx{
-		Owner:           owner.String(),
-		ConnectionId:    params.HubConnectionId,
-		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
-		PacketData: icatypes.InterchainAccountPacketData{
-			Type: icatypes.EXECUTE_TX,
-			Data: controllerMsgBytes,
-		},
-	}
-
-	handler := k.router.Handler(wrapperMsg)
-	if handler == nil {
-		return nil, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(wrapperMsg))
-	}
-
-	msgResp, err := handler(sdkCtx, wrapperMsg)
+	err = k.InFlightRequests.Set(ctx, sequence, sdk.MsgTypeURL(msg))
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute message; message %v", msg)
+		return nil, err
 	}
 
-	// We expect a single response, check if there is only one and return it
-	if len(msgResp.MsgResponses) != 1 {
-		return nil, fmt.Errorf("expected a single response, got %d", len(msgResp.MsgResponses))
-	}
-
-	return &types.MsgSupportAssetsResponse{MsgResponse: msgResp.MsgResponses[0]}, nil
+	return &types.MsgManageSupportedAssetsResponse{Sequence: sequence}, nil
 }
 
 // CreateICAOnHub is a helper function to create an ICA on the hub, should be used only once.
@@ -254,5 +196,75 @@ func (k msgServer) CreateICAOnHub(ctx context.Context, msg *types.MsgCreateICAOn
 		return nil, err
 	}
 
-	return &types.MsgCreateICAOnHubResponse{}, nil
+	return &types.MsgCreateICAOnHubResponse{
+		ChannelId: registerResponse.ChannelId,
+		PortId:    registerResponse.PortId,
+	}, nil
+}
+
+func (k msgServer) sendMsgThroughICA(ctx context.Context, msg proto.Marshaler) (uint64, error) {
+	// Check if the ICA exists and is active
+	params, err := k.Params.Get(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	icaData, err := k.ICAData.Get(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	_, ok := k.icaControllerKeeper.GetInterchainAccountAddress(sdkCtx, params.HubConnectionId, icaData.PortId)
+	if !ok {
+		return 0, errors.ErrInvalidRequest.Wrap("ICA has not been created yet")
+	}
+
+	if !k.icaControllerKeeper.IsActiveChannel(sdkCtx, params.HubConnectionId, icaData.PortId) {
+		return 0, errors.ErrInvalidRequest.Wrap("ICA channel is not active")
+	}
+
+	owner := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	if owner == nil {
+		return 0, fmt.Errorf("owner address not found")
+	}
+
+	bz, err := msg.Marshal()
+	if err != nil {
+		return 0, err
+	}
+
+	wrapperMsg := &icacontrollertypes.MsgSendTx{
+		Owner:           owner.String(),
+		ConnectionId:    params.HubConnectionId,
+		RelativeTimeout: icatypes.DefaultRelativePacketTimeoutTimestamp,
+		PacketData: icatypes.InterchainAccountPacketData{
+			Type: icatypes.EXECUTE_TX,
+			Data: bz,
+		},
+	}
+
+	handler := k.router.Handler(wrapperMsg)
+	if handler == nil {
+		return 0, errors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(wrapperMsg))
+	}
+
+	msgResp, err := handler(sdkCtx, wrapperMsg)
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute message; message %v", msg)
+	}
+
+	// We expect a single response, check if there is only one and return it
+	if len(msgResp.MsgResponses) != 1 {
+		return 0, fmt.Errorf("expected a single response, got %d", len(msgResp.MsgResponses))
+	}
+
+	// parse response as MsgSendTxResponse
+	sendTxResponse := &icacontrollertypes.MsgSendTxResponse{}
+	err = k.cdc.UnpackAny(msgResp.MsgResponses[0], &sendTxResponse)
+	if err != nil {
+		return 0, err
+	}
+
+	return sendTxResponse.Sequence, nil
 }
