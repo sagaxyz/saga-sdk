@@ -36,3 +36,14 @@ type MockIBCTransferKeeper struct {
 func (m MockIBCTransferKeeper) GetDenomTrace(ctx sdk.Context, denomTraceHash tmbytes.HexBytes) (ibctransfertypes.DenomTrace, bool) {
 	return m.DenomTrace, m.Exists
 }
+
+// MockAccountKeeper is a mock implementation of AccountKeeper
+// Returns a fixed address for the module name used in tests
+type MockAccountKeeper struct{}
+
+func (m MockAccountKeeper) GetModuleAddress(name string) sdk.AccAddress {
+	if name == "assetctl" {
+		return sdk.AccAddress([]byte("cosmos1test"))
+	}
+	return nil
+}

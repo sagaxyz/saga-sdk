@@ -59,7 +59,7 @@ func (k msgServer) ManageRegisteredAssets(ctx context.Context, msg *types.MsgMan
 		return nil, err
 	}
 
-	moduleAddress := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	moduleAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 	if moduleAddress == nil {
 		return nil, fmt.Errorf("module address not found")
 	}
@@ -146,15 +146,6 @@ func (k msgServer) ManageSupportedAssets(ctx context.Context, msg *types.MsgMana
 
 // CreateICAOnHub is a helper function to create an ICA on the hub, should be used only once.
 func (k msgServer) CreateICAOnHub(ctx context.Context, msg *types.MsgCreateICAOnHub) (*types.MsgCreateICAOnHubResponse, error) {
-	// check if the ica on hub already exists, if it does, return an error
-	has, err := k.ICAData.Has(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if has {
-		return nil, errors.ErrInvalidRequest.Wrap("ICA on hub already exists")
-	}
-
 	// check if the signer is an admin
 	addr, err := k.addressCodec.StringToBytes(msg.Authority)
 	if err != nil {
@@ -166,8 +157,17 @@ func (k msgServer) CreateICAOnHub(ctx context.Context, msg *types.MsgCreateICAOn
 		return nil, errors.ErrUnauthorized.Wrap("the signer is not an admin")
 	}
 
+	// check if the ica on hub already exists, if it does, return an error
+	has, err := k.ICAData.Has(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if has {
+		return nil, errors.ErrInvalidRequest.Wrap("ICA on hub already exists")
+	}
+
 	// get the assetctl module address
-	hostAddress := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	hostAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 	if hostAddress == nil {
 		return nil, fmt.Errorf("host address not found")
 	}
@@ -238,7 +238,7 @@ func (k msgServer) sendMsgThroughICA(ctx context.Context, msg proto.Marshaler) (
 		return 0, errors.ErrInvalidRequest.Wrap("ICA channel is not active")
 	}
 
-	owner := k.accountKeeper.GetModuleAddress(assetctltypes.ModuleName)
+	owner := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 	if owner == nil {
 		return 0, fmt.Errorf("owner address not found")
 	}

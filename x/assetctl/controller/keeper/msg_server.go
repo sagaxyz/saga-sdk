@@ -30,8 +30,8 @@ func (k msgServer) ManageRegisteredAssets(ctx context.Context, msg *types.MsgMan
 		return nil, err
 	}
 
-	if len(msg.AssetsToRegister) == 0 {
-		return nil, fmt.Errorf("assets to register cannot be empty")
+	if len(msg.AssetsToRegister) == 0 && len(msg.AssetsToUnregister) == 0 {
+		return nil, fmt.Errorf("assets to register/unregister cannot be empty")
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
@@ -138,23 +138,25 @@ func (k Keeper) checkChannelAuthority(ctx context.Context, address, channelId st
 	}
 
 	if address != moduleAddress.String() {
-		return fmt.Errorf("address is not the authority")
+		return fmt.Errorf("authority mismatch, expected %s, got %s", moduleAddress.String(), address)
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	interchainAccounts := k.ICAHostKeeper.GetAllInterchainAccounts(sdkCtx)
 	connectionId := ""
 	portId := ""
+	found := false
 	for _, interchainAccount := range interchainAccounts {
 		if interchainAccount.AccountAddress == address {
 			connectionId = interchainAccount.ConnectionId
 			portId = interchainAccount.PortId
+			found = true
 			break
 		}
 	}
 
-	if connectionId == "" || portId == "" {
-		return fmt.Errorf("the signer is not the authority")
+	if !found {
+		return fmt.Errorf("address %s is not registered as an ICA", address)
 	}
 
 	channel, ok := k.IBCChannelKeeper.GetChannel(sdkCtx, portId, channelId)

@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/sagaxyz/saga-sdk/x/assetctl/controller/types"
 )
 
@@ -23,8 +24,7 @@ func GetTxCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		GetRegisterAssetsCmd(),
-		GetUnregisterAssetsCmd(),
+		GetManageAssetsCmd(),
 		GetSupportAssetsCmd(),
 		GetUpdateParamsCmd(),
 	)
@@ -33,12 +33,12 @@ func GetTxCmd() *cobra.Command {
 	return cmd
 }
 
-// GetRegisterAssetsCmd returns the command to register assets
-func GetRegisterAssetsCmd() *cobra.Command {
+// GetManageAssetsCmd returns the command to manage assets (register and/or unregister)
+func GetManageAssetsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "register-assets [channel-id] [assets-json]",
-		Short: "Register assets in the controller module",
-		Args:  cobra.ExactArgs(2),
+		Use:   "manage-assets [channel-id] [assets-to-register] [assets-to-unregister]",
+		Short: "Manage assets in the controller module (register and/or unregister)",
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -46,17 +46,24 @@ func GetRegisterAssetsCmd() *cobra.Command {
 			}
 
 			channelID := args[0]
-			assetsJSON := args[1]
+			assetsToRegisterJSON := args[1]
+			assetsToUnregisterJSON := args[2]
 
-			var assets []types.AssetDetails
-			if err := json.Unmarshal([]byte(assetsJSON), &assets); err != nil {
-				return fmt.Errorf("failed to unmarshal assets: %w", err)
+			var assetsToRegister []banktypes.Metadata
+			if err := json.Unmarshal([]byte(assetsToRegisterJSON), &assetsToRegister); err != nil {
+				return fmt.Errorf("failed to unmarshal assets to register: %w", err)
 			}
 
-			msg := &types.MsgRegisterAssets{
-				Authority:        clientCtx.GetFromAddress().String(),
-				ChannelId:        channelID,
-				AssetsToRegister: assets,
+			var assetsToUnregister []string
+			if err := json.Unmarshal([]byte(assetsToUnregisterJSON), &assetsToUnregister); err != nil {
+				return fmt.Errorf("failed to unmarshal assets to unregister: %w", err)
+			}
+
+			msg := &types.MsgManageRegisteredAssets{
+				Authority:          clientCtx.GetFromAddress().String(),
+				ChannelId:          channelID,
+				AssetsToRegister:   assetsToRegister,
+				AssetsToUnregister: assetsToUnregister,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -67,46 +74,12 @@ func GetRegisterAssetsCmd() *cobra.Command {
 	return cmd
 }
 
-// GetUnregisterAssetsCmd returns the command to unregister assets
-func GetUnregisterAssetsCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "unregister-assets [channel-id] [ibc-denoms]",
-		Short: "Unregister assets from the controller module",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			channelID := args[0]
-			ibcDenoms := args[1]
-
-			var denoms []string
-			if err := json.Unmarshal([]byte(ibcDenoms), &denoms); err != nil {
-				return fmt.Errorf("failed to unmarshal ibc denoms: %w", err)
-			}
-
-			msg := &types.MsgUnregisterAssets{
-				Authority: clientCtx.GetFromAddress().String(),
-				ChannelId: channelID,
-				IbcDenoms: denoms,
-			}
-
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
-		},
-	}
-
-	flags.AddTxFlagsToCmd(cmd)
-	return cmd
-}
-
-// GetSupportAssetsCmd returns the command to support assets
+// GetSupportAssetsCmd returns the command to manage asset support
 func GetSupportAssetsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "support-assets [channel-id] [ibc-denoms]",
-		Short: "Support assets in the controller module",
-		Args:  cobra.ExactArgs(2),
+		Use:   "manage-support [channel-id] [add-denoms] [remove-denoms]",
+		Short: "Manage asset support in the controller module (add and/or remove support)",
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -114,17 +87,22 @@ func GetSupportAssetsCmd() *cobra.Command {
 			}
 
 			channelID := args[0]
-			ibcDenoms := args[1]
+			addDenomsJSON := args[1]
+			removeDenomsJSON := args[2]
 
-			var denoms []string
-			if err := json.Unmarshal([]byte(ibcDenoms), &denoms); err != nil {
-				return fmt.Errorf("failed to unmarshal ibc denoms: %w", err)
+			var addDenoms, removeDenoms []string
+			if err := json.Unmarshal([]byte(addDenomsJSON), &addDenoms); err != nil {
+				return fmt.Errorf("failed to unmarshal add denoms: %w", err)
+			}
+			if err := json.Unmarshal([]byte(removeDenomsJSON), &removeDenoms); err != nil {
+				return fmt.Errorf("failed to unmarshal remove denoms: %w", err)
 			}
 
-			msg := &types.MsgSupportAssets{
-				Authority: clientCtx.GetFromAddress().String(),
-				ChannelId: channelID,
-				IbcDenoms: denoms,
+			msg := &types.MsgManageSupportedAssets{
+				Authority:       clientCtx.GetFromAddress().String(),
+				ChannelId:       channelID,
+				AddIbcDenoms:    addDenoms,
+				RemoveIbcDenoms: removeDenoms,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

@@ -53,7 +53,7 @@ type Keeper struct {
 
 	router              baseapp.MessageRouter
 	aclKeeper           ACLKeeper
-	accountKeeper       AccountKeeper
+	AccountKeeper       AccountKeeper
 	icaControllerKeeper ICAControllerKeeper
 	Erc20Keeper         ERC20Keeper
 	BankKeeper          BankKeeper
@@ -88,7 +88,7 @@ func NewKeeper(
 		addressCodec:        addressCodec,
 		router:              router,
 		aclKeeper:           aclKeeper,
-		accountKeeper:       accountKeeper,
+		AccountKeeper:       accountKeeper,
 		icaControllerKeeper: icaControllerKeeper,
 		Erc20Keeper:         erc20Keeper,
 		BankKeeper:          bankKeeper,

@@ -35,25 +35,32 @@ func GetTxCmd() *cobra.Command {
 // GetRegisterDenomsCmd returns the command to register denoms
 func GetRegisterDenomsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "register-denoms [ibc-denoms]",
-		Short: "Register denoms in the host module",
-		Args:  cobra.ExactArgs(1),
+		Use:   "manage-registered-assets [assets-to-register] [assets-to-unregister]",
+		Short: "Manage registered assets in the host module (register and/or unregister)",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			ibcDenoms := args[0]
+			assetsToRegister := args[0]
+			assetsToUnregister := args[1]
 
-			var denoms []string
-			if err := json.Unmarshal([]byte(ibcDenoms), &denoms); err != nil {
-				return fmt.Errorf("failed to unmarshal ibc denoms: %w", err)
+			var toRegister []string
+			if err := json.Unmarshal([]byte(assetsToRegister), &toRegister); err != nil {
+				return fmt.Errorf("failed to unmarshal assets to register: %w", err)
 			}
 
-			msg := &types.MsgRegisterDenoms{
-				Authority: clientCtx.GetFromAddress().String(),
-				IbcDenoms: denoms,
+			var toUnregister []string
+			if err := json.Unmarshal([]byte(assetsToUnregister), &toUnregister); err != nil {
+				return fmt.Errorf("failed to unmarshal assets to unregister: %w", err)
+			}
+
+			msg := &types.MsgManageRegisteredAssets{
+				Authority:          clientCtx.GetFromAddress().String(),
+				AssetsToRegister:   toRegister,
+				AssetsToUnregister: toUnregister,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -67,25 +74,32 @@ func GetRegisterDenomsCmd() *cobra.Command {
 // GetSupportAssetsCmd returns the command to support assets
 func GetSupportAssetsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "support-assets [ibc-denoms]",
-		Short: "Support assets in the host module",
-		Args:  cobra.ExactArgs(1),
+		Use:   "manage-supported-assets [assets-to-add] [assets-to-remove]",
+		Short: "Manage supported assets in the host module (add and/or remove)",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			ibcDenoms := args[0]
+			assetsToAdd := args[0]
+			assetsToRemove := args[1]
 
-			var denoms []string
-			if err := json.Unmarshal([]byte(ibcDenoms), &denoms); err != nil {
-				return fmt.Errorf("failed to unmarshal ibc denoms: %w", err)
+			var toAdd []string
+			if err := json.Unmarshal([]byte(assetsToAdd), &toAdd); err != nil {
+				return fmt.Errorf("failed to unmarshal assets to add: %w", err)
 			}
 
-			msg := &types.MsgSupportAssets{
-				Authority: clientCtx.GetFromAddress().String(),
-				IbcDenoms: denoms,
+			var toRemove []string
+			if err := json.Unmarshal([]byte(assetsToRemove), &toRemove); err != nil {
+				return fmt.Errorf("failed to unmarshal assets to remove: %w", err)
+			}
+
+			msg := &types.MsgManageSupportedAssets{
+				Authority:       clientCtx.GetFromAddress().String(),
+				AddIbcDenoms:    toAdd,
+				RemoveIbcDenoms: toRemove,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

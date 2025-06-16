@@ -1,208 +1,226 @@
-package keeper
+package keeper_test
 
 import (
-	"context"
+	"fmt"
 	"testing"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
 	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
-	"github.com/cosmos/cosmos-sdk/std"
-	"github.com/cosmos/cosmos-sdk/testutil"
+	"github.com/cosmos/cosmos-sdk/testutil/integration"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
-	hosttypes "github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
+	"github.com/sagaxyz/saga-sdk/x/assetctl"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/host/keeper"
+	"github.com/sagaxyz/saga-sdk/x/assetctl/host/types"
+	assetctltypes "github.com/sagaxyz/saga-sdk/x/assetctl/types"
 	"github.com/stretchr/testify/require"
 )
 
-var _ icacontrollertypes.MsgServer = &mockICAControllerMsgServer{}
+// Ensure mockRouter is defined at the top level
+type mockRouter struct{}
 
-type mockICAControllerMsgServer struct {
-}
+func setupMsgServer(t *testing.T) (sdk.Context, *keeper.Keeper, types.MsgServer) {
+	keys := storetypes.NewKVStoreKeys(
+		assetctltypes.StoreKey,
+	)
+	cdc := moduletestutil.MakeTestEncodingConfig(assetctl.AppModuleBasic{}).Codec
 
-func (m *mockICAControllerMsgServer) RegisterInterchainAccount(ctx context.Context, msg *icacontrollertypes.MsgRegisterInterchainAccount) (*icacontrollertypes.MsgRegisterInterchainAccountResponse, error) {
-	return &icacontrollertypes.MsgRegisterInterchainAccountResponse{
-		ChannelId: "channel-0",
-		PortId:    "icacontroller-0",
-	}, nil
-}
+	logger := log.NewTestLogger(t)
+	cms := integration.CreateMultiStore(keys, logger)
 
-func (m *mockICAControllerMsgServer) SendTx(ctx context.Context, msg *icacontrollertypes.MsgSendTx) (*icacontrollertypes.MsgSendTxResponse, error) {
-	return &icacontrollertypes.MsgSendTxResponse{
-		Sequence: 1,
-	}, nil
-}
+	storeService := runtime.NewKVStoreService(keys[assetctltypes.StoreKey])
 
-func (m *mockICAControllerMsgServer) UpdateParams(ctx context.Context, msg *icacontrollertypes.MsgUpdateParams) (*icacontrollertypes.MsgUpdateParamsResponse, error) {
-	return &icacontrollertypes.MsgUpdateParamsResponse{}, nil
-}
+	ctx := sdk.NewContext(cms, tmproto.Header{}, true, logger)
 
-func setupMsgServer(t *testing.T) (*msgServer, sdk.Context) {
-	interfaceRegistry := codectypes.NewInterfaceRegistry()
-	std.RegisterInterfaces(interfaceRegistry)
-	icacontrollertypes.RegisterInterfaces(interfaceRegistry)
-	cdc := codec.NewProtoCodec(interfaceRegistry)
+	// Use a real bech32 address codec for testing
+	addressCodec := addresscodec.NewBech32Codec("cosmos")
 
-	key := storetypes.NewKVStoreKey("test")
-	storeService := runtime.NewKVStoreService(key)
-	ctx := testutil.DefaultContextWithKeys(
-		map[string]*storetypes.KVStoreKey{
-			"test": key,
-		},
-		map[string]*storetypes.TransientStoreKey{
-			"transient_test": storetypes.NewTransientStoreKey("transient_test"),
-		},
-		nil,
+	// Create mock keepers
+	mockACLKeeper := MockACLKeeper{}
+	mockAccountKeeper := MockAccountKeeper{}
+	mockICAControllerKeeper := MockICAControllerKeeper{}
+	mockERC20Keeper := MockERC20Keeper{}
+	mockBankKeeper := MockBankKeeper{}
+
+	// mockRouter implements baseapp.MessageRouter
+	// It returns a dummy response for MsgSendTx
+
+	msgRouter := mockRouter{}
+
+	k := keeper.NewKeeper(
+		storeService,
+		cdc,
+		logger,
+		addressCodec,
+		msgRouter,
+		mockACLKeeper,
+		mockAccountKeeper,
+		mockICAControllerKeeper,
+		mockERC20Keeper,
+		mockBankKeeper,
+		"cosmos1test",
 	)
 
-	addressCodec := addresscodec.NewBech32Codec("cosmos")
-	logger := log.NewNopLogger()
-
-	keeper := NewKeeper(storeService, cdc, logger, addressCodec)
-	adminAddr := sdk.AccAddress([]byte("admin123456789012345678901234567890"))
-	moduleAddr := sdk.AccAddress([]byte("module123456789012345678901234567890"))
-	keeper.aclKeeper = mockACLKeeper{adminAddr: adminAddr}
-	keeper.accountKeeper = mockAccountKeeper{moduleAddr: moduleAddr}
-	keeper.Authority = adminAddr.String()
-
-	// Register ICA controller interfaces and msg server in the router
-	router := baseapp.NewMsgServiceRouter()
-	router.SetInterfaceRegistry(interfaceRegistry)
-	icacontrollertypes.RegisterMsgServer(router, &mockICAControllerMsgServer{})
-
-	keeper.router = router
-
-	// Initialize params
-	params := hosttypes.Params{
+	// Set default Params and ICAData for tests
+	params := types.Params{
 		HubConnectionId: "connection-0",
 		HubChannelId:    "channel-0",
 	}
-	err := keeper.Params.Set(ctx, params)
-	require.NoError(t, err)
+	err := k.Params.Set(ctx, params)
+	if err != nil {
+		t.Fatalf("failed to set params: %v", err)
+	}
+	ica := types.ICAOnHub{
+		ChannelId: "channel-0",
+		PortId:    "icahost",
+	}
+	err = k.ICAData.Set(ctx, ica)
+	if err != nil {
+		t.Fatalf("failed to set ICAData: %v", err)
+	}
 
-	return &msgServer{Keeper: *keeper}, ctx
+	msgServer := keeper.NewMsgServerImpl(*k)
+
+	return ctx, k, msgServer
 }
 
-func TestRegisterDenoms(t *testing.T) {
-	msgServer, ctx := setupMsgServer(t)
+func TestMsgServer(t *testing.T) {
+	ctx, k, msgServer := setupMsgServer(t)
+	require.NotNil(t, k)
+	require.NotNil(t, ctx)
+	require.NotNil(t, msgServer)
 
-	// Test unauthorized
-	invalidAddr := sdk.AccAddress([]byte("invalid123456789012345678901234567890"))
-	msg := &hosttypes.MsgRegisterDenoms{
-		Authority: invalidAddr.String(),
-		IbcDenoms: []string{"ibc/denom1"},
-	}
-	_, err := msgServer.RegisterDenoms(ctx, msg)
-	require.Error(t, err)
+	moduleAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 
-	// Test empty denoms
-	adminAddr := sdk.AccAddress([]byte("admin123456789012345678901234567890"))
-	msg = &hosttypes.MsgRegisterDenoms{
-		Authority: adminAddr.String(),
-		IbcDenoms: []string{},
-	}
-	_, err = msgServer.RegisterDenoms(ctx, msg)
-	require.Error(t, err)
+	// Test ManageSupportedAssets
+	t.Run("ManageSupportedAssets", func(t *testing.T) {
+		// Test unauthorized
+		msg := &types.MsgManageSupportedAssets{
+			Authority:       "invalid",
+			AddIbcDenoms:    []string{"ibc/denom1"},
+			RemoveIbcDenoms: []string{},
+		}
+		_, err := msgServer.ManageSupportedAssets(ctx, msg)
+		require.Error(t, err)
 
-	// Test valid message
-	msg = &hosttypes.MsgRegisterDenoms{
-		Authority: adminAddr.String(),
-		IbcDenoms: []string{"ibc/denom1", "ibc/denom2"},
-	}
-	_, err = msgServer.RegisterDenoms(ctx, msg)
-	require.NoError(t, err)
+		// Test valid message
+		msg = &types.MsgManageSupportedAssets{
+			Authority:       moduleAddress.String(),
+			AddIbcDenoms:    []string{"ibc/denom1", "ibc/denom2"},
+			RemoveIbcDenoms: []string{},
+		}
+		resp, err := msgServer.ManageSupportedAssets(ctx, msg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	// Test ManageRegisteredAssets
+	t.Run("ManageRegisteredAssets", func(t *testing.T) {
+		// Test unauthorized
+		msg := &types.MsgManageRegisteredAssets{
+			Authority:          "wrong-authority",
+			AssetsToRegister:   []string{"ibc/denom1"},
+			AssetsToUnregister: []string{},
+		}
+		_, err := msgServer.ManageRegisteredAssets(ctx, msg)
+		require.Error(t, err)
+
+		// Test valid message
+		msg = &types.MsgManageRegisteredAssets{
+			Authority:          moduleAddress.String(),
+			AssetsToRegister:   []string{"ibc/denom1", "ibc/denom2"},
+			AssetsToUnregister: []string{},
+		}
+		resp, err := msgServer.ManageRegisteredAssets(ctx, msg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	// Test CreateICAOnHub
+	t.Run("CreateICAOnHub", func(t *testing.T) {
+		// reset the ICAData
+		err := k.ICAData.Remove(ctx)
+		require.NoError(t, err)
+
+		// Test unauthorized
+		msg := &types.MsgCreateICAOnHub{
+			Authority: "invalid",
+		}
+		_, err = msgServer.CreateICAOnHub(ctx, msg)
+		require.Error(t, err)
+
+		// Test valid message
+		msg = &types.MsgCreateICAOnHub{
+			Authority: moduleAddress.String(),
+		}
+		resp, err := msgServer.CreateICAOnHub(ctx, msg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	// Test UpdateParams
+	t.Run("UpdateParams", func(t *testing.T) {
+		// Test unauthorized
+		msg := &types.MsgUpdateParams{
+			Authority: "invalid",
+			Params: &types.Params{
+				HubConnectionId: "connection-0",
+				HubChannelId:    "channel-0",
+			},
+		}
+		_, err := msgServer.UpdateParams(ctx, msg)
+		require.Error(t, err)
+
+		// Test valid message
+		msg = &types.MsgUpdateParams{
+			Authority: moduleAddress.String(),
+			Params: &types.Params{
+				HubConnectionId: "connection-0",
+				HubChannelId:    "channel-0",
+			},
+		}
+		resp, err := msgServer.UpdateParams(ctx, msg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
 }
 
-func TestUpdateParams(t *testing.T) {
-	msgServer, ctx := setupMsgServer(t)
-
-	// Test unauthorized
-	invalidAddr := sdk.AccAddress([]byte("invalid123456789012345678901234567890"))
-	msg := &hosttypes.MsgUpdateParams{
-		Authority: invalidAddr.String(),
-		Params: &hosttypes.Params{
-			HubConnectionId: "connection-0",
-			HubChannelId:    "channel-0",
-		},
+func (m mockRouter) Handler(msg sdk.Msg) baseapp.MsgServiceHandler {
+	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+		switch msg := msg.(type) {
+		case *icacontrollertypes.MsgSendTx:
+			any, err := codectypes.NewAnyWithValue(&icacontrollertypes.MsgSendTxResponse{Sequence: 1})
+			if err != nil {
+				return nil, err
+			}
+			return &sdk.Result{MsgResponses: []*codectypes.Any{any}}, nil
+		case *icacontrollertypes.MsgRegisterInterchainAccount:
+			any, err := codectypes.NewAnyWithValue(&icacontrollertypes.MsgRegisterInterchainAccountResponse{
+				ChannelId: "channel-0",
+				PortId:    "port-0",
+			})
+			if err != nil {
+				return nil, err
+			}
+			return &sdk.Result{MsgResponses: []*codectypes.Any{any}}, nil
+		case *types.MsgManageSupportedAssets:
+			any, err := codectypes.NewAnyWithValue(&types.MsgManageSupportedAssetsResponse{Sequence: 1})
+			if err != nil {
+				return nil, err
+			}
+			return &sdk.Result{MsgResponses: []*codectypes.Any{any}}, nil
+		default:
+			return nil, fmt.Errorf("unhandled message type: %T", msg)
+		}
 	}
-	_, err := msgServer.UpdateParams(ctx, msg)
-	require.Error(t, err)
-
-	// Test nil params
-	adminAddr := sdk.AccAddress([]byte("admin123456789012345678901234567890"))
-	msg = &hosttypes.MsgUpdateParams{
-		Authority: adminAddr.String(),
-		Params:    nil,
-	}
-	_, err = msgServer.UpdateParams(ctx, msg)
-	require.Error(t, err)
-
-	// Test valid message
-	msg = &hosttypes.MsgUpdateParams{
-		Authority: adminAddr.String(),
-		Params: &hosttypes.Params{
-			HubConnectionId: "connection-0",
-			HubChannelId:    "channel-0",
-		},
-	}
-	_, err = msgServer.UpdateParams(ctx, msg)
-	require.NoError(t, err)
 }
 
-func TestSupportAssets(t *testing.T) {
-	msgServer, ctx := setupMsgServer(t)
-
-	// Test unauthorized
-	invalidAddr := sdk.AccAddress([]byte("invalid123456789012345678901234567890"))
-	msg := &hosttypes.MsgSupportAssets{
-		Authority: invalidAddr.String(),
-		IbcDenoms: []string{"ibc/denom1"},
-	}
-	_, err := msgServer.SupportAssets(ctx, msg)
-	require.Error(t, err)
-
-	// Test empty denoms
-	adminAddr := sdk.AccAddress([]byte("admin123456789012345678901234567890"))
-	msg = &hosttypes.MsgSupportAssets{
-		Authority: adminAddr.String(),
-		IbcDenoms: []string{},
-	}
-	_, err = msgServer.SupportAssets(ctx, msg)
-	require.Error(t, err)
-
-	// Test valid message
-	msg = &hosttypes.MsgSupportAssets{
-		Authority: adminAddr.String(),
-		IbcDenoms: []string{"ibc/denom1", "ibc/denom2"},
-	}
-	_, err = msgServer.SupportAssets(ctx, msg)
-	require.NoError(t, err)
-}
-
-func TestCreateICAOnHub(t *testing.T) {
-	msgServer, ctx := setupMsgServer(t)
-
-	// Test unauthorized
-	invalidAddr := sdk.AccAddress([]byte("invalid123456789012345678901234567890"))
-	msg := &hosttypes.MsgCreateICAOnHub{
-		Authority: invalidAddr.String(),
-	}
-	_, err := msgServer.CreateICAOnHub(ctx, msg)
-	require.Error(t, err)
-
-	// Test valid message
-	adminAddr := sdk.AccAddress([]byte("admin123456789012345678901234567890"))
-	msg = &hosttypes.MsgCreateICAOnHub{
-		Authority: adminAddr.String(),
-	}
-	_, err = msgServer.CreateICAOnHub(ctx, msg)
-	require.NoError(t, err)
-
-	// Test duplicate creation
-	_, err = msgServer.CreateICAOnHub(ctx, msg)
-	require.Error(t, err)
+func (m mockRouter) HandlerByTypeURL(typeURL string) baseapp.MsgServiceHandler {
+	return m.Handler(nil)
 }

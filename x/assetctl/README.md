@@ -6,10 +6,6 @@ The `assetctl` module is responsible for managing a global directory of bridgeab
 
 ## Concepts
 
-### Chainlet Opt-In (Registry Toggling)
-
-Chainlets can choose to enable or disable the asset registry functionality for themselves. This is done via a `MsgToggleChainletRegistry` message. When a chainlet enables the registry, its outbound and inbound (to the chainlet via the Hub) asset transfers will be subject to validation against the Hub's global asset directory by the antehandler. If disabled, its transfers bypass these checks (from the perspective of this module's antehandler).
-
 ### Asset Registration (Global Directory)
 
 Assets are registered into the Hub's *global* asset directory, typically via an Interchain Account (ICA) message originating from a chainlet or by a governance process on the Hub itself. The registration process involves:
@@ -57,19 +53,16 @@ The `assetctl` module handles the following messages (primarily via ICA, but dir
     *   `enable`: Boolean flag to enable (true) or disable (false) the registry for this chainlet.
     *   *Action:* Adds or removes the `chainlet_id` from the `EnabledList`.
 
-*   **`MsgRegisterAssets`** (Handled via ICA or direct)
+*   **`MsgManageRegisteredAssets`** (Handled via ICA or direct)
     *   `creator`: The address of the initiator (e.g., ICA host module on chainlet, or a Hub address with authority).
-    *   `assets_to_register`: A list of assets, where each asset includes:
+    *   `channel_id`: The IBC channel ID for the chainlet.
+    *   `assets_to_register`: A list of assets to register, where each asset includes:
         *   `denom`: The original bank denom name of the asset on its source chain.
         *   `display_name`: Human-readable display name.
         *   `description`: Asset description.
         *   `denom_units`: List of denomination units (e.g., base, display).
-    *   *Action:* Registers one or more new assets in the Hub's global `AssetMetadata` directory.
-
-*   **`MsgUnregisterAssets`** (Handled via ICA or direct)
-    *   `creator`: The address of the initiator.
-    *   `ibc_denoms_to_unregister`: A list of Hub IBC denoms to be removed from the `AssetMetadata` directory.
-    *   *Action:* Removes one or more assets from the Hub's global `AssetMetadata` directory.
+    *   `assets_to_unregister`: A list of Hub IBC denoms to unregister.
+    *   *Action:* Registers and/or unregisters assets in the Hub's global `AssetMetadata` directory.
 
 ## Queries
 

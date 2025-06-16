@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/integration"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/genesis/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -66,11 +67,13 @@ func setupTest(t *testing.T) (sdk.Context, *keeper.Keeper) {
 		},
 		Exists: true,
 	}
+	mockAccountKeeper := MockAccountKeeper{}
 
 	k := keeper.NewKeeper(storeService, cdc, logger, addressCodec)
 	k.ICAHostKeeper = mockICAHostKeeper
 	k.IBCChannelKeeper = mockIBCChannelKeeper
 	k.IBCTransferKeeper = mockIBCTransferKeeper
+	k.AccountKeeper = mockAccountKeeper
 	k.Authority = "cosmos1test" // Set a test authority
 
 	return ctx, k
@@ -78,45 +81,75 @@ func setupTest(t *testing.T) (sdk.Context, *keeper.Keeper) {
 
 func TestRegisterAssets(t *testing.T) {
 	ctx, k := setupTest(t)
-	msgServer := keeper.NewMsgServerImpl(*k)
+	moduleAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 
 	tests := []struct {
 		name    string
-		msg     *types.MsgRegisterAssets
+		msg     *types.MsgManageRegisteredAssets
 		wantErr bool
 		setup   func(*keeper.Keeper)
 	}{
 		{
 			name: "valid registration",
-			msg: &types.MsgRegisterAssets{
-				Authority: "cosmos1test",
+			msg: &types.MsgManageRegisteredAssets{
+				Authority: moduleAddress.String(),
 				ChannelId: "channel-0",
-				AssetsToRegister: []types.AssetDetails{
+				AssetsToRegister: []banktypes.Metadata{
 					{
-						IbcDenom:    "ibc/1234567890abcdef",
-						Denom:       "test",
-						DisplayName: "Test Asset",
 						Description: "Test Description",
-						DenomUnits: []types.DenomUnit{
+						DenomUnits: []*banktypes.DenomUnit{
 							{
 								Denom:    "test",
 								Exponent: 6,
 							},
 						},
+						Base:    "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+						Display: "test",
 					},
 				},
 			},
 			wantErr: false,
+			setup: func(k *keeper.Keeper) {
+				k.ICAHostKeeper = MockICAHostKeeper{
+					Accounts: []icahosttypes.RegisteredInterchainAccount{
+						{
+							AccountAddress: moduleAddress.String(),
+							ConnectionId:   "connection-0",
+							PortId:         "icahost",
+						},
+					},
+				}
+				k.IBCChannelKeeper = MockIBCChannelKeeper{
+					Channel: channeltypes.Channel{
+						State:    channeltypes.OPEN,
+						Ordering: channeltypes.ORDERED,
+						Counterparty: channeltypes.Counterparty{
+							PortId:    "transfer",
+							ChannelId: "channel-0",
+						},
+						ConnectionHops: []string{"connection-0"},
+						Version:        "ics20-1",
+					},
+					Exists: true,
+				}
+			},
 		},
 		{
 			name: "unauthorized",
-			msg: &types.MsgRegisterAssets{
+			msg: &types.MsgManageRegisteredAssets{
 				Authority: "wrong_authority",
 				ChannelId: "channel-0",
-				AssetsToRegister: []types.AssetDetails{
+				AssetsToRegister: []banktypes.Metadata{
 					{
-						IbcDenom: "ibc/...",
-						Denom:    "test",
+						Description: "Test Description",
+						DenomUnits: []*banktypes.DenomUnit{
+							{
+								Denom:    "test",
+								Exponent: 6,
+							},
+						},
+						Base:    "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+						Display: "test",
 					},
 				},
 			},
@@ -124,22 +157,29 @@ func TestRegisterAssets(t *testing.T) {
 		},
 		{
 			name: "empty assets",
-			msg: &types.MsgRegisterAssets{
-				Authority:        "cosmos1test",
+			msg: &types.MsgManageRegisteredAssets{
+				Authority:        moduleAddress.String(),
 				ChannelId:        "channel-0",
-				AssetsToRegister: []types.AssetDetails{},
+				AssetsToRegister: []banktypes.Metadata{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "channel not found",
-			msg: &types.MsgRegisterAssets{
-				Authority: "cosmos1test",
+			msg: &types.MsgManageRegisteredAssets{
+				Authority: moduleAddress.String(),
 				ChannelId: "channel-0",
-				AssetsToRegister: []types.AssetDetails{
+				AssetsToRegister: []banktypes.Metadata{
 					{
-						IbcDenom: "ibc/...",
-						Denom:    "test",
+						Description: "Test Description",
+						DenomUnits: []*banktypes.DenomUnit{
+							{
+								Denom:    "test",
+								Exponent: 6,
+							},
+						},
+						Base:    "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+						Display: "test",
 					},
 				},
 			},
@@ -153,13 +193,20 @@ func TestRegisterAssets(t *testing.T) {
 		},
 		{
 			name: "denom trace not found",
-			msg: &types.MsgRegisterAssets{
-				Authority: "cosmos1test",
+			msg: &types.MsgManageRegisteredAssets{
+				Authority: moduleAddress.String(),
 				ChannelId: "channel-0",
-				AssetsToRegister: []types.AssetDetails{
+				AssetsToRegister: []banktypes.Metadata{
 					{
-						IbcDenom: "ibc/...",
-						Denom:    "test",
+						Description: "Test Description",
+						DenomUnits: []*banktypes.DenomUnit{
+							{
+								Denom:    "test",
+								Exponent: 6,
+							},
+						},
+						Base:    "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+						Display: "test",
 					},
 				},
 			},
@@ -173,13 +220,20 @@ func TestRegisterAssets(t *testing.T) {
 		},
 		{
 			name: "interchain account not found",
-			msg: &types.MsgRegisterAssets{
-				Authority: "cosmos1test",
+			msg: &types.MsgManageRegisteredAssets{
+				Authority: moduleAddress.String(),
 				ChannelId: "channel-0",
-				AssetsToRegister: []types.AssetDetails{
+				AssetsToRegister: []banktypes.Metadata{
 					{
-						IbcDenom: "ibc/...",
-						Denom:    "test",
+						Description: "Test Description",
+						DenomUnits: []*banktypes.DenomUnit{
+							{
+								Denom:    "test",
+								Exponent: 6,
+							},
+						},
+						Base:    "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+						Display: "test",
 					},
 				},
 			},
@@ -197,7 +251,8 @@ func TestRegisterAssets(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup(k)
 			}
-			_, err := msgServer.RegisterAssets(ctx, tt.msg)
+			msgServer := keeper.NewMsgServerImpl(*k)
+			_, err := msgServer.ManageRegisteredAssets(ctx, tt.msg)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -209,37 +264,61 @@ func TestRegisterAssets(t *testing.T) {
 
 func TestUnregisterAssets(t *testing.T) {
 	ctx, k := setupTest(t)
-	msgServer := keeper.NewMsgServerImpl(*k)
-
+	moduleAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 	tests := []struct {
 		name    string
-		msg     *types.MsgUnregisterAssets
+		msg     *types.MsgManageRegisteredAssets
 		wantErr bool
+		setup   func(*keeper.Keeper)
 	}{
 		{
 			name: "valid unregistration",
-			msg: &types.MsgUnregisterAssets{
-				Authority: "cosmos1test",
-				ChannelId: "channel-0",
-				IbcDenoms: []string{"ibc/..."},
+			msg: &types.MsgManageRegisteredAssets{
+				Authority:          moduleAddress.String(),
+				ChannelId:          "channel-0",
+				AssetsToUnregister: []string{"ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"},
 			},
 			wantErr: false,
+			setup: func(k *keeper.Keeper) {
+				k.ICAHostKeeper = MockICAHostKeeper{
+					Accounts: []icahosttypes.RegisteredInterchainAccount{
+						{
+							AccountAddress: moduleAddress.String(),
+							ConnectionId:   "connection-0",
+							PortId:         "icahost",
+						},
+					},
+				}
+				k.IBCChannelKeeper = MockIBCChannelKeeper{
+					Channel: channeltypes.Channel{
+						State:    channeltypes.OPEN,
+						Ordering: channeltypes.ORDERED,
+						Counterparty: channeltypes.Counterparty{
+							PortId:    "transfer",
+							ChannelId: "channel-0",
+						},
+						ConnectionHops: []string{"connection-0"},
+						Version:        "ics20-1",
+					},
+					Exists: true,
+				}
+			},
 		},
 		{
 			name: "unauthorized",
-			msg: &types.MsgUnregisterAssets{
-				Authority: "wrong_authority",
-				ChannelId: "channel-0",
-				IbcDenoms: []string{"ibc/..."},
+			msg: &types.MsgManageRegisteredAssets{
+				Authority:          "wrong_authority",
+				ChannelId:          "channel-0",
+				AssetsToUnregister: []string{"ibc/..."},
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty denoms",
-			msg: &types.MsgUnregisterAssets{
-				Authority: "cosmos1test",
-				ChannelId: "channel-0",
-				IbcDenoms: []string{},
+			msg: &types.MsgManageRegisteredAssets{
+				Authority:          moduleAddress.String(),
+				ChannelId:          "channel-0",
+				AssetsToUnregister: []string{},
 			},
 			wantErr: true,
 		},
@@ -247,7 +326,11 @@ func TestUnregisterAssets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := msgServer.UnregisterAssets(ctx, tt.msg)
+			if tt.setup != nil {
+				tt.setup(k)
+			}
+			msgServer := keeper.NewMsgServerImpl(*k)
+			_, err := msgServer.ManageRegisteredAssets(ctx, tt.msg)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -259,37 +342,61 @@ func TestUnregisterAssets(t *testing.T) {
 
 func TestSupportAsset(t *testing.T) {
 	ctx, k := setupTest(t)
-	msgServer := keeper.NewMsgServerImpl(*k)
-
+	moduleAddress := k.AccountKeeper.GetModuleAddress(assetctltypes.ModuleName)
 	tests := []struct {
 		name    string
-		msg     *types.MsgSupportAssets
+		msg     *types.MsgManageSupportedAssets
 		wantErr bool
+		setup   func(*keeper.Keeper)
 	}{
 		{
 			name: "valid support",
-			msg: &types.MsgSupportAssets{
-				Authority: "cosmos1test",
-				ChannelId: "channel-0",
-				IbcDenoms: []string{"ibc/..."},
+			msg: &types.MsgManageSupportedAssets{
+				Authority:    moduleAddress.String(),
+				ChannelId:    "channel-0",
+				AddIbcDenoms: []string{"ibc/..."},
 			},
 			wantErr: false,
+			setup: func(k *keeper.Keeper) {
+				k.ICAHostKeeper = MockICAHostKeeper{
+					Accounts: []icahosttypes.RegisteredInterchainAccount{
+						{
+							AccountAddress: moduleAddress.String(),
+							ConnectionId:   "connection-0",
+							PortId:         "icahost",
+						},
+					},
+				}
+				k.IBCChannelKeeper = MockIBCChannelKeeper{
+					Channel: channeltypes.Channel{
+						State:    channeltypes.OPEN,
+						Ordering: channeltypes.ORDERED,
+						Counterparty: channeltypes.Counterparty{
+							PortId:    "transfer",
+							ChannelId: "channel-0",
+						},
+						ConnectionHops: []string{"connection-0"},
+						Version:        "ics20-1",
+					},
+					Exists: true,
+				}
+			},
 		},
 		{
 			name: "unauthorized",
-			msg: &types.MsgSupportAssets{
-				Authority: "wrong_authority",
-				ChannelId: "channel-0",
-				IbcDenoms: []string{"ibc/..."},
+			msg: &types.MsgManageSupportedAssets{
+				Authority:    "wrong_authority",
+				ChannelId:    "channel-0",
+				AddIbcDenoms: []string{"ibc/..."},
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty denoms",
-			msg: &types.MsgSupportAssets{
-				Authority: "cosmos1test",
-				ChannelId: "channel-0",
-				IbcDenoms: []string{},
+			msg: &types.MsgManageSupportedAssets{
+				Authority:    moduleAddress.String(),
+				ChannelId:    "channel-0",
+				AddIbcDenoms: []string{},
 			},
 			wantErr: true,
 		},
@@ -297,7 +404,11 @@ func TestSupportAsset(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := msgServer.SupportAssets(ctx, tt.msg)
+			if tt.setup != nil {
+				tt.setup(k)
+			}
+			msgServer := keeper.NewMsgServerImpl(*k)
+			_, err := msgServer.ManageSupportedAssets(ctx, tt.msg)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -310,7 +421,6 @@ func TestSupportAsset(t *testing.T) {
 func TestUpdateParams(t *testing.T) {
 	ctx, k := setupTest(t)
 	msgServer := keeper.NewMsgServerImpl(*k)
-
 	tests := []struct {
 		name    string
 		msg     *types.MsgUpdateParams
