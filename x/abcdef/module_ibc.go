@@ -158,8 +158,8 @@ func (im IBCModule) OnRecvPacket(
 
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
-	case *types.AbcdefPacketData_UpgradePacket:
-	packetAck, err := im.keeper.OnRecvUpgradePacket(ctx, modulePacket, *packet.UpgradePacket)
+	case *types.AbcdefPacketData_ConfirmUpgradePacket:
+	packetAck, err := im.keeper.OnRecvConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket)
 	if err != nil {
 		ack = channeltypes.NewErrorAcknowledgement(err)
 	} else {
@@ -170,13 +170,13 @@ func (im IBCModule) OnRecvPacket(
 		}
 		ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
 	}
-	ctx.EventManager().EmitEvent(
+	/*ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
-			types.EventTypeUpgradePacket,
+			types.EventTypeConfirmUpgradePacket,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 			sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
 		),
-	)
+	)*/
 // this line is used by starport scaffolding # ibc/packet/module/recv
 	default:
 		err := fmt.Errorf("unrecognized %s packet type: %T", types.ModuleName, packet)
@@ -210,12 +210,13 @@ func (im IBCModule) OnAcknowledgementPacket(
 
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
-	case *types.AbcdefPacketData_UpgradePacket:
-	err := im.keeper.OnAcknowledgementUpgradePacket(ctx, modulePacket, *packet.UpgradePacket, ack)
+	case *types.AbcdefPacketData_ConfirmUpgradePacket:
+	err := im.keeper.OnAcknowledgementConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket, ack)
 	if err != nil {
 		return err
 	}
-	eventType = types.EventTypeUpgradePacket
+	//TODO type
+	//eventType = types.EventTypeConfirmUpgradePacket
 // this line is used by starport scaffolding # ibc/packet/module/ack
 	default:
 		errMsg := fmt.Sprintf("unrecognized %s packet type: %T", types.ModuleName, packet)
@@ -263,8 +264,8 @@ func (im IBCModule) OnTimeoutPacket(
 
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
-	case *types.AbcdefPacketData_UpgradePacket:
-	err := im.keeper.OnTimeoutUpgradePacket(ctx, modulePacket, *packet.UpgradePacket)
+	case *types.AbcdefPacketData_ConfirmUpgradePacket:
+	err := im.keeper.OnTimeoutConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket)
 	if err != nil {
 		return err
 	}

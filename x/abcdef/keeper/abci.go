@@ -1,15 +1,16 @@
 package keeper
 
-import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-)
+import "context"
 
-func (k *Keeper) BeginBlock(ctx sdk.Context) {
+func (k *Keeper) BeginBlock(ctx context.Context) error {
+	return nil
 }
 
-func (k *Keeper) EndBlock(ctx sdk.Context) {
+func (k *Keeper) EndBlock(ctx context.Context) error {
 	err := k.Send(ctx)
-    if err != nil {
-        ctx.Logger().Error("failed to send IBC packet", "error", err)
-    }
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

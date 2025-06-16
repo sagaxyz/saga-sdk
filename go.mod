@@ -32,7 +32,6 @@ require (
 	cosmossdk.io/collections v1.2.0 // indirect
 	cosmossdk.io/core v0.11.3 // indirect
 	cosmossdk.io/depinject v1.2.0 // indirect
-	cosmossdk.io/schema v1.1.0 // indirect
 	cosmossdk.io/x/feegrant v0.2.0 // indirect
 	cosmossdk.io/x/tx v0.14.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -170,6 +169,8 @@ require (
 )
 
 replace (
+	cosmossdk.io/collections => cosmossdk.io/collections v0.4.0
+	cosmossdk.io/store => github.com/evmos/cosmos-sdk/store v0.0.0-20240718141609-414cbd051fbe
 	cosmossdk.io/x/feegrant => cosmossdk.io/x/feegrant v0.1.1
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	github.com/cosmos/cosmos-sdk => github.com/sagaxyz/cosmos-sdk v0.50.9-saga
