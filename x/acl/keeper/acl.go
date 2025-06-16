@@ -39,7 +39,7 @@ func (k Keeper) SetAdmin(ctx sdk.Context, addr sdk.AccAddress) {
 	store.Set(addr.Bytes(), []byte{0}) //TODO
 }
 
-func (k Keeper) Admin(ctx sdk.Context, addr sdk.AccAddress) bool {
+func (k Keeper) IsAdmin(ctx sdk.Context, addr sdk.AccAddress) bool {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAdmins)
 	return store.Has(addr.Bytes())
 }

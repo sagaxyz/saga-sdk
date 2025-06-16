@@ -1,0 +1,52 @@
+syntax = "proto3";
+package saga.admin.v1;
+
+import "google/api/annotations.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos/bank/v1beta1/bank.proto";
+import "saga/admin/v1/genesis.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/admin/types";
+
+// Msg defines the module's Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+  // EnableSetMetadata enables the acl-based admin permissions to set metadata.
+  rpc EnableSetMetadata(MsgEnableSetMetadata)
+      returns (MsgEnableSetMetadataResponse) {
+    option (google.api.http).get = "/saga/admin/v1/tx/enable";
+  };
+  // DisableSetMetadata disables the acl-based admin permissions to set
+  // metadata.
+  rpc DisableSetMetadata(MsgDisableSetMetadata)
+      returns (MsgDisableSetMetadataResponse) {
+    option (google.api.http).get = "/saga/admin/v1/tx/disable";
+  };
+  // SetMetadata is a permissioned message that allows the admin or superuser to
+  // set metadata for a given denom. This is only available if the admin module
+  // is enabled.
+  rpc SetMetadata(MsgSetMetadata) returns (MsgSetMetadataResponse) {
+    option (google.api.http).post = "/saga/admin/v1/tx/set_metadata";
+  };
+}
+
+message MsgSetMetadata {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  cosmos.bank.v1beta1.Metadata metadata = 2;
+}
+message MsgSetMetadataResponse {}
+
+message MsgEnableSetMetadata {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+}
+message MsgEnableSetMetadataResponse {}
+
+message MsgDisableSetMetadata {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+}
+message MsgDisableSetMetadataResponse {}

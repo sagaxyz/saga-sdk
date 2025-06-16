@@ -1,0 +1,14 @@
+syntax = "proto3";
+package saga.admin.v1;
+
+import "gogoproto/gogo.proto";
+option go_package = "github.com/sagaxyz/saga-sdk/x/admin/types";
+
+// GenesisState defines the module's genesis state.
+message GenesisState { Params params = 1 [ (gogoproto.nullable) = false ]; }
+
+// Params defines the admin module parameters
+message Params { Permissions permissions = 1 [ (gogoproto.nullable) = false ]; }
+
+// AdminPermissions defines the permissions for admin users.
+message Permissions { bool set_metadata = 1; }
