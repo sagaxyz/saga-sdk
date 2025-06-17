@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"fmt"
-
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -169,13 +167,3 @@ func (m *IBCMiddleware) OnTimeoutPacket(ctx types.Context, packet channeltypes.P
 }
 
 var _ porttypes.IBCModule = &IBCMiddleware{}
-
-// newErrorAcknowledgement returns an error that identifies PFM and provides the error.
-// It's okay if these errors are non-deterministic, because they will not be committed to state, only emitted as events.
-func newErrorAcknowledgement(err string) channeltypes.Acknowledgement {
-	return channeltypes.Acknowledgement{
-		Response: &channeltypes.Acknowledgement_Error{
-			Error: fmt.Sprintf("assetctl error: %s", err),
-		},
-	}
-}

@@ -1,93 +1,160 @@
-# `x/assetctl` - Asset Registry Module
+# `x/assetctl` - Asset Control Module
 
 ## Abstract
 
-The `assetctl` module is responsible for managing a global directory of bridgeable assets within the Hub and for tracking which chainlets have opted-in to utilize this registry. It allows for the registration and unregistration of assets into the global directory. An antehandler will check transfers against this registry, but only for chainlets that have explicitly enabled this feature.
+The `assetctl` module implements the Saga Asset Control architecture. This system is designed to manage a global directory of assets on a central **Controller** chain (the Hub) and enforce asset transfer rules for multiple **Host** chains (the chainlets).
+
+This architecture has two primary components:
+1.  **Controller (on the Hub):** A module that maintains a global, informational directory of all known assets and, more importantly, manages an access control list (ACL) for asset transfers on a per-chainlet basis.
+2.  **Host (on Chainlets):** A module on each chainlet that communicates with the Controller. It allows chainlet owners to register their own native assets to the global directory and to specify which assets they want to support (i.e., allow for transfer).
 
 ## Concepts
 
-### Asset Registration (Global Directory)
+The core concept is a separation of concerns. The Hub acts as a central authority for asset control, but the decision of *which* assets to support is delegated to each individual chainlet. Chainlets use their Host module to send Interchain Account (ICA) messages to the Hub's Controller module, which then executes the requested changes to the asset lists. An `AnteDecorator` on the Hub intercepts all IBC transfers (`MsgTransfer`) and validates them against the Controller's "supported assets" list, effectively enforcing the chainlets' preferences.
 
-Assets are registered into the Hub's *global* asset directory, typically via an Interchain Account (ICA) message originating from a chainlet or by a governance process on the Hub itself. The registration process involves:
-1.  An entity (e.g., chainlet via ICA, Hub governance) initiating a registration message for one or more assets.
-2.  For each asset, the message includes its original bank denom name and metadata (display name, description, denom units).
-3.  The Hub's `assetctl` module determines the IBC denom for the asset *on the Hub*, ensuring its uniqueness in the global directory, and then appends the asset's details to this directory.
+---
 
-IBC denom names on the Hub are used as the primary identifier for assets within the global directory.
+## **Controller (Hub)**
 
-### Asset Unregistration (Global Directory)
+The Controller component resides on the Hub chainlet and acts as the central point of coordination for asset management.
 
-Assets can be unregistered from the Hub's global directory, again typically via ICA from a chainlet or by Hub governance. This removes them from the global directory. Transfers of these assets via the Hub would then be blocked by the antehandler for any chainlet that has the registry feature enabled.
+### State
 
-### Asset Transfer Control (Antehandler)
+The Controller module maintains the following in its state:
 
-The `assetctl` module, through a dedicated antehandler, can intercept ICS20 (token transfer) packets being processed by the Hub.
-1.  The antehandler first checks if the destination chainlet (or source, depending on transfer direction and where the check is most relevant) has the asset registry feature enabled (via `EnabledList`).
-2.  If the feature is enabled for that chainlet, the antehandler then inspects the asset being transferred.
-3.  It verifies if the asset's IBC denom (on the Hub) is present in the Hub's global asset directory (`AssetMetadata`).
-4.  If the feature is enabled AND the asset is in the directory, the ICS20 transfer continues.
-5.  If the feature is enabled AND the asset is NOT in the directory, the transfer is rejected.
-6.  If the feature is NOT enabled for the chainlet, the transfer bypasses this specific module's validation.
-
-### System Components
-
-*   **Asset Hub (this module):** Resides on the Hub chain. It services requests for asset registration/unregistration into the global directory and for chainlets to toggle their registry participation. Its antehandler controls ICS20 transfers against the global directory for opted-in chainlets.
-*   **Asset Host (separate module on chainlets/Saga Mainnet):** Resides on each chainlet and Saga Mainnet. It authenticates owner requests and sends ICA messages to the Hub for asset registration/unregistration or for toggling the chainlet's registry status.
-
-## State
-
-The `assetctl` module maintains the following in its state:
-
-*   **Enabled Chainlets (`EnabledList`):** A set of `ChainletID`s. Presence of a `ChainletID` indicates the chainlet has opted-in to the asset registry's transfer controls.
-    *   `EnabledListPrefix | ChainletID -> EmptyValue` (KeySet)
-*   **Global Asset Directory (`AssetMetadata`):** A collection mapping Hub IBC denoms to their metadata (original denom, display name, description, denom units). This serves as the central registry of all known and allowed assets.
+*   **Global Asset Directory (`AssetMetadata`):** A collection mapping Hub-side IBC denoms to their `RegisteredAsset` protobuf, which contains the full `bank.v1beta1.Metadata`. This is for informational and discovery purposes.
     *   `AssetMetadataPrefix | HubIBCDenom -> ProtocolBuffer(RegisteredAsset)`
+*   **Supported Assets (`SupportedAssets`):** An access control list. The presence of a `(ChannelID, HubIBCDenom)` pair indicates that the asset is approved for transfer to the chainlet associated with that channel. This is the list used by the antehandler for validation.
+    *   `SupportedAssetsPrefix | ChannelID | HubIBCDenom -> EmptyValue` (KeySet)
+*   **Parameters (`Params`):** Module-specific parameters for the Controller.
+    *   `ParamsPrefix -> ProtocolBuffer(Params)`
 
-## Messages
+### Messages
 
-The `assetctl` module handles the following messages (primarily via ICA, but direct messages could also be enabled):
+The Controller handles the following messages, which are expected to be sent from a Host module's ICA on a chainlet.
 
-*   **`MsgToggleChainletRegistry`** (Handled via ICA or direct)
-    *   `creator`: The address of the initiator (e.g., ICA host module on chainlet, or a chainlet admin).
-    *   `chainlet_id`: The ID of the chainlet.
-    *   `enable`: Boolean flag to enable (true) or disable (false) the registry for this chainlet.
-    *   *Action:* Adds or removes the `chainlet_id` from the `EnabledList`.
-
-*   **`MsgManageRegisteredAssets`** (Handled via ICA or direct)
-    *   `creator`: The address of the initiator (e.g., ICA host module on chainlet, or a Hub address with authority).
-    *   `channel_id`: The IBC channel ID for the chainlet.
-    *   `assets_to_register`: A list of assets to register, where each asset includes:
-        *   `denom`: The original bank denom name of the asset on its source chain.
-        *   `display_name`: Human-readable display name.
-        *   `description`: Asset description.
-        *   `denom_units`: List of denomination units (e.g., base, display).
+*   **`MsgManageRegisteredAssets`**
+    *   *Purpose:* To add or remove assets from the global, informational `AssetMetadata` directory.
+    *   `authority`: The chainlet's ICA address on the Hub.
+    *   `channel_id`: The IBC channel connecting the chainlet to the Hub.
+    *   `assets_to_register`: A list of `bank.v1beta1.Metadata` to register.
     *   `assets_to_unregister`: A list of Hub IBC denoms to unregister.
-    *   *Action:* Registers and/or unregisters assets in the Hub's global `AssetMetadata` directory.
 
-## Queries
+*   **`MsgManageSupportedAssets`**
+    *   *Purpose:* To approve or deny the transfer of specific assets to the chainlet. This modifies the `SupportedAssets` ACL.
+    *   `authority`: The chainlet's ICA address on the Hub.
+    *   `channel_id`: The IBC channel ID for the chainlet.
+    *   `add_ibc_denoms`: A list of Hub IBC denoms to allow for transfer.
+    *   `remove_ibc_denoms`: A list of Hub IBC denoms to block from transfer.
 
-The `assetctl` module provides the following gRPC queries:
+*   **`MsgUpdateParams`**
+    *   *Purpose:* To update the Controller module's parameters.
+    *   `authority`: The address of the module's designated authority (e.g., governance).
+    *   `params`: The new parameters to set.
 
-*   **`QueryAssetDirectory`**
-    *   Request: `QueryAssetDirectoryRequest` (supports pagination)
-    *   Response: `QueryAssetDirectoryResponse` (list of `RegisteredAsset` from `AssetMetadata`, pagination info)
-    *   *Action:* Returns a paginated list of all assets registered in the Hub's global directory.
-*   **`QueryChainletRegistryStatus`** (New Query)
-    *   Request: `QueryChainletRegistryStatusRequest { chainlet_id: string }`
-    *   Response: `QueryChainletRegistryStatusResponse { is_enabled: bool }`
-    *   *Action:* Returns whether the asset registry feature is enabled for the given `chainlet_id`.
+### Queries
+
+*   **`QueryAssetDirectory`**: Returns a paginated list of all assets in the global `AssetMetadata` directory.
+*   **`QueryParams`**: Returns the current parameters of the Controller module.
+
+### Antehandler
+
+The Controller includes an `AnteDecorator` that intercepts every `MsgTransfer`. It checks if the `(SourceChannel, Token.Denom)` pair exists in the `SupportedAssets` list. If the pair is not found, the transaction is rejected.
+
+### Client
+
+```bash
+# Query the global asset directory
+appd query assetctl controller asset-directory
+
+# Query the controller params
+appd query assetctl controller params
+
+# The following transactions are meant to be sent via a chainlet's ICA
+# and would not typically be run manually from a user account.
+appd tx assetctl controller manage-registered-assets ...
+appd tx assetctl controller manage-supported-assets ...
+```
+
+---
+
+## **Host (Chainlet)**
+
+The Host component resides on each chainlet and acts as the interface for chainlet owners to manage their assets on the Hub.
+
+### State
+
+The Host module maintains the following in its state:
+
+*   **ICA on Hub (`ICAData`):** Stores the address and channel information of the Interchain Account it has created on the Hub.
+    *   `ICAOnHubPrefix -> ProtocolBuffer(ICAOnHub)`
+*   **In-Flight Requests (`InFlightRequests`):** A map of pending ICA request sequences to their message type. This tracks ongoing communications with the Controller.
+    *   `InFlightRequestsPrefix | Sequence -> String(MsgTypeURL)`
+*   **Parameters (`Params`):** Module-specific parameters for the Host.
+    *   `ParamsPrefix -> ProtocolBuffer(Params)`
+
+### Messages
+
+A chainlet owner (with `x/acl` permissions) can send the following messages to the Host module on their own chainlet. The Host module will then dispatch the corresponding ICA message to the Controller on the Hub.
+
+*   **`MsgCreateICAOnHub`**
+    *   *Purpose:* To establish the initial connection by creating an Interchain Account on the Hub, controlled by the Host module.
+    *   `authority`: The chainlet admin's address.
+
+*   **`MsgManageSupportedAssets`**
+    *   *Purpose:* To tell the Controller on the Hub which assets this chainlet wants to support.
+    *   `authority`: The chainlet admin's address.
+    *   `add_ibc_denoms`: A list of IBC denoms (on the Hub) to support.
+    *   `remove_ibc_denoms`: A list of IBC denoms to stop supporting.
+
+*   **`MsgManageRegisteredAssets`**
+    *   *Purpose:* To register the chainlet's own native assets in the Hub's global directory.
+    *   `authority`: The chainlet admin's address.
+    *   `assets_to_register`: A list of local denoms to register.
+    *   `assets_to_unregister`: A list of local denoms to unregister.
+
+*   **`MsgUpdateParams`**
+    *   *Purpose:* To update the Host module's parameters.
+    *   `authority`: The chainlet admin's address.
+    *   `params`: The new parameters to set.
+
+### Queries
+
+*   **`QueryICAOnHub`**: Returns information about the Host's ICA on the Hub, such as its address and channel ID.
+*   **`QueryParams`**: Returns the current parameters of the Host module.
+
+### Client
+
+```bash
+# Create the ICA on the Hub to initialize the system
+appd tx assetctl host create-ica-on-hub --from <admin_key>
+
+# Add a supported asset for this chainlet
+appd tx assetctl host manage-supported-assets --add <hub_ibc_denom> --from <admin_key>
+
+# Register a native asset in the Hub's global directory
+appd tx assetctl host manage-registered-assets --register <native_denom> --from <admin_key>
+
+# Query the chainlet's ICA address on the Hub
+appd query assetctl host ica-on-hub
+
+# Query the host params
+appd query assetctl host params
+```
 
 ## Events
 
 The `assetctl` module can emit the following events:
 
-*   `EventTypeToggleChainletRegistry`: Emitted when a chainlet enables or disables the registry.
-    *   Attribute Keys: `chainlet_id`, `enabled_status` (true/false)
 *   `EventTypeRegisterAsset`: Emitted when a new asset is registered to the global directory.
     *   Attribute Keys: `ibc_denom`, `original_denom`
 *   `EventTypeUnregisterAsset`: Emitted when an asset is unregistered from the global directory.
     *   Attribute Keys: `ibc_denom`
-*   `EventTypeAssetTransferBlocked`: Emitted when an ICS20 transfer is blocked by the antehandler for an opted-in chainlet due to the asset not being in the global directory.
+*   `EventTypeAddSupportedAsset`: Emitted when an asset is added to a chainlet's supported list.
+    *   Attribute Keys: `chainlet_id`, `ibc_denom`
+*   `EventTypeRemoveSupportedAsset`: Emitted when an asset is removed from a chainlet's supported list.
+    *   Attribute Keys: `chainlet_id`, `ibc_denom`
+*   `EventTypeAssetTransferBlocked`: Emitted when an ICS20 transfer is blocked by the antehandler.
     *   Attribute Keys: `chainlet_id`, `ibc_denom`
 
 ## Client
@@ -96,37 +163,32 @@ A user can interact with the `assetctl` module using gRPC or the command-line in
 
 ### CLI
 
-Scaffolding for CLI commands will be added for queries and transactions:
+*Note: CLI commands are subject to change based on final implementation.*
 
 ```bash
 # Query the global asset directory
-appd query assetctl asset-directory --page <page_num> --limit <limit>
+appd query assetctl controller asset-directory --page <page_num> --limit <limit>
 
-# Query a chainlet's registry status
-appd query assetctl chainlet-status <chainlet_id>
+# Query the controller params
+appd query assetctl controller params
 
-# Toggle a chainlet's registry status (example, if direct messages are allowed)
-appd tx assetctl toggle-chainlet-registry <chainlet_id> <true|false> --from <key_or_address>
+# Register assets (example, sent from chainlet's ICA)
+appd tx assetctl controller manage-registered-assets <path/to/assets.json> --from <chainlet-ica-address>
 
-# Register assets (example)
-appd tx assetctl register-assets <path/to/assets.json> --from <key_or_address>
-
-# Unregister assets (example)
-appd tx assetctl unregister-assets <ibc_denom1,ibc_denom2> --from <key_or_address>
+# Add supported assets (example, sent from chainlet's ICA)
+appd tx assetctl controller manage-supported-assets --add <ibc_denom1,ibc_denom2> --channel-id <channel-id> --from <chainlet-ica-address>
 ```
 
 ### gRPC
 
-Queries can be made via gRPC using the `saga.assetctl.v1.Query` service.
-Message submission would use the `saga.assetctl.v1.Msg` service.
+Queries can be made via gRPC using the `saga.assetctl.controller.v1.Query` service.
+Message submission would use the `saga.assetctl.controller.v1.Msg` service.
 
 ## Future Improvements
 
-*   Detailed specification for the antehandler logic.
+*   Full implementation of the query services.
 *   Governance mechanisms for managing the global asset registry directly on the Hub.
-*   Clear definition of authority for who can toggle chainlet registry status (e.g., chainlet's ICA controller, specific admin accounts).
-
-
+*   More robust authority and authentication mechanisms beyond the basic ICA address check.
 
 Setup
 
