@@ -1,0 +1,35 @@
+syntax = "proto3";
+package saga.assetctl.host.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "saga/assetctl/host/v1/host.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/assetctl/host/types";
+
+// Query defines the gRPC querier service.
+service Query {
+
+  // Params queries the controller module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/saga/assetctl/v1/host/params";
+  }
+
+  // ICAOnHub queries the ICA on the hub.
+  rpc ICAOnHub(QueryICAOnHubRequest) returns (QueryICAOnHubResponse) {
+    option (google.api.http).get = "/saga/assetctl/v1/host/ica-on-hub";
+  }
+}
+	
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryICAOnHubRequest {}
+
+message QueryICAOnHubResponse {
+  ICAOnHub ica_on_hub = 1 [(gogoproto.nullable) = false];
+}
