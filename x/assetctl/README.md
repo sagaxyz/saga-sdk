@@ -23,11 +23,11 @@ The Controller component resides on the Hub chainlet and acts as the central poi
 The Controller module maintains the following in its state:
 
 *   **Global Asset Directory (`AssetMetadata`):** A collection mapping Hub-side IBC denoms to their `RegisteredAsset` protobuf, which contains the full `bank.v1beta1.Metadata`. This is for informational and discovery purposes.
-    *   `AssetMetadataPrefix | HubIBCDenom -> ProtocolBuffer(RegisteredAsset)`
+    *   `AssetMetadataPrefix | HubIBCDenom -> RegisteredAsset`
 *   **Supported Assets (`SupportedAssets`):** An access control list. The presence of a `(ChannelID, HubIBCDenom)` pair indicates that the asset is approved for transfer to the chainlet associated with that channel. This is the list used by the antehandler for validation.
     *   `SupportedAssetsPrefix | ChannelID | HubIBCDenom -> EmptyValue` (KeySet)
 *   **Parameters (`Params`):** Module-specific parameters for the Controller.
-    *   `ParamsPrefix -> ProtocolBuffer(Params)`
+    *   `ParamsPrefix -> Params`
 
 ### Messages
 
@@ -87,11 +87,11 @@ The Host component resides on each chainlet and acts as the interface for chainl
 The Host module maintains the following in its state:
 
 *   **ICA on Hub (`ICAData`):** Stores the address and channel information of the Interchain Account it has created on the Hub.
-    *   `ICAOnHubPrefix -> ProtocolBuffer(ICAOnHub)`
+    *   `ICAOnHubPrefix -> ICAOnHub`
 *   **In-Flight Requests (`InFlightRequests`):** A map of pending ICA request sequences to their message type. This tracks ongoing communications with the Controller.
     *   `InFlightRequestsPrefix | Sequence -> String(MsgTypeURL)`
 *   **Parameters (`Params`):** Module-specific parameters for the Host.
-    *   `ParamsPrefix -> ProtocolBuffer(Params)`
+    *   `ParamsPrefix -> Params`
 
 ### Messages
 
@@ -144,7 +144,7 @@ appd query assetctl host params
 
 ## Events
 
-The `assetctl` module can emit the following events:
+The `assetctl` module can emit the following events (TODO: add these):
 
 *   `EventTypeRegisterAsset`: Emitted when a new asset is registered to the global directory.
     *   Attribute Keys: `ibc_denom`, `original_denom`
@@ -162,6 +162,8 @@ The `assetctl` module can emit the following events:
 A user can interact with the `assetctl` module using gRPC or the command-line interface (CLI).
 
 ### CLI
+
+TODO: to be tested
 
 *Note: CLI commands are subject to change based on final implementation.*
 
@@ -183,23 +185,6 @@ appd tx assetctl controller manage-supported-assets --add <ibc_denom1,ibc_denom2
 
 Queries can be made via gRPC using the `saga.assetctl.controller.v1.Query` service.
 Message submission would use the `saga.assetctl.controller.v1.Msg` service.
-
-## Future Improvements
-
-*   Full implementation of the query services.
-*   Governance mechanisms for managing the global asset registry directly on the Hub.
-*   More robust authority and authentication mechanisms beyond the basic ICA address check.
-
-Setup
-
-We start with a pre-existing ICA created by the chainlet on the Hub, the Hub somehow recognizes this ICA as the "controller" of the chainlet.
-This will be created by a chainlet's module, which on the chainlet's end is very straightforward, but on the Hub's end might be a bit tricky, as there has to be a validation mechanism to ensure that the ICA is indeed the controller of the chainlet.
-
-PFM has to be enabled in the Hub.
-
-
-
-
 
 
 
