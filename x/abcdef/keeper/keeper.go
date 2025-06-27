@@ -5,11 +5,11 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
-	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "cosmossdk.io/store/types"
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
@@ -33,9 +33,11 @@ type Keeper struct {
 
 	upgradeKeeper *upgradekeeper.Keeper //TODO interface
 	icaKeeper     icacontrollerkeeper.Keeper
+	channelKeeper types.ChannelKeeper
 }
 
-func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, scopedKeeper exported.ScopedKeeper, uk *upgradekeeper.Keeper) Keeper {
+func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, scopedKeeper exported.ScopedKeeper, uk *upgradekeeper.Keeper, channelKeeper types.ChannelKeeper) Keeper {
+
 	if _, err := sdk.AccAddressFromBech32(authority); err != nil {
 		panic(fmt.Sprintf("invalid authority address: %s", authority))
 	}
@@ -48,6 +50,7 @@ func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority 
 		ibcKeeperFn:   ibcKeeperFn,
 		scopedKeeper:  scopedKeeper,
 		upgradeKeeper: uk,
+		channelKeeper: channelKeeper,
 	}
 }
 
