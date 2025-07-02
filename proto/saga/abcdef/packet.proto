@@ -15,8 +15,9 @@ message NoData {}
 
 // ConfirmUpgradePacketData defines a struct for the packet payload
 message ConfirmUpgradePacketData {
-    uint64 height = 1;
-    string plan = 2;
+    string chainId = 1;
+    uint64 height = 2;
+    string plan = 3;
 }
 
 // UpgradePacketAck defines a struct for the packet acknowledgment

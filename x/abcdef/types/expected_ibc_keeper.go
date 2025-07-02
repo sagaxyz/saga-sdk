@@ -21,6 +21,7 @@ type ChannelKeeper interface {
 		data []byte,
 	) (uint64, error)
 	ChanCloseInit(ctx sdk.Context, portID, channelID string, chanCap *capabilitytypes.Capability) error
+	GetAllChannelsWithPortPrefix(ctx sdk.Context, portPrefix string) []channeltypes.IdentifiedChannel
 }
 
 // PortKeeper defines the expected IBC port keeper.
