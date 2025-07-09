@@ -67,7 +67,7 @@ func (suite *TestSuite) TestInitGenesis() {
 				}
 				for _, admin := range tc.genesis.Admins {
 					addr := sdk.MustAccAddressFromBech32(admin)
-					admin := suite.aclKeeper.Admin(suite.ctx, addr)
+					admin := suite.aclKeeper.IsAdmin(suite.ctx, addr)
 					suite.Require().True(admin)
 				}
 			}

@@ -14,7 +14,7 @@ func (suite *TestSuite) TestMsgServer() {
 		addr2 := sdk.AccAddress([]byte{222})
 
 		suite.Run("add", func() {
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr1))
+			suite.Require().False(suite.aclKeeper.IsAdmin(suite.ctx, addr1))
 			_, err := suite.aclKeeper.AddAdmins(suite.ctx, &types.MsgAddAdmins{
 				Sender: addr1.String(),
 				Admins: []string{addr1.String()},
@@ -26,11 +26,11 @@ func (suite *TestSuite) TestMsgServer() {
 				Admins: []string{addr1.String()},
 			})
 			suite.Require().NoError(err)
-			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr1))
+			suite.Require().True(suite.aclKeeper.IsAdmin(suite.ctx, addr1))
 		})
 		suite.Run("remove", func() {
-			suite.Require().True(suite.aclKeeper.Admin(suite.ctx, addr1))
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr2))
+			suite.Require().True(suite.aclKeeper.IsAdmin(suite.ctx, addr1))
+			suite.Require().False(suite.aclKeeper.IsAdmin(suite.ctx, addr2))
 
 			_, err := suite.aclKeeper.RemoveAdmins(suite.ctx, &types.MsgRemoveAdmins{
 				Sender: addr2.String(),
@@ -43,14 +43,14 @@ func (suite *TestSuite) TestMsgServer() {
 				Admins: []string{addr1.String()},
 			})
 			suite.Require().NoError(err)
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr1))
+			suite.Require().False(suite.aclKeeper.IsAdmin(suite.ctx, addr1))
 		})
 	})
 	suite.Run("allowed", func() {
 		addr := sdk.AccAddress([]byte{111})
 
 		suite.Run("add", func() {
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().False(suite.aclKeeper.IsAdmin(suite.ctx, addr))
 			suite.Require().False(suite.aclKeeper.Allowed(suite.ctx, addr))
 
 			_, err := suite.aclKeeper.AddAllowed(suite.ctx, &types.MsgAddAllowed{
@@ -67,7 +67,7 @@ func (suite *TestSuite) TestMsgServer() {
 			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, addr))
 		})
 		suite.Run("remove", func() {
-			suite.Require().False(suite.aclKeeper.Admin(suite.ctx, addr))
+			suite.Require().False(suite.aclKeeper.IsAdmin(suite.ctx, addr))
 			suite.Require().True(suite.aclKeeper.Allowed(suite.ctx, addr))
 
 			_, err := suite.aclKeeper.RemoveAllowed(suite.ctx, &types.MsgRemoveAllowed{
