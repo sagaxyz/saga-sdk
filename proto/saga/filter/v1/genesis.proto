@@ -9,5 +9,5 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/filter/types";
 // GenesisState defines the filter module's genesis state.
 message GenesisState {
   // params defines all the parameters of the filter module.
-  Params params = 1 [(gogoproto.nullable) = false];
+  Params params = 1 [ (gogoproto.nullable) = false ];
 }

@@ -73,7 +73,9 @@ proto_ver        = 0.11.6
 proto_image_name = ghcr.io/cosmos/proto-builder:$(proto_ver)
 proto_image      = docker run --rm -v $(CURDIR):/workspace --workdir /workspace $(proto_image_name)
 
-.PHONY: proto-gen
+.PHONY: proto-gen proto-format
 proto-gen:
 	@echo "Generating Protobuf files"
 	@$(proto_image) sh ./scripts/protocgen.sh
+proto-format:
+	@$(proto_image) find ./ -name "*.proto" -exec clang-format -i {} \;
