@@ -31,11 +31,7 @@ message QueryParamsResponse {
 }
 
 message QueryListAdminsRequest {}
-message QueryListAdminsResponse {
-  repeated string admins = 1;
-}
+message QueryListAdminsResponse { repeated string admins = 1; }
 
 message QueryListAllowedRequest {}
-message QueryListAllowedResponse {
-  repeated string allowed = 1;
-}
+message QueryListAllowedResponse { repeated string allowed = 1; }

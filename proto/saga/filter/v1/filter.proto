@@ -6,6 +6,4 @@ import "gogoproto/gogo.proto";
 option go_package = "github.com/sagaxyz/saga-sdk/x/filter/types";
 
 // Params defines the filter module parameters
-message Params {
-  repeated string prefixes = 1;
-}
+message Params { repeated string prefixes = 1; }
