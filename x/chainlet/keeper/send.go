@@ -80,6 +80,7 @@ func (k Keeper) Send(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("XXX packet data: %+v\n", packetData)
 
 	// Timeout
 	connEnd, found := k.connectionKeeper.GetConnection(sdkCtx, ccvConnectionID)
