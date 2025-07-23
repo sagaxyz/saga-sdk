@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -45,8 +44,8 @@ func (k Keeper) Send(ctx context.Context) error {
 		}
 		return err
 	}
-	if sdkCtx.BlockHeight() < plan.Height - 1 {
-		k.Logger(sdkCtx).Debug(fmt.Sprintf("skipping until the upgrade height is reached: %d < %d", plan.Height - 1, sdkCtx.BlockHeight()))
+	if sdkCtx.BlockHeight() < plan.Height-1 {
+		k.Logger(sdkCtx).Debug(fmt.Sprintf("skipping until the upgrade height is reached: %d >= %d", plan.Height-1, sdkCtx.BlockHeight()))
 		return nil
 	}
 
@@ -72,21 +71,31 @@ func (k Keeper) Send(ctx context.Context) error {
 	}
 
 	// Create the packet data
-	timeoutHeight := clienttypes.Height{
-		RevisionNumber: 1,
-		RevisionHeight: 10000000, //TODO counterparty height + module param offset
-	}
-	timeoutTimestamp := uint64(sdkCtx.BlockTime().Add(24 * time.Hour).UnixNano()) //TODO module param
-	height := sdkCtx.BlockHeight()
 	packetData := types.ConfirmUpgradePacketData{
 		ChainId: sdkCtx.ChainID(),
-		Height:  uint64(height),
+		Height:  uint64(sdkCtx.BlockHeight()),
 		Plan:    plan.Name,
 	}
 	err = packetData.ValidateBasic()
 	if err != nil {
 		return err
 	}
+
+	// Timeout
+	connEnd, found := k.connectionKeeper.GetConnection(sdkCtx, ccvConnectionID)
+	if !found {
+		return fmt.Errorf("connection %s not found", ccvConnectionID)
+	}
+	clientState, ex := k.clientKeeper.GetClientState(sdkCtx, connEnd.ClientId)
+	if !ex {
+		return fmt.Errorf("client state missing for client ID '%s'", connEnd.ClientId)
+	}
+	p := k.GetParams(sdkCtx)
+	timeoutHeight := clienttypes.Height{
+		RevisionNumber: clientState.GetLatestHeight().GetRevisionNumber(),
+		RevisionHeight: clientState.GetLatestHeight().GetRevisionHeight() + p.TimeoutHeight,
+	}
+	timeoutTimestamp := uint64(sdkCtx.BlockTime().Add(p.TimeoutTime).UnixNano())
 
 	_, err = k.TransmitConfirmUpgradePacket(sdkCtx, packetData, types.PortID, sourceChannel.ChannelId, timeoutHeight, timeoutTimestamp)
 	if err != nil {
