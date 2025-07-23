@@ -10,9 +10,7 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/chainlet/types";
 
 // GenesisState defines the chainlet module's genesis state.
 message GenesisState {
-
   // params defines all the parameters of the module.
   Params params = 1
       [ (gogoproto.nullable) = false, (amino.dont_omitempty) = true ];
-  string port_id = 2;
 }

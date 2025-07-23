@@ -30,27 +30,31 @@ type Keeper struct {
 	ibcKeeperFn  func() *ibckeeper.Keeper
 	scopedKeeper exported.ScopedKeeper
 
-	upgradeKeeper  types.UpgradeKeeper
-	channelKeeper  types.ChannelKeeper
-	consumerKeeper types.ConsumerKeeper
+	upgradeKeeper    types.UpgradeKeeper
+	channelKeeper    types.ChannelKeeper
+	consumerKeeper   types.ConsumerKeeper
+	clientKeeper     types.ClientKeeper
+	connectionKeeper types.ConnectionKeeper
 }
 
-func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, scopedKeeper exported.ScopedKeeper, uk *upgradekeeper.Keeper, channelKeeper types.ChannelKeeper, consumerKeeper types.ConsumerKeeper) Keeper {
+func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, scopedKeeper exported.ScopedKeeper, uk *upgradekeeper.Keeper, channelKeeper types.ChannelKeeper, consumerKeeper types.ConsumerKeeper, clientKeeper types.ClientKeeper, connectionKeeper types.ConnectionKeeper) Keeper {
 
 	if _, err := sdk.AccAddressFromBech32(authority); err != nil {
 		panic(fmt.Sprintf("invalid authority address: %s", authority))
 	}
 
 	return Keeper{
-		cdc:            cdc,
-		storeKey:       storeKey,
-		memKey:         memKey,
-		authority:      authority,
-		ibcKeeperFn:    ibcKeeperFn,
-		scopedKeeper:   scopedKeeper,
-		upgradeKeeper:  uk,
-		channelKeeper:  channelKeeper,
-		consumerKeeper: consumerKeeper,
+		cdc:              cdc,
+		storeKey:         storeKey,
+		memKey:           memKey,
+		authority:        authority,
+		ibcKeeperFn:      ibcKeeperFn,
+		scopedKeeper:     scopedKeeper,
+		upgradeKeeper:    uk,
+		channelKeeper:    channelKeeper,
+		consumerKeeper:   consumerKeeper,
+		clientKeeper:     clientKeeper,
+		connectionKeeper: connectionKeeper,
 	}
 }
 
