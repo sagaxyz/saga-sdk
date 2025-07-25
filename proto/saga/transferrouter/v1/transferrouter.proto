@@ -1,0 +1,45 @@
+syntax = "proto3";
+package saga.transferrouter.v1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/transferrouter/types";
+
+// Params defines the transferrouter module parameters.
+message Params {
+  // enabled specifies if the module functionality is turned on.
+  bool enabled = 1;
+} 
+
+// CallQueueItem is to store a call in the queue to be executed on the next block.
+// Every call might have a matching in-flight packet, which is used to refund the call if it fails,
+// or to write the acknowledgement.
+message CallQueueItem {
+    Call call = 1;
+    InFlightPacket in_flight_packet = 2;
+}
+
+// Call is to store a call in the queue to be executed on the next block.
+message Call {
+    bytes from = 1;
+    bytes contract = 2;
+    bytes data = 3;
+    bool commit = 4;
+}
+
+// InFlightPacket contains information about original packet for
+// writing the acknowledgement and refunding if necessary.
+message InFlightPacket {
+    string original_sender_address  = 1;
+    string refund_channel_id        = 2;
+    string refund_port_id           = 3;
+    string packet_src_channel_id    = 4;
+    string packet_src_port_id       = 5;
+    uint64 packet_timeout_timestamp = 6;
+    string packet_timeout_height    = 7;
+    bytes  packet_data              = 8;
+    uint64 refund_sequence          = 9;
+    int32  retries_remaining        = 10;
+    uint64 timeout                  = 11;
+    bool   nonrefundable            = 12;
+  }
