@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	corestore "cosmossdk.io/core/store"
+	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
@@ -16,16 +17,17 @@ var (
 	LastCallSequencePrefix = collections.NewPrefix(2) // Stores the last call sequence
 )
 
-// Keeper maintains the link to data storage and exposes getter/setter methods for the module's state.
 type Keeper struct {
 	cdc          codec.BinaryCodec
-	storeService any // runtime.KVStoreService placeholder until SDK type imported
+	storeService corestore.KVStoreService
 	authority    string
 
 	Schema           collections.Schema
 	Params           collections.Item[types.Params]
 	CallQueue        collections.Map[uint64, types.CallQueueItem]
 	LastCallSequence collections.Item[uint64]
+
+	ics4Wrapper porttypes.ICS4Wrapper
 }
 
 // New returns a new Keeper instance.
