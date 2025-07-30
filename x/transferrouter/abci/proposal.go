@@ -1,16 +1,20 @@
 package abci
 
 import (
+	"bytes"
+
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	evmostypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
 type ProposalHandler struct {
-	keeper     keeper.Keeper
-	txSelector baseapp.TxSelector
+	keeper      keeper.Keeper
+	txSelector  baseapp.TxSelector
+	knownSigner []byte
 }
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
@@ -51,7 +55,39 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
-		// 1. Validate the proposal by checking the contents of the block against the call queue
-		return &abci.ResponseProcessProposal{}, nil
+		for _, tx := range req.Txs {
+			msg := evmostypes.MsgEthereumTx{}
+			err := msg.UnmarshalBinary(tx)
+			// Check if the signer is the
+			if err == nil {
+				signer := msg.GetFrom() // TODO: or GetSender()?
+				if bytes.Equal(signer.Bytes(), h.knownSigner) {
+					// Verify if the transaction comes from the call queue, if it doesn't, return a rejection
+					callQueueItem, found := h.keeper.GetCallQueueItemByHash(ctx, msg.Hash)
+					if !found {
+						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+					}
+
+					// Let's also compare the transaction's bytes, might be overkill, let's revisit later
+					callQTxBz, err := callQueueItem.ToMsgEthereumTx().AsTransaction().MarshalBinary()
+					if err != nil {
+						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+					}
+
+					blockTxBz, err := msg.AsTransaction().MarshalBinary()
+					if err != nil {
+						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+					}
+
+					if !bytes.Equal(callQTxBz, blockTxBz) {
+						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+					}
+				}
+			}
+		}
+
+		return &abci.ResponseProcessProposal{
+			Status: abci.ResponseProcessProposal_ACCEPT,
+		}, nil
 	}
 }

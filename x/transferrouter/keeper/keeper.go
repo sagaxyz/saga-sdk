@@ -72,3 +72,8 @@ func NewKeeper(cdc codec.BinaryCodec, storeSvc corestore.KVStoreService, authori
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", types.ModuleName)
 }
+
+// GetCallQueueItemByHash returns the call queue item by hash (in hex format), TODO: implement index
+func (k Keeper) GetCallQueueItemByHash(ctx sdk.Context, hash string) (types.CallQueueItem, bool) {
+	return types.CallQueueItem{}, false
+}

@@ -28,7 +28,7 @@ func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
 }
 
 // OnAcknowledgementPacket implements types.IBCModule.
-func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer types.AccAddress) error {
+func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
 	return i.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 }
 
