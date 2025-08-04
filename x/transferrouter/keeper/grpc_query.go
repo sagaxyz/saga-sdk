@@ -11,12 +11,15 @@ import (
 var _ types.QueryServer = Querier{}
 
 type Querier struct {
-	Keeper
+	k Keeper
 }
 
 // Params returns the current module parameters.
-func (k Querier) Params(c context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+func (q Querier) Params(c context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
-	params := k.GetParams(ctx)
+	params, err := q.k.Params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &types.QueryParamsResponse{Params: params}, nil
 }

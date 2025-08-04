@@ -93,7 +93,8 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		},
 	})
 
-	return i.app.OnRecvPacket(ctx, packet, relayer)
+	// Do not return the acknowledgement, we will write it in the post handler
+	return nil
 }
 
 // OnTimeoutPacket implements types.IBCModule.

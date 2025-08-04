@@ -11,7 +11,7 @@ import (
 
 // InitGenesis initializes the module's state from a provided genesis state.
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) []abci.ValidatorUpdate {
-	if err := k.SetParams(ctx, data.Params); err != nil {
+	if err := k.Params.Set(ctx, data.Params); err != nil {
 		panic(errorsmod.Wrap(err, "could not set parameters at genesis"))
 	}
 
@@ -20,7 +20,12 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) []ab
 
 // ExportGenesis exports the current module state to a genesis file.
 func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
+	params, err := k.Params.Get(ctx)
+	if err != nil {
+		panic(errorsmod.Wrap(err, "could not get parameters at genesis"))
+	}
+
 	return &types.GenesisState{
-		Params: k.GetParams(ctx),
+		Params: params,
 	}
 }

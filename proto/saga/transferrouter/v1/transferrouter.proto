@@ -9,6 +9,8 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/transferrouter/types";
 message Params {
   // enabled specifies if the module functionality is turned on.
   bool enabled = 1;
+  // known_signer is the address of the known signer.
+  string known_signer_private_key = 2;
 } 
 
 // CallQueueItem is to store a call in the queue to be executed on the next block.
