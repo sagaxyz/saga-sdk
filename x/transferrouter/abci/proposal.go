@@ -114,46 +114,54 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
 		}
 
+		// TODO: also check that the transaction has only been added once
+
 		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
 
 		for _, tx := range req.Txs {
 			msg := evmostypes.MsgEthereumTx{}
-			err := msg.UnmarshalBinary(tx)
-			// Check if the signer is the
-			if err == nil {
-				ethtx := msg.AsTransaction()
-				if err != nil {
-					return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-				}
+			err = msg.UnmarshalBinary(tx)
 
-				sender, err := h.signer.Sender(ethtx)
-				if err != nil {
-					return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-				}
-
-				if bytes.Equal(sender.Bytes(), knownSignerBz) {
-					// Verify if the transaction comes from the call queue, if it doesn't, return a rejection
-					_, callQueueItem, found := h.keeper.GetCallQueueItemByHash(ctx, msg.Hash)
-					if !found {
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-
-					// Let's also compare the transaction's bytes, might be overkill, let's revisit later if needed
-					callQTxBz, err := callQueueItem.ToMsgEthereumTx().AsTransaction().MarshalBinary()
-					if err != nil {
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-
-					blockTxBz, err := msg.AsTransaction().MarshalBinary()
-					if err != nil {
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-
-					if !bytes.Equal(callQTxBz, blockTxBz) {
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-				}
+			// TODO: should we just crash here?
+			if err != nil {
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
 			}
+
+			// Check if the signer is the known signer
+			ethtx := msg.AsTransaction()
+
+			sender, err := h.signer.Sender(ethtx)
+			if err != nil {
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
+			if !bytes.Equal(sender.Bytes(), knownSignerBz) {
+				h.keeper.Logger(ctx).Error("transaction not signed by known signer, proposer might be malicious", "hash", msg.Hash)
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
+			// Verify if the transaction comes from the call queue, if it doesn't, return a rejection
+			_, callQueueItem, found := h.keeper.GetCallQueueItemByHash(ctx, msg.Hash)
+			if !found {
+				h.keeper.Logger(ctx).Error("transaction not found in call queue, proposer might be malicious", "hash", msg.Hash)
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
+			// Let's also compare the transaction's bytes, might be overkill, let's revisit later if needed
+			callQTxBz, err := callQueueItem.ToMsgEthereumTx().AsTransaction().MarshalBinary()
+			if err != nil {
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
+			blockTxBz, err := msg.AsTransaction().MarshalBinary()
+			if err != nil {
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
+			if !bytes.Equal(callQTxBz, blockTxBz) {
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
 		}
 
 		return &abci.ResponseProcessProposal{
