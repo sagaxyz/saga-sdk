@@ -44,6 +44,8 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, nil // TODO: handle error
 		}
 
+		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
+		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
 		err = h.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
 			ethTx := value.ToMsgEthereumTx()
 			signedTx, err := ethcoretypes.SignTx(ethTx.AsTransaction(), h.signer, privKey)

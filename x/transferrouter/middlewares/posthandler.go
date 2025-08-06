@@ -38,7 +38,6 @@ func (p PostHandler) PostHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, succe
 			msgEthereumTx := msg.(*evmostypes.MsgEthereumTx)
 			seq, callQueueItem, found = p.keeper.GetCallQueueItemByHash(ctx, msgEthereumTx.Hash)
 			if found {
-				// stop the loop
 				break
 			}
 		}

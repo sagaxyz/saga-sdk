@@ -74,7 +74,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
 
-	// If it's a PFM packet meant to be forwarded, we return early
+	// If it's a PFM packet meant to be forwarded, we return early as we won't handle it here
 	d := make(map[string]interface{})
 	err := json.Unmarshal([]byte(data.Memo), &d)
 	if err == nil && d["forward"] != nil {
