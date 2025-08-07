@@ -9,7 +9,6 @@ import (
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	evmostypes "github.com/evmos/evmos/v20/x/evm/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
@@ -130,7 +129,7 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
 
 		for _, tx := range req.Txs {
-			msg := evmostypes.MsgEthereumTx{}
+			msg := evmtypes.MsgEthereumTx{}
 			err = msg.UnmarshalBinary(tx)
 
 			// TODO: should we just crash here?
