@@ -11,6 +11,7 @@ This module has 3 main components:
 1. IBC middleware: in charge of intercepting incoming IBC packets and storing them in the call queue.
 2. ABCI++ Prepare and ProcessProposal: in charge of adding the signed calls to the block, and checking the contents of the block against the call queue to avoid a malicious block proposer to add bad calls to the block.
 3. Posthandler: in charge of writing the IBC acknowledgement if needed, and also removing the call from the queue.
+4. ??? Maybe a contract in the EVM that will execute the actual call.
 
 ### ABCI++
 

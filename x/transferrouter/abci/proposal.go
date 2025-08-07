@@ -22,6 +22,15 @@ type ProposalHandler struct {
 	txVerifier baseapp.ProposalTxVerifier
 }
 
+func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, signer ethtypes.Signer, txVerifier baseapp.ProposalTxVerifier) *ProposalHandler {
+	return &ProposalHandler{
+		keeper:     keeper,
+		txSelector: txSelector,
+		signer:     signer,
+		txVerifier: txVerifier,
+	}
+}
+
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
 		// 1. Add the calls to the proposal

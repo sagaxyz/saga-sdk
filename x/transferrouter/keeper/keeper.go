@@ -6,11 +6,13 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ethereum/go-ethereum/common"
 
 	corestore "cosmossdk.io/core/store"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
@@ -21,6 +23,10 @@ var (
 	LastCallSequencePrefix = collections.NewPrefix(3) // Stores the last call sequence
 )
 
+type ERC20Keeper interface {
+	GetCoinAddress(ctx sdk.Context, denom string) (common.Address, error)
+}
+
 type Keeper struct {
 	cdc          codec.BinaryCodec
 	storeService corestore.KVStoreService
@@ -30,6 +36,8 @@ type Keeper struct {
 	Params           collections.Item[types.Params]
 	CallQueue        *collections.IndexedMap[uint64, types.CallQueueItem, CallQueIndexes]
 	LastCallSequence collections.Item[uint64]
+
+	Erc20Keeper ERC20Keeper
 
 	ics4Wrapper porttypes.ICS4Wrapper
 }

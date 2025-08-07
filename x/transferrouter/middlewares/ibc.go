@@ -3,6 +3,7 @@ package middlewares
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
@@ -10,7 +11,9 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/abi"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
@@ -101,6 +104,8 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	newRecAddr := sdk.AccAddress(knownSignerAddress.Bytes())
 	data.Receiver = newRecAddr.String()
 
+	// TODO: now only a simple transfer is supported, we need to add support for other stuff?
+
 	// update the packet data
 	packet.Data, err = json.Marshal(data)
 	if err != nil {
@@ -108,10 +113,41 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
 
+	// get the coin address
+	coinAddr, err := i.k.Erc20Keeper.GetCoinAddress(ctx, data.Denom)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get coin address", "error", err)
+		return i.app.OnRecvPacket(ctx, packet, relayer)
+	}
+
+	// assemble the call data, erc20 transfer for now
+	receiverAccAddr, err := sdk.AccAddressFromBech32(data.Receiver)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to parse receiver address", "error", err)
+		return i.app.OnRecvPacket(ctx, packet, relayer)
+	}
+	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes()).Hex()
+
+	amount, ok := new(big.Int).SetString(data.Amount, 10)
+	if !ok {
+		i.k.Logger(ctx).Error("failed to parse amount", "error", err)
+		return i.app.OnRecvPacket(ctx, packet, relayer)
+	}
+
+	// transfer(address recipient, uint256 amount) → bool
+	callData, err := abi.ABI.Pack("transfer", recipientAddrHex, amount)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
+		return i.app.OnRecvPacket(ctx, packet, relayer)
+	}
+
 	// 1. Store the packet in the call queue
 	i.k.CallQueue.Set(ctx, packet.Sequence, types.CallQueueItem{
 		Call: &types.Call{
-			Data: packet.Data, // TODO: this is not right, we need to parse it and make the call
+			From:     knownSignerAddress.Bytes(),
+			Contract: coinAddr.Bytes(),
+			Data:     callData,
+			Commit:   true,
 		},
 		InFlightPacket: &types.InFlightPacket{
 			OriginalSenderAddress:  data.Sender,
