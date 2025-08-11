@@ -43,13 +43,19 @@ type Keeper struct {
 }
 
 // New returns a new Keeper instance.
-func NewKeeper(cdc codec.BinaryCodec, storeSvc corestore.KVStoreService, authority string) Keeper {
+func NewKeeper(cdc codec.BinaryCodec,
+	storeSvc corestore.KVStoreService,
+	erc20Keeper ERC20Keeper,
+	ics4Wrapper porttypes.ICS4Wrapper,
+	authority string) Keeper {
 
 	sb := collections.NewSchemaBuilder(storeSvc)
 	k := Keeper{
 		cdc:          cdc,
 		storeService: storeSvc,
 		authority:    authority,
+		Erc20Keeper:  erc20Keeper,
+		ics4Wrapper:  ics4Wrapper,
 		Params: collections.NewItem(
 			sb,
 			ParamsPrefix,

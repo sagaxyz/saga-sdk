@@ -2,7 +2,7 @@ package types
 
 const (
 	// ModuleName defines the module name
-	ModuleName = "transferrouter"
+	ModuleName = "txrouter"
 
 	// StoreKey defines the primary module store key
 	StoreKey = ModuleName

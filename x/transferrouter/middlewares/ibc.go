@@ -113,8 +113,16 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
 
+	// TODO: remember to handle denoms differently if this chain was the sender
+	// see ReceiverChainIsSource in transfer keeper relay.go
+	// since SendPacket did not prefix the denomination, we must prefix denomination here
+	sourcePrefix := transfertypes.GetDenomPrefix(packet.GetDestPort(), packet.GetDestChannel())
+	// NOTE: sourcePrefix contains the trailing "/"
+	prefixedDenom := sourcePrefix + data.Denom
+	denomTrace := transfertypes.ParseDenomTrace(prefixedDenom)
+
 	// get the coin address
-	coinAddr, err := i.k.Erc20Keeper.GetCoinAddress(ctx, data.Denom)
+	coinAddr, err := i.k.Erc20Keeper.GetCoinAddress(ctx, denomTrace.IBCDenom())
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to get coin address", "error", err)
 		return i.app.OnRecvPacket(ctx, packet, relayer)
@@ -126,7 +134,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		i.k.Logger(ctx).Error("failed to parse receiver address", "error", err)
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
-	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes()).Hex()
+	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes())
 
 	amount, ok := new(big.Int).SetString(data.Amount, 10)
 	if !ok {
