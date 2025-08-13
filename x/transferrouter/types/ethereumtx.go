@@ -9,7 +9,7 @@ import (
 )
 
 // ToMsgEthereumTx converts the call to a MsgEthereumTx, adding the necessary signature and fields
-func (c *CallQueueItem) ToMsgEthereumTx() *evmostypes.MsgEthereumTx {
+func (c *CallQueueItem) ToMsgEthereumTx(nonce uint64, chainID *big.Int) *evmostypes.MsgEthereumTx {
 	if c.Call == nil {
 		return nil
 	}
@@ -30,12 +30,12 @@ func (c *CallQueueItem) ToMsgEthereumTx() *evmostypes.MsgEthereumTx {
 	}()
 
 	txArgs := &evmostypes.EvmTxArgs{
-		Nonce:     0,     // Will be set by the signer
-		GasLimit:  21000, // Standard gas limit for simple transfers
+		Nonce:     nonce,   // Will be set by the signer
+		GasLimit:  2100000, // Standard gas limit for simple transfers // TODO: figure out how to set this
 		Input:     c.Call.Data,
 		GasFeeCap: big.NewInt(0), // Will be set by the signer
 		GasPrice:  big.NewInt(0), // Will be set by the signer
-		ChainID:   big.NewInt(1), // Default chain ID, should be configurable
+		ChainID:   chainID,       // Default chain ID, should be configurable
 		Amount:    big.NewInt(0), // No value transfer for contract calls
 		GasTipCap: big.NewInt(0), // Will be set by the signer
 		To:        toAddr,

@@ -3,9 +3,12 @@ package abci
 import (
 	"bytes"
 	"errors"
+	"math/big"
 
+	"cosmossdk.io/collections"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -20,19 +23,22 @@ type ProposalHandler struct {
 	txSelector baseapp.TxSelector
 	signer     ethtypes.Signer
 	txVerifier baseapp.ProposalTxVerifier
+	txConfig   client.TxConfig
 }
 
-func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, signer ethtypes.Signer, txVerifier baseapp.ProposalTxVerifier) *ProposalHandler {
+func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, signer ethtypes.Signer, txVerifier baseapp.ProposalTxVerifier, txConfig client.TxConfig) *ProposalHandler {
 	return &ProposalHandler{
 		keeper:     keeper,
 		txSelector: txSelector,
 		signer:     signer,
 		txVerifier: txVerifier,
+		txConfig:   txConfig,
 	}
 }
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+
 		logger := h.keeper.Logger(ctx)
 		logger.Info("PrepareProposalHandler start", "height", ctx.BlockHeight(), "txs_in_request", len(req.Txs), "maxTxBytes", req.MaxTxBytes)
 
@@ -67,12 +73,16 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("failed to parse private key")
 		}
 
+		nextNonce, err := h.keeper.NextNonce.Get(ctx)
+		if err != nil {
+			if !errors.Is(err, collections.ErrNotFound) {
+				logger.Error("failed to get last nonce", "error", err)
+				return nil, errors.New("failed to get last nonce")
+			}
+		}
+
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
 		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
-		if h.keeper.CallQueue == nil {
-			logger.Error("CallQueue is nil")
-			return nil, errors.New("call queue is nil")
-		}
 		err = h.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
 			logger.Info("Processing call queue item", "key", key, "value", value)
 
@@ -81,10 +91,10 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 				return true, errors.New("call queue item call is nil")
 			}
 
-			logger.Info("About to call ToMsgEthereumTx", "key", key)
-			ethTx := value.ToMsgEthereumTx()
-			logger.Info("ToMsgEthereumTx completed", "key", key, "ethTx", ethTx)
-			if ethTx == nil {
+			logger.Info("About to call ToMsgEthereumTx", "key", key, "nonce", nextNonce)
+			msgEthTx := value.ToMsgEthereumTx(nextNonce, big.NewInt(1234)) // TODO: remove this
+			logger.Info("ToMsgEthereumTx completed", "key", key, "ethTx", msgEthTx)
+			if msgEthTx == nil {
 				logger.Error("ToMsgEthereumTx returned nil", "key", key)
 				return true, errors.New("failed to convert to ethereum tx")
 			}
@@ -95,7 +105,9 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			}
 
 			logger.Info("About to call AsTransaction", "key", key)
-			ethtx := ethTx.AsTransaction()
+			ethtx := msgEthTx.AsTransaction()
+			ethtx.ChainId().Set(big.NewInt(1234)) // TODO: remove this
+
 			logger.Info("AsTransaction completed", "key", key, "ethtx", ethtx)
 			if ethtx == nil {
 				logger.Error("AsTransaction returned nil", "key", key)
@@ -112,36 +124,47 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 
 			// TODO: might not be the right way to do it, let's circle back later
 			logger.Info("About to create MsgEthereumTx", "key", key)
-			msgEthTx := &evmtypes.MsgEthereumTx{}
+			msgEthTx = &evmtypes.MsgEthereumTx{}
 			logger.Info("About to call FromEthereumTx", "key", key)
 			err = msgEthTx.FromEthereumTx(signedTx)
 			if err != nil {
 				logger.Error("Failed to convert from ethereum tx", "error", err, "key", key)
 				return true, err
 			}
-			logger.Info("FromEthereumTx completed", "key", key)
+			logger.Info("FromEthereumTx completed", "key", key, "hash", msgEthTx.Hash)
 
-			logger.Info("About to marshal MsgEthereumTx", "key", key)
-			msgEthTxBz, err := msgEthTx.Marshal()
-			if err != nil {
-				logger.Error("Failed to marshal msg ethereum tx", "error", err, "key", key)
+			if err := msgEthTx.ValidateBasic(); err != nil {
+				logger.Error("tx failed basic validation", "error", err.Error(), "key", key)
 				return true, err
 			}
-			logger.Info("MsgEthereumTx marshaled successfully", "key", key, "msgEthTxBz_len", len(msgEthTxBz))
+
+			cosmosTx, err := msgEthTx.BuildTx(h.txConfig.NewTxBuilder(), "saga") //"res.Params.EvmDenom")
+			if err != nil {
+				logger.Error("failed to build cosmos tx", "error", err.Error(), "key", key)
+				return true, err
+			}
+
+			// Encode transaction by default Tx encoder
+			txBytes, err := h.txConfig.TxEncoder()(cosmosTx)
+			if err != nil {
+				logger.Error("failed to encode eth tx using default encoder", "error", err.Error(), "key", key)
+				return true, err
+			}
 
 			if h.txSelector == nil {
 				logger.Error("TxSelector is nil")
 				return true, errors.New("tx selector is nil")
 			}
 
-			added := h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, msgEthTx, msgEthTxBz)
+			stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
 			// If the transaction is not added, we stop the walk, because we don't want to execute queued calls out of order
-			if !added {
-				logger.Info("Transaction not added to proposal, stopping walk", "key", key)
+			if stop {
+				logger.Info("No more txs to add 1")
 				return true, nil
 			}
 
 			logger.Info("Transaction added to proposal", "key", key)
+			nextNonce = nextNonce + 1
 			return false, nil
 		})
 
@@ -175,9 +198,10 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 				continue
 			}
 
-			added := h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, tx, txBz)
-			if !added {
-				logger.Info("Transaction not added to proposal, stopping", "index", i)
+			// TODO: revise this
+			stop := h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, tx, txBz)
+			if stop {
+				logger.Info("No more txs to add 2")
 				break
 			}
 			logger.Info("Transaction added to proposal", "index", i)
@@ -248,14 +272,28 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 			}
 
 			// Verify if the transaction comes from the call queue, if it doesn't, return a rejection
-			_, callQueueItem, found := h.keeper.GetCallQueueItemByHash(ctx, msg.Hash)
+			var callQueueItem types.CallQueueItem
+			var found bool
+			err = h.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
+				// must calculate the hash here, as we can't preset the nonce in the call
+				if value.ToMsgEthereumTx(ethtx.Nonce(), big.NewInt(1234)).Hash == msg.Hash {
+					found = true
+					callQueueItem = value
+					return true, nil
+				}
+				return false, nil
+			})
+			if err != nil {
+				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+			}
+
 			if !found {
 				h.keeper.Logger(ctx).Error("transaction not found in call queue, proposer might be malicious", "hash", msg.Hash)
 				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
 			}
 
 			// Let's also compare the transaction's bytes, might be overkill, let's revisit later if needed
-			callQTxBz, err := callQueueItem.ToMsgEthereumTx().AsTransaction().MarshalBinary()
+			callQTxBz, err := callQueueItem.ToMsgEthereumTx(ethtx.Nonce(), big.NewInt(1234)).AsTransaction().MarshalBinary() // TODO: remove this
 			if err != nil {
 				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
 			}

@@ -1,7 +1,9 @@
 package middlewares
 
 import (
+	"bytes"
 	"fmt"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
@@ -40,16 +42,39 @@ func (p PostHandler) PostHandler() sdk.PostHandler {
 			found         bool
 		)
 
+		// TODO: check performance
 		for i, msg := range msgs {
 			msgType := sdk.MsgTypeURL(msg)
 			ctx.Logger().Info("Processing message", "index", i, "type", msgType)
 
-			if msgType == "/cosmos.evm.v1.MsgEthereumTx" {
+			if msgType == "/ethermint.evm.v1.MsgEthereumTx" {
 				ctx.Logger().Info("Found Ethereum transaction message")
 				msgEthereumTx := msg.(*evmostypes.MsgEthereumTx)
 				ctx.Logger().Info("Ethereum tx details", "hash", msgEthereumTx.Hash, "from", msgEthereumTx.From)
+				// seq, callQueueItem, found = p.keeper.GetCallQueueItemByHash(ctx, msgEthereumTx.Hash)
 
-				seq, callQueueItem, found = p.keeper.GetCallQueueItemByHash(ctx, msgEthereumTx.Hash)
+				// increment nonce
+				nonce := msgEthereumTx.AsTransaction().Nonce()
+				err = p.keeper.NextNonce.Set(ctx, nonce+1)
+				if err != nil {
+					ctx.Logger().Error("failed to set last nonce", "error", err)
+					return ctx, err
+				}
+
+				err = p.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
+					// TODO: for now we do it with data?
+					if bytes.Equal(value.ToMsgEthereumTx(nonce, big.NewInt(1234)).AsTransaction().Data(), msgEthereumTx.AsTransaction().Data()) {
+						found = true
+						seq = key
+						callQueueItem = value
+						return true, nil
+					}
+					return false, nil
+				})
+				if err != nil {
+					ctx.Logger().Error("failed to walk call queue", "error", err)
+					return ctx, err
+				}
 				ctx.Logger().Info("Call queue lookup result", "found", found, "seq", seq, "hash", msgEthereumTx.Hash)
 
 				if found {
@@ -89,7 +114,7 @@ func (p PostHandler) PostHandler() sdk.PostHandler {
 			SourcePort:         callQueueItem.InFlightPacket.PacketSrcPortId,
 			DestinationChannel: callQueueItem.InFlightPacket.RefundChannelId,
 			DestinationPort:    callQueueItem.InFlightPacket.RefundPortId,
-			Data:               callQueueItem.Call.Data,
+			Data:               callQueueItem.InFlightPacket.PacketData,
 			TimeoutHeight:      clienttypes.MustParseHeight(callQueueItem.InFlightPacket.PacketTimeoutHeight),
 			TimeoutTimestamp:   callQueueItem.InFlightPacket.PacketTimeoutTimestamp,
 		}
@@ -108,15 +133,15 @@ func (p PostHandler) PostHandler() sdk.PostHandler {
 
 		// took from ibc-go:
 		// // Lookup module by channel capability
-		// module, capability, err := k.ChannelKeeper.LookupModuleByChannel(ctx, msg.Packet.DestinationPort, msg.Packet.DestinationChannel)
-		// if err != nil {
-		// 	ctx.Logger().Error("receive packet failed", "port-id", msg.Packet.SourcePort, "channel-id", msg.Packet.SourceChannel, "error", errorsmod.Wrap(err, "could not retrieve module from port-id"))
-		// 	return nil, errorsmod.Wrap(err, "could not retrieve module from port-id")
-		// }
+		_, capability, err := p.keeper.ChannelKeeper.LookupModuleByChannel(ctx, packet.DestinationPort, packet.DestinationChannel)
+		if err != nil {
+			ctx.Logger().Error("receive packet failed", "port-id", packet.DestinationPort, "channel-id", packet.DestinationChannel, "error", err)
+			return ctx, err
+		}
 
 		// TODO: missing chanCapability, but it has been removed in v10, so we might not need it
 		ctx.Logger().Info("Writing IBC acknowledgment...")
-		err = p.keeper.WriteIBCAcknowledgment(ctx, nil, packet, ack)
+		err = p.keeper.WriteIBCAcknowledgment(ctx, capability, packet, ack)
 		if err != nil {
 			ctx.Logger().Error("failed to write IBC acknowledgment", "error", err)
 			return newCtx, err

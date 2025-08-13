@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"cosmossdk.io/collections"
-	"cosmossdk.io/collections/indexes"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,6 +9,7 @@ import (
 
 	corestore "cosmossdk.io/core/store"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 
@@ -23,6 +23,13 @@ var (
 	LastCallSequencePrefix = collections.NewPrefix(3) // Stores the last call sequence
 )
 
+type ChannelKeeper interface {
+	GetChannel(ctx sdk.Context, srcPort, srcChan string) (channel channeltypes.Channel, found bool)
+	GetPacketCommitment(ctx sdk.Context, portID, channelID string, sequence uint64) []byte
+	GetNextSequenceSend(ctx sdk.Context, portID, channelID string) (uint64, bool)
+	LookupModuleByChannel(ctx sdk.Context, portID, channelID string) (string, *capabilitytypes.Capability, error)
+}
+
 type ERC20Keeper interface {
 	GetCoinAddress(ctx sdk.Context, denom string) (common.Address, error)
 }
@@ -32,12 +39,13 @@ type Keeper struct {
 	storeService corestore.KVStoreService
 	authority    string
 
-	Schema           collections.Schema
-	Params           collections.Item[types.Params]
-	CallQueue        *collections.IndexedMap[uint64, types.CallQueueItem, CallQueIndexes]
-	LastCallSequence collections.Item[uint64]
+	Schema    collections.Schema
+	Params    collections.Item[types.Params]
+	CallQueue collections.Map[uint64, types.CallQueueItem]
+	NextNonce collections.Item[uint64]
 
-	Erc20Keeper ERC20Keeper
+	Erc20Keeper   ERC20Keeper
+	ChannelKeeper ChannelKeeper
 
 	ics4Wrapper porttypes.ICS4Wrapper
 }
@@ -47,30 +55,31 @@ func NewKeeper(cdc codec.BinaryCodec,
 	storeSvc corestore.KVStoreService,
 	erc20Keeper ERC20Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
+	channelKeeper ChannelKeeper,
 	authority string) Keeper {
 
 	sb := collections.NewSchemaBuilder(storeSvc)
 	k := Keeper{
-		cdc:          cdc,
-		storeService: storeSvc,
-		authority:    authority,
-		Erc20Keeper:  erc20Keeper,
-		ics4Wrapper:  ics4Wrapper,
+		cdc:           cdc,
+		storeService:  storeSvc,
+		authority:     authority,
+		Erc20Keeper:   erc20Keeper,
+		ChannelKeeper: channelKeeper,
+		ics4Wrapper:   ics4Wrapper,
 		Params: collections.NewItem(
 			sb,
 			ParamsPrefix,
 			"params",
 			codec.CollValue[types.Params](cdc),
 		),
-		CallQueue: collections.NewIndexedMap(
+		CallQueue: collections.NewMap(
 			sb,
 			CallQueuePrefix,
 			"call_queue",
 			collections.Uint64Key,
 			codec.CollValue[types.CallQueueItem](cdc),
-			NewCallQueIndexes(sb),
 		),
-		LastCallSequence: collections.NewItem(
+		NextNonce: collections.NewItem(
 			sb,
 			LastCallSequencePrefix,
 			"last_call_sequence",
@@ -92,39 +101,7 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", types.ModuleName)
 }
 
-// GetCallQueueItemByHash returns the call queue item by hash (in hex format)
-func (k Keeper) GetCallQueueItemByHash(ctx sdk.Context, hash string) (seq uint64, item types.CallQueueItem, found bool) {
-	seq, err := k.CallQueue.Indexes.Hash.MatchExact(ctx, hash)
-	if err != nil {
-		return 0, types.CallQueueItem{}, false
-	}
-
-	item, err = k.CallQueue.Get(ctx, seq)
-	if err != nil {
-		return 0, types.CallQueueItem{}, false
-	}
-
-	return seq, item, true
-}
-
 // WriteIBCAcknowledgment writes the IBC acknowledgment for the call queue item
 func (k Keeper) WriteIBCAcknowledgment(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet ibcexported.PacketI, ack ibcexported.Acknowledgement) error {
 	return k.ics4Wrapper.WriteAcknowledgement(ctx, chanCap, packet, ack)
-}
-
-// Indexes
-type CallQueIndexes struct {
-	Hash *indexes.Unique[string, uint64, types.CallQueueItem]
-}
-
-func (c CallQueIndexes) IndexesList() []collections.Index[uint64, types.CallQueueItem] {
-	return []collections.Index[uint64, types.CallQueueItem]{c.Hash}
-}
-
-func NewCallQueIndexes(sb *collections.SchemaBuilder) CallQueIndexes {
-	return CallQueIndexes{
-		Hash: indexes.NewUnique[string, uint64, types.CallQueueItem](sb, CallQueueHashPrefix, "callqueue_hash", collections.StringKey, collections.Uint64Key, func(pk uint64, v types.CallQueueItem) (string, error) {
-			return v.ToMsgEthereumTx().Hash, nil
-		}),
-	}
 }

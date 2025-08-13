@@ -89,7 +89,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	params, err := i.k.Params.Get(ctx)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return newErrorAcknowledgement(err)
 	}
 
 	// Parse the configured private key (in hex format) and derive the corresponding
@@ -97,21 +97,20 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to parse known signer private key", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return newErrorAcknowledgement(err)
 	}
 
-	knownSignerAddress := crypto.PubkeyToAddress(privKey.PublicKey)
-	newRecAddr := sdk.AccAddress(knownSignerAddress.Bytes())
-	data.Receiver = newRecAddr.String()
+	// Override the receiver address to the known signer address
+	knownSignerAddress := sdk.AccAddress(crypto.PubkeyToAddress(privKey.PublicKey).Bytes())
+	err = i.receiveFunds(ctx, packet, data, knownSignerAddress.String(), relayer)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to receive funds", "error", err)
+		return newErrorAcknowledgement(err)
+	}
 
 	// TODO: now only a simple transfer is supported, we need to add support for other stuff?
 
-	// update the packet data
-	packet.Data, err = json.Marshal(data)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to marshal packet data", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
-	}
+	// assemble the call data, erc20 transfer for now
 
 	// TODO: remember to handle denoms differently if this chain was the sender
 	// see ReceiverChainIsSource in transfer keeper relay.go
@@ -121,32 +120,31 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	prefixedDenom := sourcePrefix + data.Denom
 	denomTrace := transfertypes.ParseDenomTrace(prefixedDenom)
 
+	receiverAccAddr, err := sdk.AccAddressFromBech32(data.Receiver)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to parse receiver address", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes())
+
 	// get the coin address
 	coinAddr, err := i.k.Erc20Keeper.GetCoinAddress(ctx, denomTrace.IBCDenom())
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to get coin address", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return newErrorAcknowledgement(err)
 	}
-
-	// assemble the call data, erc20 transfer for now
-	receiverAccAddr, err := sdk.AccAddressFromBech32(data.Receiver)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to parse receiver address", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
-	}
-	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes())
 
 	amount, ok := new(big.Int).SetString(data.Amount, 10)
 	if !ok {
 		i.k.Logger(ctx).Error("failed to parse amount", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return newErrorAcknowledgement(err)
 	}
 
 	// transfer(address recipient, uint256 amount) → bool
 	callData, err := abi.ABI.Pack("transfer", recipientAddrHex, amount)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return newErrorAcknowledgement(err)
 	}
 
 	// 1. Store the packet in the call queue
@@ -180,4 +178,55 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 // OnTimeoutPacket implements types.IBCModule.
 func (i IBCMiddleware) OnTimeoutPacket(ctx sdk.Context, packet channeltypes.Packet, relayer sdk.AccAddress) error {
 	return i.app.OnTimeoutPacket(ctx, packet, relayer)
+}
+
+// receiveFunds receives funds from the packet into the override receiver
+// address and returns an error if the funds cannot be received. (from PFM, thank you!)
+func (i IBCMiddleware) receiveFunds(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data transfertypes.FungibleTokenPacketData,
+	overrideReceiver string,
+	relayer sdk.AccAddress,
+) error {
+	overrideData := transfertypes.FungibleTokenPacketData{
+		Denom:    data.Denom,
+		Amount:   data.Amount,
+		Sender:   data.Sender,
+		Receiver: overrideReceiver, // override receiver
+		// Memo explicitly zeroed
+	}
+	overrideDataBz := transfertypes.ModuleCdc.MustMarshalJSON(&overrideData)
+	overridePacket := channeltypes.Packet{
+		Sequence:           packet.Sequence,
+		SourcePort:         packet.SourcePort,
+		SourceChannel:      packet.SourceChannel,
+		DestinationPort:    packet.DestinationPort,
+		DestinationChannel: packet.DestinationChannel,
+		Data:               overrideDataBz, // override data
+		TimeoutHeight:      packet.TimeoutHeight,
+		TimeoutTimestamp:   packet.TimeoutTimestamp,
+	}
+
+	ack := i.app.OnRecvPacket(ctx, overridePacket, relayer)
+
+	if ack == nil {
+		return fmt.Errorf("ack is nil")
+	}
+
+	if !ack.Success() {
+		return fmt.Errorf("ack error: %s", string(ack.Acknowledgement()))
+	}
+
+	return nil
+}
+
+// newErrorAcknowledgement returns an error that identifies PFM and provides the error.
+// It's okay if these errors are non-deterministic, because they will not be committed to state, only emitted as events.
+func newErrorAcknowledgement(err error) channeltypes.Acknowledgement {
+	return channeltypes.Acknowledgement{
+		Response: &channeltypes.Acknowledgement_Error{
+			Error: fmt.Sprintf("transfer-router error: %s", err.Error()),
+		},
+	}
 }
