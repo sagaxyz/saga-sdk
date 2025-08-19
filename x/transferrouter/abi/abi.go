@@ -8,20 +8,25 @@ import (
 	"github.com/evmos/evmos/v20/precompiles/common"
 )
 
-// abiPath defines the path to the ERC-20 precompile ABI JSON file.
-var abiPath = "abi.json"
-
-// Embed abi json file to the executable binary. Needed when importing as dependency.
+// Embed abi json files to the executable binary. Needed when importing as dependency.
 //
-//go:embed abi.json
+//go:embed erc20.json gateway.json
 var f embed.FS
 
-var ABI abi.ABI
+var (
+	ERC20ABI   abi.ABI
+	GatewayABI abi.ABI
+)
 
 func init() {
-	newABI, err := common.LoadABI(f, abiPath)
+	erc20ABI, err := common.LoadABI(f, "erc20.json")
 	if err != nil {
 		panic(err)
 	}
-	ABI = newABI
+	gatewayABI, err := common.LoadABI(f, "gateway.json")
+	if err != nil {
+		panic(err)
+	}
+	ERC20ABI = erc20ABI
+	GatewayABI = gatewayABI
 }

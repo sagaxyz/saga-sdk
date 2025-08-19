@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math/big"
 
-	"cosmossdk.io/collections"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -73,12 +72,11 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("failed to parse private key")
 		}
 
-		nextNonce, err := h.keeper.NextNonce.Get(ctx)
+		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
+		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(knownSignerBz))
 		if err != nil {
-			if !errors.Is(err, collections.ErrNotFound) {
-				logger.Error("failed to get last nonce", "error", err)
-				return nil, errors.New("failed to get last nonce")
-			}
+			nextNonce = 0
+			logger.Error("failed to get sequence", "error", err)
 		}
 
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block

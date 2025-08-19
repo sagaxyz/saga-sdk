@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -53,17 +54,9 @@ func (p PostHandler) PostHandler() sdk.PostHandler {
 				ctx.Logger().Info("Ethereum tx details", "hash", msgEthereumTx.Hash, "from", msgEthereumTx.From)
 				// seq, callQueueItem, found = p.keeper.GetCallQueueItemByHash(ctx, msgEthereumTx.Hash)
 
-				// increment nonce
-				nonce := msgEthereumTx.AsTransaction().Nonce()
-				err = p.keeper.NextNonce.Set(ctx, nonce+1)
-				if err != nil {
-					ctx.Logger().Error("failed to set last nonce", "error", err)
-					return ctx, err
-				}
-
 				err = p.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
 					// TODO: for now we do it with data?
-					if bytes.Equal(value.ToMsgEthereumTx(nonce, big.NewInt(1234)).AsTransaction().Data(), msgEthereumTx.AsTransaction().Data()) {
+					if bytes.Equal(value.ToMsgEthereumTx(0, big.NewInt(1234)).AsTransaction().Data(), msgEthereumTx.AsTransaction().Data()) {
 						found = true
 						seq = key
 						callQueueItem = value
@@ -128,7 +121,13 @@ func (p PostHandler) PostHandler() sdk.PostHandler {
 			"data_length", len(packet.Data),
 		)
 
-		ack := channeltypes.NewResultAcknowledgement([]byte{1})
+		var ack channeltypes.Acknowledgement
+		if success {
+			ack = channeltypes.NewResultAcknowledgement([]byte{1})
+		} else {
+			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
+		}
+
 		ctx.Logger().Info("Created acknowledgment", "ack", ack)
 
 		// took from ibc-go:

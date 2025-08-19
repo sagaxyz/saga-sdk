@@ -92,17 +92,11 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return newErrorAcknowledgement(err)
 	}
 
-	// Parse the configured private key (in hex format) and derive the corresponding
-	// Ethereum address of the known signer.
-	privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to parse known signer private key", "error", err)
-		return newErrorAcknowledgement(err)
-	}
+	// Override the receiver address to the gateway contract address
+	gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345")
+	gatewayCosmosAddr := sdk.AccAddress(gatewayAddr.Bytes())
 
-	// Override the receiver address to the known signer address
-	knownSignerAddress := sdk.AccAddress(crypto.PubkeyToAddress(privKey.PublicKey).Bytes())
-	err = i.receiveFunds(ctx, packet, data, knownSignerAddress.String(), relayer)
+	err = i.receiveFunds(ctx, packet, data, gatewayCosmosAddr.String(), relayer)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to receive funds", "error", err)
 		return newErrorAcknowledgement(err)
@@ -141,17 +135,35 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	}
 
 	// transfer(address recipient, uint256 amount) → bool
-	callData, err := abi.ABI.Pack("transfer", recipientAddrHex, amount)
+	callData, err := abi.ERC20ABI.Pack("transfer", recipientAddrHex, amount)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
 		return newErrorAcknowledgement(err)
 	}
 
+	// Now assemble the call data for the gateway
+	// function execute(address target,uint256 value, bytes calldata data, bytes calldata note)
+	// note should contain data on the original packet, for now we just use the packet data
+	callData, err = abi.GatewayABI.Pack("execute", coinAddr, big.NewInt(0), callData, packet.Data)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+
+	// Parse the configured private key (in hex format) and derive the corresponding
+	// Ethereum address of the known signer.
+	privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to parse known signer private key", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+	knownSignerAddress := sdk.AccAddress(crypto.PubkeyToAddress(privKey.PublicKey).Bytes())
+
 	// 1. Store the packet in the call queue
 	i.k.CallQueue.Set(ctx, packet.Sequence, types.CallQueueItem{
 		Call: &types.Call{
 			From:     knownSignerAddress.Bytes(),
-			Contract: coinAddr.Bytes(),
+			Contract: gatewayAddr.Bytes(),
 			Data:     callData,
 			Commit:   true,
 		},
