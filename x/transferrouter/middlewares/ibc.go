@@ -1,10 +1,12 @@
 package middlewares
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
 
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -93,7 +95,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	}
 
 	// Override the receiver address to the gateway contract address
-	gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345")
+	gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345") // TODO: make this configurable
 	gatewayCosmosAddr := sdk.AccAddress(gatewayAddr.Bytes())
 
 	err = i.receiveFunds(ctx, packet, data, gatewayCosmosAddr.String(), relayer)
@@ -141,10 +143,20 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return newErrorAcknowledgement(err)
 	}
 
+	txHash := tmhash.Sum(ctx.TxBytes())
+	txHashHex := hex.EncodeToString(txHash)
+	memo, err := json.Marshal(map[string]interface{}{
+		"txHash": txHashHex,
+	})
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to marshal memo", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+
 	// Now assemble the call data for the gateway
 	// function execute(address target,uint256 value, bytes calldata data, bytes calldata note)
 	// note should contain data on the original packet, for now we just use the packet data
-	callData, err = abi.GatewayABI.Pack("execute", coinAddr, big.NewInt(0), callData, packet.Data)
+	callData, err = abi.GatewayABI.Pack("execute", coinAddr, big.NewInt(0), callData, memo)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
 		return newErrorAcknowledgement(err)

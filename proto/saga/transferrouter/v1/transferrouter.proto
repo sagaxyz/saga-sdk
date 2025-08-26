@@ -19,6 +19,7 @@ message Params {
 message CallQueueItem {
     Call call = 1;
     InFlightPacket in_flight_packet = 2;
+    string memo = 3;
 }
 
 // Call is to store a call in the queue to be executed on the next block.
