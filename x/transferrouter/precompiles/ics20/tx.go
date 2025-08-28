@@ -5,6 +5,7 @@ package ics20
 
 import (
 	"fmt"
+	"strings"
 
 	errorsmod "cosmossdk.io/errors"
 
@@ -109,9 +110,21 @@ func (p *Precompile) Transfer(
 		tokenPair, found = p.erc20Keeper.GetTokenPair(ctx, tokenPairID)
 	}
 
+	fullDenomPath := tokenPair.Denom
+	// deconstruct the token denomination into the denomination trace info
+	// to determine if the sender is the source chain
+	if strings.HasPrefix(tokenPair.Denom, "ibc/") {
+		fullDenomPath, err = p.transferKeeper.DenomPathFromHash(ctx, tokenPair.Denom)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// This mimics the behavior of the IBC transfer module, by emitting transfers to the escrow address
+	// if the sender is the source chain, and to the null address (burn) if the sender is the destination chain
 	if found {
 		erc20Addr := tokenPair.GetERC20Contract()
-		if transfertypes.SenderChainIsSource(msg.SourcePort, msg.SourceChannel, msg.Token.Denom) {
+		if transfertypes.SenderChainIsSource(msg.SourcePort, msg.SourceChannel, fullDenomPath) {
 			// obtain the escrow address for the source channel end
 			escrowAddress := transfertypes.GetEscrowAddress(msg.SourcePort, msg.SourceChannel)
 			escrowHexAddr := common.BytesToAddress(escrowAddress)
