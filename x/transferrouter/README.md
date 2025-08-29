@@ -6,12 +6,12 @@ The transferrouter module is responsible for routing native internal transfers, 
 
 ## Design
 
-This module has 3 main components:
+This module has 4 main components:
 
 1. IBC middleware: in charge of intercepting incoming IBC packets and storing them in the call queue.
 2. ABCI++ Prepare and ProcessProposal: in charge of adding the signed calls to the block, and checking the contents of the block against the call queue to avoid a malicious block proposer to add bad calls to the block.
-3. Posthandler: in charge of writing the IBC acknowledgement if needed, and also removing the call from the queue.
-4. ??? Maybe a contract in the EVM that will execute the actual call.
+3. PostTxProcessing: in charge of writing the IBC acknowledgement if needed, and also removing the call from the queue.
+4. Gateway contract: a contract in the EVM that will send the tokens to the receiver.
 
 ### ABCI++
 
@@ -25,16 +25,29 @@ ProcessProposal is called for each block to each validator. During this call, th
 
 In the IBC middleware, only the RecvPacket method is overridden, which is called when a new IBC packet is received. It will store the packet in the call queue as a new transfer along with the original packet. The default behavior is overridden and the tokens being transferred end up in an escrow account (known signer's address). Any packet that is not a transfer to the local chain will fall back to the default behavior, such as Packet Forward Middleware packets, or packets that are not transfers.
 
-### Posthandler
+### PostTxProcessing
 
-The posthandler is called after the MsgEthereumTx is executed, it will check against the list of transactions in the call queue and if the transaction is found, it will write the IBC acknowledgement if needed, and remove the call from the queue.
+The PostTxProcessing is called after the MsgEthereumTx is executed, it will check against the list of transactions in the call queue and if the transaction is found, it will write the IBC acknowledgement if needed, and remove the call from the queue.
 
-## Flow
+## Flows
+
+### Incoming IBC transfer
 
 1. A new IBC transfer is received, and in OnRecvPacket, the transfer is stored in the call queue as a new transfer along with the original packet. The default behavior is overridden and the tokens being transferred end up in a temporary escrow account.
 2. On the next block (H+1), during PrepareProposal, the block proposer will add at the top of the block as many MsgEthereumTx as there are calls in the queue (TBD: if we have a limit to avoid blocking other normal txs). The signer of the message will be a publicly known private key.
 3. During ProcessProposal, validators will check the contents of the block against the call queue. If the calls do not precisely match the contents of the call queue, the block is rejected. This is in order to avoid a malicious block proposer to add bad calls to the block. Also, any other transaction that uses the escrow account will be rejected.
-4. During FinalizeBlock, the MsgEthereumTxs will be executed as usual (TBD: details regarding EVM hooks, like the intermediate contract that executes the actual call in the EVM). Each MsgEthereumTx will call a posthandler that will write the IBC acknowledgement if needed, and also remove the call from the queue.
+4. During FinalizeBlock, the created Txs will call the Gateway contract in order to send the tokens to the end receiver.
+5. Each MsgEthereumTx will call a PostTxProcessing (EVM hook) that will write the IBC acknowledgement and remove the call from the queue.
+
+### Outgoing IBC transfer
+
+The outgoing transfer works slightly different as there is no need to create a new MsgEthereumTx, as long as the sender uses the ICS20 precompile. The transferrouter module includes a copy of the ICS20 precompile to which we added the emission of the a Transfer event.
+
+TBD: the behavior of the native ICS 20 transfer, as we didn't add an event.
+
+### Timeouts and error acknowledgement
+
+When a timeout or an error acknowledgement is received, we proceed to refund the tokens to the sender.
 
 ## Security considerations and mitigations
 
@@ -47,3 +60,9 @@ A malicious block proposer can try to steal funds from the escrow account by add
 Any transaction that uses the escrow account or the known signer's key will be rejected. This is mitigated by the ProcessProposal call, which will check the contents of the block against the call queue. If the calls do not match the contents of the call queue, the block is rejected.
 
 Also an antehandler can be implemented to reject any transaction that uses the escrow account or the known signer's key, this is to avoid getting useless transactions into the mempool.
+
+## Working with other modules/IBC middlewares
+
+### Packet Forward Middleware
+
+This package should not interfere with x/PFM as it will let those transactions pass through with no modifications. These transactions won't be shown on the EVM block explorer.

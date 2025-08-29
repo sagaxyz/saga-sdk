@@ -36,7 +36,29 @@ func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
 
 // OnAcknowledgementPacket implements types.IBCModule.
 func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
-	return i.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
+	var data transfertypes.FungibleTokenPacketData
+	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
+		im.keeper.Logger(ctx).Error("transferrouter error parsing packet data from ack packet",
+			"sequence", packet.Sequence,
+			"src-channel", packet.SourceChannel, "src-port", packet.SourcePort,
+			"dst-channel", packet.DestinationChannel, "dst-port", packet.DestinationPort,
+			"error", err,
+		)
+		return im.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
+	}
+
+	ack := channeltypes.Acknowledgement{}
+	err := json.Unmarshal(acknowledgement, &ack)
+	if err != nil {
+		return err
+	}
+
+	if ack.Success() {
+		return i.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
+	}
+
+	// if the acknowledgement is an error, we need to refund the tokens to the sender
+
 }
 
 // OnChanCloseConfirm implements types.IBCModule.
