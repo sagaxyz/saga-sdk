@@ -38,13 +38,13 @@ func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
 func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
-		im.keeper.Logger(ctx).Error("transferrouter error parsing packet data from ack packet",
+		i.k.Logger(ctx).Error("transferrouter error parsing packet data from ack packet",
 			"sequence", packet.Sequence,
 			"src-channel", packet.SourceChannel, "src-port", packet.SourcePort,
 			"dst-channel", packet.DestinationChannel, "dst-port", packet.DestinationPort,
 			"error", err,
 		)
-		return im.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
+		return i.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 	}
 
 	ack := channeltypes.Acknowledgement{}
@@ -58,7 +58,8 @@ func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channelty
 	}
 
 	// if the acknowledgement is an error, we need to refund the tokens to the sender
-
+	// TODO: implement refund by adding a call to the call queue
+	return nil
 }
 
 // OnChanCloseConfirm implements types.IBCModule.
@@ -117,7 +118,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	}
 
 	// Override the receiver address to the gateway contract address
-	gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345") // TODO: make this configurable
+	gatewayAddr := common.HexToAddress("0x0000000000000000000000000000000000006a7e") // TODO: make this configurable
 	gatewayCosmosAddr := sdk.AccAddress(gatewayAddr.Bytes())
 
 	err = i.receiveFunds(ctx, packet, data, gatewayCosmosAddr.String(), relayer)

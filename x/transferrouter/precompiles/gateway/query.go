@@ -42,8 +42,10 @@ func (p Precompile) Owner(
 
 // getOwner gets the current owner address
 func (p Precompile) getOwner(ctx sdk.Context) (common.Address, error) {
-	// TODO: Implement actual owner checking logic
-	// This would typically involve calling keeper methods to get the current owner
-	// For now, we'll return a hardcoded owner address (same as in the Solidity contract)
-	return common.HexToAddress("0x5A6acd4e5766f1dC889a7f7736190323B5685a6a"), nil
+	params, err := p.transferKeeper.Params.Get(ctx)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return common.HexToAddress(params.KnownSignerAddress), nil
 }

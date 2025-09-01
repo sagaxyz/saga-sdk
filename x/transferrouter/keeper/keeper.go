@@ -210,7 +210,7 @@ func (k Keeper) WriteAcknowledgementForPacket(
 		refundEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
 
 		// Override the receiver address to the gateway contract address
-		gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345")
+		gatewayAddr := common.HexToAddress("0x0000000000000000000000000000000000006a7e")
 		escrowAddress := sdk.AccAddress(gatewayAddr.Bytes())
 
 		newToken := sdk.NewCoins(coin)

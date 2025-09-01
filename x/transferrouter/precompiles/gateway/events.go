@@ -14,31 +14,18 @@ import (
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
 )
 
-const (
-	// EventTypeGatewayExecute defines the event type for the Gateway Execute transaction.
-	EventTypeGatewayExecute = "GatewayExecute"
-
-	// EventTypeGatewayNote defines the event type for the Gateway Note transaction.
-	EventTypeGatewayNote = "GatewayNote"
-
-	// ExecuteEventSignature is the signature of the Execute event
-	ExecuteEventSignature = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
-
-	// NoteEventSignature is the signature of the Note event
-	NoteEventSignature = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b926"
-)
-
-// EmitGatewayExecuteEvent creates a new Gateway execute event emitted on an Execute transaction.
-func EmitGatewayExecuteEvent(
+// emitGatewayExecuteEvent creates a new Gateway execute event emitted on an Execute transaction.
+func (p Precompile) emitGatewayExecuteEvent(
 	ctx sdk.Context,
 	stateDB vm.StateDB,
-	event abi.Event,
 	precompileAddr, senderAddr common.Address,
 	target common.Address,
 	value *big.Int,
 	data []byte,
 	note []byte,
 ) error {
+	event := p.ABI.Events["Execute"]
+
 	// Prepare the event topics
 	topics := make([]common.Hash, 3)
 
@@ -73,15 +60,16 @@ func EmitGatewayExecuteEvent(
 	return nil
 }
 
-// EmitGatewayNoteEvent creates a new Gateway note event emitted on an EmitNote transaction.
-func EmitGatewayNoteEvent(
+// emitNoteEvent creates a new Gateway note event emitted on an EmitNote transaction.
+func (p Precompile) emitNoteEvent(
 	ctx sdk.Context,
 	stateDB vm.StateDB,
-	event abi.Event,
 	precompileAddr, senderAddr common.Address,
 	ref [32]byte,
 	data []byte,
 ) error {
+	event := p.ABI.Events["Note"]
+
 	// Prepare the event topics
 	topics := make([]common.Hash, 3)
 

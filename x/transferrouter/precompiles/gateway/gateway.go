@@ -6,17 +6,20 @@ package gateway
 import (
 	"embed"
 	"fmt"
+	"math/big"
 
 	storetypes "cosmossdk.io/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/evmos/v20/precompiles/authorization"
 	cmn "github.com/evmos/evmos/v20/precompiles/common"
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
+	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	transferrouterkeeper "github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 )
 
 // PrecompileAddress of the Gateway EVM extension in hex format.
-const PrecompileAddress = "0x0000000000000000000000000000000000000803"
+const PrecompileAddress = "0x0000000000000000000000000000000000006a7e"
 
 var _ vm.PrecompiledContract = &Precompile{}
 
@@ -25,16 +28,29 @@ var _ vm.PrecompiledContract = &Precompile{}
 //go:embed abi.json
 var f embed.FS
 
+type EVMKeeper interface {
+	CallEVMWithData(
+		ctx sdk.Context,
+		from common.Address,
+		contract *common.Address,
+		data []byte,
+		commit bool,
+		gasCap *big.Int,
+	) (*evmtypes.MsgEthereumTxResponse, error)
+}
+
 type Precompile struct {
 	cmn.Precompile
-	// Add your keeper interfaces here
+	transferKeeper transferrouterkeeper.Keeper
+	evmKeeper      EVMKeeper
 }
 
 // NewPrecompile creates a new Gateway Precompile instance as a
 // PrecompiledContract interface.
 func NewPrecompile(
 	authzKeeper authzkeeper.Keeper,
-	// Add your keeper parameters here
+	transferKeeper transferrouterkeeper.Keeper,
+	evmKeeper EVMKeeper,
 ) (*Precompile, error) {
 	newAbi, err := cmn.LoadABI(f, "abi.json")
 	if err != nil {
@@ -49,7 +65,8 @@ func NewPrecompile(
 			TransientKVGasConfig: storetypes.TransientGasConfig(),
 			ApprovalExpiration:   cmn.DefaultExpirationDuration, // should be configurable in the future.
 		},
-		// Initialize your keepers here
+		transferKeeper: transferKeeper,
+		evmKeeper:      evmKeeper,
 	}
 
 	// SetAddress defines the address of the Gateway compile contract.
@@ -90,16 +107,6 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 	return p.RunAtomic(snapshot, stateDB, func() ([]byte, error) {
 
 		switch method.Name {
-		// TODO Approval transactions => need cosmos-sdk v0.46 & ibc-go v6.2.0
-		// Authorization Methods:
-		case authorization.ApproveMethod:
-			bz, err = p.Approve(ctx, evm.Origin, stateDB, method, args)
-		case authorization.RevokeMethod:
-			bz, err = p.Revoke(ctx, evm.Origin, stateDB, method, args)
-		case authorization.IncreaseAllowanceMethod:
-			bz, err = p.IncreaseAllowance(ctx, evm.Origin, stateDB, method, args)
-		case authorization.DecreaseAllowanceMethod:
-			bz, err = p.DecreaseAllowance(ctx, evm.Origin, stateDB, method, args)
 		// Gateway transactions
 		case ExecuteMethod:
 			bz, err = p.Execute(ctx, evm.Origin, contract, stateDB, method, args)
@@ -112,8 +119,6 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 		// Gateway queries
 		case OwnerMethod:
 			bz, err = p.Owner(ctx, contract, method, args)
-		case authorization.AllowanceMethod:
-			bz, err = p.Allowance(method, args)
 		default:
 			return nil, fmt.Errorf(cmn.ErrUnknownMethod, method.Name)
 		}
@@ -143,22 +148,13 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 //   - EmitNote
 //   - Pause
 //   - Unpause
-//
-// Available authorization transactions are:
-//   - Approve
-//   - Revoke
-//   - IncreaseAllowance
-//   - DecreaseAllowance
 func (Precompile) IsTransaction(method string) bool {
 	switch method {
 	case ExecuteMethod,
 		EmitNoteMethod,
 		PauseMethod,
 		UnpauseMethod,
-		authorization.ApproveMethod,
-		authorization.RevokeMethod,
-		authorization.IncreaseAllowanceMethod,
-		authorization.DecreaseAllowanceMethod:
+		OwnerMethod:
 		return true
 	default:
 		return false

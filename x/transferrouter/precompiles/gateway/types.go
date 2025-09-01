@@ -51,12 +51,6 @@ type EventGatewayNote struct {
 	Data []byte
 }
 
-// ExecuteResponse defines the data for the execute response.
-type ExecuteResponse struct {
-	Success bool
-	Result  []byte
-}
-
 // OwnerResponse defines the data for the owner response.
 type OwnerResponse struct {
 	Owner common.Address

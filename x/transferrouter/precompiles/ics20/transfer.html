@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ethers v6 + MetaMask Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.14.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; }
+    input { width: 100%; padding: 8px; margin: 4px 0 12px; }
+    button { padding: 8px 12px; margin-right: 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    #status { padding: 8px; background: #f4f4f4; border-radius: 6px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h2>MetaMask + Ethers v6 – transfer()</h2>
+
+  <div id="status">Detectando wallet…</div>
+
+  <button id="connectBtn">Connect</button>
+  <button id="sendBtn">Send transfer()</button>
+  <div id="account" class="mono"></div>
+  <hr />
+
+  <label>Contract Address
+    <input id="contractAddress" placeholder="0x..." />
+  </label>
+
+  <div class="row">
+    <label>Source Port
+      <input id="sourcePort" value="transfer" />
+    </label>
+    <label>Source Channel
+      <input id="sourceChannel" value="channel-0" />
+    </label>
+  </div>
+
+  <label>Denom
+    <input id="denom" value="erc20/0xA19377761FED745723B90993398E04d641c2CfFE" />
+  </label>
+
+  <div class="row">
+    <label>Amount (uint256)
+      <input id="amount" value="1317353" />
+    </label>
+    <label>Timeout Timestamp (uint64)
+      <input id="timeoutTs" value="0" />
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Sender (address)
+      <input id="sender" value="0x7442045fb933c39abfeb8938bc87bbb2175f2bb7" />
+    </label>
+    <label>Receiver (string)
+      <input id="receiver" value="saga1hj8n5w8khc8q78f6th627mj6xp25mfzy0vjacs" />
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Revision Number (uint64)
+      <input id="revNumber" value="0" />
+    </label>
+    <label>Revision Height (uint64)
+      <input id="revHeight" value="123330" />
+    </label>
+  </div>
+
+  <label>Memo (string)
+    <input id="memo" value='{"forward":{"port":"transfer","channel":"channel-0","receiver":"saga1hj8n5w8khc8q78f6th627mj6xp25mfzy0vjacs"}}' />
+  </label>
+
+  <pre id="log" class="mono"></pre>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const log = (msg) => { console.log(msg); $("log").textContent += (typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)) + "\n"; };
+
+  // Selecciona el provider correcto cuando hay varias wallets (Brave, etc.)
+  function getInjectedProvider() {
+    const eth = window.ethereum;
+    if (!eth) return null;
+    if (eth.providers?.length) {
+      const mm = eth.providers.find(p => p.isMetaMask);
+      return mm || eth.providers[0];
+    }
+    return eth;
+  }
+
+  let ethereumProvider = null;     // EIP-1193 provider inyectado
+  let provider = null;             // ethers.BrowserProvider
+  let signer = null;
+
+  // Esperar la inyección (MetaMask recomienda escuchar ethereum#initialized)
+  function onEthereumReady() {
+    ethereumProvider = getInjectedProvider();
+    if (ethereumProvider) {
+      $("status").textContent = "Wallet detectada.";
+    } else {
+      $("status").innerHTML =
+        "⚠️ No se detectó MetaMask. Si abriste el archivo con <code>file://</code>, servilo con un servidor local (p.ej. <code>python3 -m http.server 5500</code>) o en Chrome habilitá MetaMask → Allow access to file URLs.";
+    }
+  }
+
+  window.addEventListener("ethereum#initialized", onEthereumReady, { once: true });
+  // Fallback si el evento no llega
+  setTimeout(onEthereumReady, 300);
+
+  $("connectBtn").onclick = async () => {
+    try {
+      if (!ethereumProvider) { onEthereumReady(); }
+      if (!ethereumProvider) { alert("Wallet no detectada."); return; }
+
+      provider = new ethers.BrowserProvider(ethereumProvider);
+      // Pedir cuentas de forma explícita (evita problemas de privacidad/EIP-1102)
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+      const addr = await signer.getAddress();
+      $("account").textContent = "Connected: " + addr;
+      $("status").textContent = "Conectado.";
+    } catch (err) {
+      console.error(err);
+      alert("Connect error: " + (err?.message || err));
+    }
+  };
+
+  const abi = [
+    "function transfer(string sourcePort,string sourceChannel,string denom,uint256 amount,address sender,string receiver,(uint64 revisionNumber,uint64 revisionHeight) timeoutHeight,uint64 timeoutTimestamp,string memo) returns (uint64)"
+  ];
+
+  $("sendBtn").onclick = async () => {
+    try {
+      if (!signer) { alert("Conectate primero."); return; }
+
+      const contractAddr = $("contractAddress").value.trim();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(contractAddr)) {
+        alert("Dirección de contrato inválida.");
+        return;
+      }
+
+      const contract = new ethers.Contract(contractAddr, abi, signer);
+
+      const args = [
+        $("sourcePort").value,
+        $("sourceChannel").value,
+        $("denom").value,
+        $("amount").value,                      // BigNumberish: "1317353" o número
+        $("sender").value,
+        $("receiver").value,
+        [ Number($("revNumber").value), Number($("revHeight").value) ],  // tuple Height
+        Number($("timeoutTs").value),           // BigNumberish (no array)
+        $("memo").value
+      ];
+
+      log(["transfer args", args]);
+
+      const tx = await contract.transfer(...args);
+      log(["tx sent", tx.hash]);
+      $("status").textContent = "Tx enviada: " + tx.hash;
+
+      const rcpt = await tx.wait();
+      log(["tx mined", rcpt.transactionHash]);
+      $("status").textContent = "Tx confirmada: " + rcpt.transactionHash;
+    } catch (err) {
+      console.error(err);
+      log(err);
+      alert("Send error: " + (err?.message || err));
+    }
+  };
+})();
+</script>
+</body>
+</html>
