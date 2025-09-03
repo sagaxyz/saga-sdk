@@ -3,7 +3,6 @@ package middlewares
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -14,6 +13,7 @@ import (
 	coretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	evmostypes "github.com/evmos/evmos/v20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
@@ -30,7 +30,11 @@ func NewEvmHooks(k keeper.Keeper) evmtypes.EvmHooks {
 func (h *EvmHooks) PostTxProcessing(ctx sdk.Context, sender common.Address, msg core.Message, receipt *ethtypes.Receipt) error {
 	h.k.Logger(ctx).Info("PostTxProcessing", "sender", sender, "msg", msg, "receipt", receipt)
 
-	chainId := big.NewInt(1234)
+	chainId, err := evmostypes.ParseChainID(ctx.ChainID())
+	if err != nil {
+		h.k.Logger(ctx).Error("failed to parse chain id", "error", err)
+		return err
+	}
 
 	// only perform the following checks if the sender is the known signer
 	params, err := h.k.Params.Get(ctx)

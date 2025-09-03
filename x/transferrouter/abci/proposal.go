@@ -3,7 +3,6 @@ package abci
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -12,6 +11,7 @@ import (
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	evmostypes "github.com/evmos/evmos/v20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
@@ -37,6 +37,12 @@ func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, sig
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+
+		chainId, err := evmostypes.ParseChainID(ctx.ChainID())
+		if err != nil {
+			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
+			return nil, errors.New("failed to parse chain id")
+		}
 
 		logger := h.keeper.Logger(ctx)
 		logger.Info("PrepareProposalHandler start", "height", ctx.BlockHeight(), "txs_in_request", len(req.Txs), "maxTxBytes", req.MaxTxBytes)
@@ -90,7 +96,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			}
 
 			logger.Info("About to call ToMsgEthereumTx", "key", key, "nonce", nextNonce)
-			msgEthTx := value.ToMsgEthereumTx(nextNonce, big.NewInt(1234)) // TODO: remove the hardcoded chain id
+			msgEthTx := value.ToMsgEthereumTx(nextNonce, chainId)
 			logger.Info("ToMsgEthereumTx completed", "key", key, "ethTx", msgEthTx)
 			if msgEthTx == nil {
 				logger.Error("ToMsgEthereumTx returned nil", "key", key)
@@ -104,7 +110,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 
 			logger.Info("About to call AsTransaction", "key", key)
 			ethtx := msgEthTx.AsTransaction()
-			ethtx.ChainId().Set(big.NewInt(1234)) // TODO: remove this
+			ethtx.ChainId().Set(chainId)
 
 			logger.Info("AsTransaction completed", "key", key, "ethtx", ethtx)
 			if ethtx == nil {
@@ -229,6 +235,12 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 // malicious behavior. TODO: add a slashing mechanism for this (might be difficult as this is outside the state machine).
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+		chainId, err := evmostypes.ParseChainID(ctx.ChainID())
+		if err != nil {
+			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
+			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+		}
+
 		params, err := h.keeper.Params.Get(ctx)
 		if err != nil {
 			h.keeper.Logger(ctx).Error("failed to get params", "error", err)
@@ -274,7 +286,7 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 			var found bool
 			err = h.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
 				// must calculate the hash here, as we can't preset the nonce in the call
-				if value.ToMsgEthereumTx(ethtx.Nonce(), big.NewInt(1234)).Hash == msg.Hash {
+				if value.ToMsgEthereumTx(ethtx.Nonce(), chainId).Hash == msg.Hash {
 					found = true
 					callQueueItem = value
 					return true, nil
@@ -291,7 +303,7 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 			}
 
 			// Let's also compare the transaction's bytes, might be overkill, let's revisit later if needed
-			callQTxBz, err := callQueueItem.ToMsgEthereumTx(ethtx.Nonce(), big.NewInt(1234)).AsTransaction().MarshalBinary() // TODO: remove this
+			callQTxBz, err := callQueueItem.ToMsgEthereumTx(ethtx.Nonce(), chainId).AsTransaction().MarshalBinary() // TODO: remove this
 			if err != nil {
 				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
 			}
