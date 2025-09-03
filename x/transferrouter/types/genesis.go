@@ -6,6 +6,7 @@ func DefaultGenesisState() *GenesisState {
 		Params: Params{
 			Enabled:               true,
 			KnownSignerPrivateKey: "f6dba52e479cf5d7ad58bc11177c105ac7b89a02be1d432e77e113fc53377978", // 0x5A6acd4e5766f1dC889a7f7736190323B5685a6a
+			KnownSignerAddress:    "0x5A6acd4e5766f1dC889a7f7736190323B5685a6a",
 		},
 	}
 }

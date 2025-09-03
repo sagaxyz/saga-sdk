@@ -90,7 +90,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			}
 
 			logger.Info("About to call ToMsgEthereumTx", "key", key, "nonce", nextNonce)
-			msgEthTx := value.ToMsgEthereumTx(nextNonce, big.NewInt(1234)) // TODO: remove this
+			msgEthTx := value.ToMsgEthereumTx(nextNonce, big.NewInt(1234)) // TODO: remove the hardcoded chain id
 			logger.Info("ToMsgEthereumTx completed", "key", key, "ethTx", msgEthTx)
 			if msgEthTx == nil {
 				logger.Error("ToMsgEthereumTx returned nil", "key", key)

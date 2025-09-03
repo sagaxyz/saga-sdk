@@ -59,6 +59,43 @@ func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channelty
 
 	// if the acknowledgement is an error, we need to refund the tokens to the sender
 	// TODO: implement refund by adding a call to the call queue
+	callData, err := CreateGatewayExecuteCallData(
+		ctx, i.k, data.Denom, data.Amount, data.Sender, nil,
+	)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to create gateway execute call data", "error", err)
+		return err
+	}
+
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params", "error", err)
+		return err
+	}
+
+	// Parse the configured private key (in hex format) and derive the corresponding
+	// Ethereum address of the known signer.
+	privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to parse known signer private key", "error", err)
+		return err
+	}
+	knownSignerAddress := sdk.AccAddress(crypto.PubkeyToAddress(privKey.PublicKey).Bytes())
+	gatewayAddr := common.HexToAddress("0x0000000000000000000000000000000000006a7e")
+
+	err = i.k.CallQueue.Set(ctx, packet.Sequence, types.CallQueueItem{
+		Call: &types.Call{
+			From:     knownSignerAddress.Bytes(),
+			Contract: gatewayAddr.Bytes(),
+			Data:     callData,
+			Commit:   true,
+		},
+	})
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to set call queue", "error", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -120,6 +157,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	// Override the receiver address to the gateway contract address
 	gatewayAddr := common.HexToAddress("0x0000000000000000000000000000000000006a7e") // TODO: make this configurable
 	gatewayCosmosAddr := sdk.AccAddress(gatewayAddr.Bytes())
+	fmt.Println("gatewayCosmosAddr!!!!", gatewayCosmosAddr.String())
 
 	err = i.receiveFunds(ctx, packet, data, gatewayCosmosAddr.String(), relayer)
 	if err != nil {
@@ -131,57 +169,9 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 
 	// assemble the call data, erc20 transfer for now
 
-	// TODO: remember to handle denoms differently if this chain was the sender
-	// see ReceiverChainIsSource in transfer keeper relay.go
-	// since SendPacket did not prefix the denomination, we must prefix denomination here
-	sourcePrefix := transfertypes.GetDenomPrefix(packet.GetDestPort(), packet.GetDestChannel())
-	// NOTE: sourcePrefix contains the trailing "/"
-	prefixedDenom := sourcePrefix + data.Denom
-	denomTrace := transfertypes.ParseDenomTrace(prefixedDenom)
-
-	receiverAccAddr, err := sdk.AccAddressFromBech32(data.Receiver)
+	callData, err := CreateGatewayExecuteCallDataFromPacket(ctx, i.k, packet, data)
 	if err != nil {
-		i.k.Logger(ctx).Error("failed to parse receiver address", "error", err)
-		return newErrorAcknowledgement(err)
-	}
-	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes())
-
-	// get the coin address
-	coinAddr, err := i.k.Erc20Keeper.GetCoinAddress(ctx, denomTrace.IBCDenom())
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to get coin address", "error", err)
-		return newErrorAcknowledgement(err)
-	}
-
-	amount, ok := new(big.Int).SetString(data.Amount, 10)
-	if !ok {
-		i.k.Logger(ctx).Error("failed to parse amount", "error", err)
-		return newErrorAcknowledgement(err)
-	}
-
-	// transfer(address recipient, uint256 amount) → bool
-	callData, err := abi.ERC20ABI.Pack("transfer", recipientAddrHex, amount)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
-		return newErrorAcknowledgement(err)
-	}
-
-	txHash := tmhash.Sum(ctx.TxBytes())
-	txHashHex := hex.EncodeToString(txHash)
-	memo, err := json.Marshal(map[string]interface{}{
-		"txHash": txHashHex,
-	})
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to marshal memo", "error", err)
-		return newErrorAcknowledgement(err)
-	}
-
-	// Now assemble the call data for the gateway
-	// function execute(address target,uint256 value, bytes calldata data, bytes calldata note)
-	// note should contain data on the original packet, for now we just use the packet data
-	callData, err = abi.GatewayABI.Pack("execute", coinAddr, big.NewInt(0), callData, memo)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to pack call data", "error", err)
+		i.k.Logger(ctx).Error("failed to create gateway execute call data", "error", err)
 		return newErrorAcknowledgement(err)
 	}
 
@@ -276,4 +266,120 @@ func newErrorAcknowledgement(err error) channeltypes.Acknowledgement {
 			Error: fmt.Sprintf("transfer-router error: %s", err.Error()),
 		},
 	}
+}
+
+// CreateGatewayExecuteCallData creates call data for the gateway execute function
+// This function assembles the call data needed to execute an ERC20 transfer through the gateway
+// Parameters:
+//   - ctx: SDK context
+//   - k: keeper instance
+//   - denom: the denomination to transfer (can be IBC denom or regular denom)
+//   - amount: the amount to transfer as a string
+//   - recipient: the recipient address as a bech32 string
+//   - memo: optional memo data (can be nil)
+//
+// Returns:
+//   - []byte: encoded call data for gateway.execute function
+//   - error: any error that occurred during call data creation
+func CreateGatewayExecuteCallData(
+	ctx sdk.Context,
+	k keeper.Keeper,
+	denom string,
+	amount string,
+	recipient string,
+	memo []byte,
+) ([]byte, error) {
+	// Parse the recipient address
+	receiverAccAddr, err := sdk.AccAddressFromBech32(recipient)
+	if err != nil {
+		k.Logger(ctx).Error("failed to parse receiver address", "error", err)
+		return nil, fmt.Errorf("failed to parse receiver address: %w", err)
+	}
+	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes())
+
+	// Parse the amount
+	amountBig, ok := new(big.Int).SetString(amount, 10)
+	if !ok {
+		k.Logger(ctx).Error("failed to parse amount", "amount", amount)
+		return nil, fmt.Errorf("failed to parse amount: %s", amount)
+	}
+
+	// Get the coin address for the denomination
+	coinAddr, err := k.Erc20Keeper.GetCoinAddress(ctx, denom)
+	if err != nil {
+		k.Logger(ctx).Error("failed to get coin address", "error", err)
+		return nil, fmt.Errorf("failed to get coin address: %w", err)
+	}
+
+	k.Logger(ctx).Info("coinAddr", "address", coinAddr.Hex(), "denom", denom)
+
+	// transfer(address recipient, uint256 amount) → bool
+	erc20CallData, err := abi.ERC20ABI.Pack("transfer", recipientAddrHex, amountBig)
+	if err != nil {
+		k.Logger(ctx).Error("failed to pack ERC20 call data", "error", err)
+		return nil, fmt.Errorf("failed to pack ERC20 call data: %w", err)
+	}
+
+	// Use provided memo or create a default one
+	if memo == nil {
+		txHash := tmhash.Sum(ctx.TxBytes())
+		txHashHex := hex.EncodeToString(txHash)
+		memo, err = json.Marshal(map[string]interface{}{
+			"txHash": txHashHex,
+		})
+		if err != nil {
+			k.Logger(ctx).Error("failed to marshal memo", "error", err)
+			return nil, fmt.Errorf("failed to marshal memo: %w", err)
+		}
+	}
+
+	// Now assemble the call data for the gateway
+	// function execute(address target,uint256 value, bytes calldata data, bytes calldata note)
+	gatewayCallData, err := abi.GatewayABI.Pack("execute", coinAddr, big.NewInt(0), erc20CallData, memo)
+	if err != nil {
+		k.Logger(ctx).Error("failed to pack gateway call data", "error", err)
+		return nil, fmt.Errorf("failed to pack gateway call data: %w", err)
+	}
+
+	return gatewayCallData, nil
+}
+
+// CreateGatewayExecuteCallDataFromPacket creates call data for the gateway execute function from IBC packet data
+// This is a convenience function that extracts data from packet and calls CreateGatewayExecuteCallData
+// Parameters:
+//   - ctx: SDK context
+//   - k: keeper instance
+//   - packet: IBC packet containing transfer data
+//   - data: transfer data from the packet
+//
+// Returns:
+//   - []byte: encoded call data for gateway.execute function
+//   - error: any error that occurred during call data creation
+func CreateGatewayExecuteCallDataFromPacket(
+	ctx sdk.Context,
+	k keeper.Keeper,
+	packet channeltypes.Packet,
+	data transfertypes.FungibleTokenPacketData,
+) ([]byte, error) {
+	// TODO: remember to handle denoms differently if this chain was the sender
+	// see ReceiverChainIsSource in transfer keeper relay.go
+	// since SendPacket did not prefix the denomination, we must prefix denomination here
+	sourcePrefix := transfertypes.GetDenomPrefix(packet.GetDestPort(), packet.GetDestChannel())
+	// NOTE: sourcePrefix contains the trailing "/"
+	prefixedDenom := sourcePrefix + data.Denom
+	denomTrace := transfertypes.ParseDenomTrace(prefixedDenom)
+
+	// Create memo with transaction hash
+	txHash := tmhash.Sum(ctx.TxBytes())
+	txHashHex := hex.EncodeToString(txHash)
+	memo, err := json.Marshal(map[string]interface{}{
+		"txHash": txHashHex,
+	})
+	if err != nil {
+		k.Logger(ctx).Error("failed to marshal memo", "error", err)
+		return nil, fmt.Errorf("failed to marshal memo: %w", err)
+	}
+
+	// Call the main function with extracted data
+	return CreateGatewayExecuteCallData(ctx, k, denomTrace.IBCDenom(), data.Amount, data.Receiver, memo)
 }

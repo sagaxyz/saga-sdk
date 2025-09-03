@@ -1,4 +1,8 @@
-[
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "Gateway",
+  "sourceName": "solidity/precompiles/gateway/Gateway.sol",
+  "abi": [
   {
     "inputs": [
       {
@@ -185,4 +189,9 @@
     "name": "Unpaused",
     "type": "event"
   }
-] 
+],
+"bytecode": "0x",
+"deployedBytecode": "0x",
+"linkReferences": {},
+"deployedLinkReferences": {}
+}

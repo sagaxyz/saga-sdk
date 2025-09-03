@@ -23,29 +23,28 @@ func (p Precompile) emitGatewayExecuteEvent(
 	value *big.Int,
 	data []byte,
 	note []byte,
+	success bool,
+	result []byte,
 ) error {
-	event := p.ABI.Events["Execute"]
+	event := p.ABI.Events["Executed"]
 
 	// Prepare the event topics
-	topics := make([]common.Hash, 3)
+	topics := make([]common.Hash, 2)
 
 	// The first topic is always the signature of the event.
 	topics[0] = event.ID
 
 	var err error
-	// sender and target are indexed
-	topics[1], err = cmn.MakeTopic(senderAddr)
-	if err != nil {
-		return err
-	}
-	topics[2], err = cmn.MakeTopic(target)
+	// target is indexed (index 0 in the event inputs)
+	topics[1], err = cmn.MakeTopic(target)
 	if err != nil {
 		return err
 	}
 
-	// Prepare the event data: value, data, note
-	arguments := abi.Arguments{event.Inputs[2], event.Inputs[3], event.Inputs[4]}
-	packed, err := arguments.Pack(value, data, note)
+	// Prepare the event data: value, data, success, result, note
+	// These correspond to inputs at indices 1, 2, 3, 4, 5 (0-indexed)
+	arguments := abi.Arguments{event.Inputs[1], event.Inputs[2], event.Inputs[3], event.Inputs[4], event.Inputs[5]}
+	packed, err := arguments.Pack(value, data, success, result, note)
 	if err != nil {
 		return err
 	}
@@ -71,24 +70,21 @@ func (p Precompile) emitNoteEvent(
 	event := p.ABI.Events["Note"]
 
 	// Prepare the event topics
-	topics := make([]common.Hash, 3)
+	topics := make([]common.Hash, 2)
 
 	// The first topic is always the signature of the event.
 	topics[0] = event.ID
 
 	var err error
-	// sender and ref are indexed
-	topics[1], err = cmn.MakeTopic(senderAddr)
-	if err != nil {
-		return err
-	}
-	topics[2], err = cmn.MakeTopic(ref)
+	// ref is indexed (index 0 in the event inputs)
+	topics[1], err = cmn.MakeTopic(ref)
 	if err != nil {
 		return err
 	}
 
 	// Prepare the event data: data
-	arguments := abi.Arguments{event.Inputs[2]}
+	// This corresponds to input at index 1 (0-indexed)
+	arguments := abi.Arguments{event.Inputs[1]}
 	packed, err := arguments.Pack(data)
 	if err != nil {
 		return err

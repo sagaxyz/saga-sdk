@@ -1,7 +1,6 @@
 package types
 
 import (
-	fmt "fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -30,8 +29,8 @@ func (c *CallQueueItem) ToMsgEthereumTx(nonce uint64, chainID *big.Int) *evmosty
 	}()
 
 	txArgs := &evmostypes.EvmTxArgs{
-		Nonce:     nonce,   // Will be set by the signer
-		GasLimit:  2100000, // Standard gas limit for simple transfers // TODO: figure out how to set this
+		Nonce:     nonce,    // Will be set by the signer
+		GasLimit:  16100000, // Standard gas limit for simple transfers // TODO: figure out how to set this
 		Input:     c.Call.Data,
 		GasFeeCap: big.NewInt(0), // Will be set by the signer
 		GasPrice:  big.NewInt(0), // Will be set by the signer
@@ -43,6 +42,5 @@ func (c *CallQueueItem) ToMsgEthereumTx(nonce uint64, chainID *big.Int) *evmosty
 	}
 
 	tx := evmostypes.NewTx(txArgs)
-	fmt.Println("!!!tx", tx)
 	return tx
 }

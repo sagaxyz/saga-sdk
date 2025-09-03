@@ -6,14 +6,15 @@ package gateway
 import (
 	"embed"
 	"fmt"
-	"math/big"
 
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core"
 	cmn "github.com/evmos/evmos/v20/precompiles/common"
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
+	corevm "github.com/evmos/evmos/v20/x/evm/core/vm"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	transferrouterkeeper "github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 )
@@ -29,15 +30,17 @@ var _ vm.PrecompiledContract = &Precompile{}
 var f embed.FS
 
 type EVMKeeper interface {
-	CallEVMWithData(
-		ctx sdk.Context,
-		from common.Address,
-		contract *common.Address,
-		data []byte,
-		commit bool,
-		gasCap *big.Int,
-	) (*evmtypes.MsgEthereumTxResponse, error)
+	// CallEVMWithData(
+	// 	ctx sdk.Context,
+	// 	from common.Address,
+	// 	contract *common.Address,
+	// 	data []byte,
+	// 	commit bool,
+	// ) (*evmtypes.MsgEthereumTxResponse, error)
+	ApplyMessage(ctx sdk.Context, msg ethtypes.Message, tracer vm.EVMLogger, commit bool) (*evmtypes.MsgEthereumTxResponse, error)
 }
+
+var _ corevm.PrecompiledContract = &Precompile{}
 
 type Precompile struct {
 	cmn.Precompile
@@ -100,6 +103,7 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 		return nil, err
 	}
 
+	p.transferKeeper.Logger(ctx).Info("RunSetup!!!!")
 	// This handles any out of gas errors that may occur during the execution of a precompile tx or query.
 	// It avoids panics and returns the out of gas error so the EVM can continue gracefully.
 	defer cmn.HandleGasError(ctx, contract, initialGas, &err, stateDB, snapshot)()
@@ -109,6 +113,7 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 		switch method.Name {
 		// Gateway transactions
 		case ExecuteMethod:
+			p.transferKeeper.Logger(ctx).Info("ExecuteMethod!!!!")
 			bz, err = p.Execute(ctx, evm.Origin, contract, stateDB, method, args)
 		case EmitNoteMethod:
 			bz, err = p.EmitNote(ctx, evm.Origin, contract, stateDB, method, args)
@@ -124,21 +129,26 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 		}
 
 		if err != nil {
+			p.transferKeeper.Logger(ctx).Error("error!!222", "error", err)
 			return nil, err
 		}
 
-		cost := ctx.GasMeter().GasConsumed() - initialGas
-
-		if !contract.UseGas(cost) {
-			return nil, vm.ErrOutOfGas
-		}
+		// cost := ctx.GasMeter().GasConsumed() - initialGas
+		// if !contract.UseGas(cost) {
+		// 	return nil, vm.ErrOutOfGas
+		// }
 
 		if err := p.AddJournalEntries(stateDB, snapshot); err != nil {
+			p.transferKeeper.Logger(ctx).Error("error!!333", "error", err)
 			return nil, err
 		}
+
+		logs := stateDB.Logs()
+		p.transferKeeper.Logger(ctx).Info("logs!!!!1", "logs", logs)
 
 		return bz, nil
 	})
+
 }
 
 // IsTransaction checks if the given method name corresponds to a transaction or query.

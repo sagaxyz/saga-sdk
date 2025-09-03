@@ -6,11 +6,14 @@ package gateway
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
+	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 )
 
 // Execute executes a call to another contract through the Gateway precompile.
@@ -48,34 +51,40 @@ func (p Precompile) Execute(
 		return nil, fmt.Errorf("sender is not the known signer")
 	}
 
-	// Create the execute message
-	msg := &ExecuteMsg{
-		Target: executeArgs.Target,
-		Value:  executeArgs.Value,
-		Data:   executeArgs.Data,
-		Note:   executeArgs.Note,
-	}
-
-	// Check and accept authorization if needed
-	authzResp, expiration, err := CheckAndAcceptAuthorizationIfNeeded(ctx, contract, origin, p.AuthzKeeper, msg)
-	if err != nil {
-		return nil, err
-	}
-
 	// Execute the call logic here
 	// This is where you would call your keeper methods to perform the actual execution
-	result, err := p.evmKeeper.CallEVMWithData(ctx, sender, &executeArgs.Target, executeArgs.Data, true, nil)
+	nonce, err := p.transferKeeper.AccountKeeper.GetSequence(ctx, p.Address().Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	// Update grant if needed
-	if err := UpdateGrantIfNeeded(ctx, contract, p.AuthzKeeper, origin, expiration, authzResp); err != nil {
+	msg := ethtypes.NewMessage(
+		p.Address(),
+		&executeArgs.Target,
+		nonce,
+		big.NewInt(0), // amount
+		6000000,       // gasLimit
+		big.NewInt(0), // gasFeeCap
+		big.NewInt(0), // gasTipCap
+		big.NewInt(0), // gasPrice
+		executeArgs.Data,
+		ethtypes.AccessList{}, // AccessList
+		false,
+	)
+
+	result, err := p.evmKeeper.ApplyMessage(ctx, msg, evmtypes.NewNoOpTracer(), true)
+	if err != nil {
 		return nil, err
+	}
+
+	if !result.Failed() {
+		for _, log := range result.Logs {
+			stateDB.AddLog(log.ToEthereum())
+		}
 	}
 
 	// Emit the gateway execute event
-	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), sender, executeArgs.Target, executeArgs.Value, executeArgs.Data, executeArgs.Note); err != nil {
+	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), p.Address(), executeArgs.Target, executeArgs.Value, executeArgs.Data, executeArgs.Note, !result.Failed(), result.Ret); err != nil {
 		return nil, err
 	}
 
