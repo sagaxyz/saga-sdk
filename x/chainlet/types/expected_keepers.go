@@ -16,7 +16,8 @@ type ParamSubspace interface {
 }
 
 type UpgradeKeeper interface {
-	GetUpgradePlan(ctx context.Context) (plan upgradetypes.Plan, err error)
+	GetUpgradePlan(context.Context) (upgradetypes.Plan, error)
+	ScheduleUpgrade(context.Context, upgradetypes.Plan) error
 }
 
 type ConsumerKeeper interface {

@@ -44,7 +44,7 @@ func (k Keeper) Send(ctx context.Context) error {
 		}
 		return err
 	}
-	if sdkCtx.BlockHeight() < plan.Height-1 {
+	if sdkCtx.BlockHeight() != plan.Height-2 {
 		k.Logger(sdkCtx).Debug(fmt.Sprintf("skipping until the upgrade height is reached: %d >= %d", plan.Height-1, sdkCtx.BlockHeight()))
 		return nil
 	}

@@ -8,6 +8,7 @@ message ChainletPacketData {
   oneof packet {
     NoData noData = 1;
     ConfirmUpgradePacketData confirmUpgradePacket = 2;
+    CreateUpgradePacketData createUpgradePacket = 3;
   }
 }
 
@@ -20,5 +21,15 @@ message ConfirmUpgradePacketData {
   string plan = 3;
 }
 
-// UpgradePacketAck defines a struct for the packet acknowledgment
+// ConfirmUpgradePacketAck defines a struct for the packet acknowledgment
 message ConfirmUpgradePacketAck {}
+
+// CreateUpgradePacketData defines a struct for the packet payload
+message CreateUpgradePacketData {
+  string name = 1;
+  uint64 height = 2;
+  string info = 3;
+}
+
+// UpgradePacketAck defines a struct for the packet acknowledgment
+message CreateUpgradePacketAck {}
