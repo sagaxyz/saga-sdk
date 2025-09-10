@@ -161,6 +161,7 @@ func (im IBCModule) OnRecvPacket(
 	case *types.ChainletPacketData_CreateUpgradePacket:
 		packetAck, err := im.keeper.OnRecvCreateUpgradePacket(ctx, modulePacket, *packet.CreateUpgradePacket)
 		if err != nil {
+			fmt.Printf("XXX OnRecvCreateUpgradePacket: error=%s\n", err)
 			ack = channeltypes.NewErrorAcknowledgement(err)
 		} else {
 			// Encode packet acknowledgment
@@ -170,11 +171,12 @@ func (im IBCModule) OnRecvPacket(
 			}
 			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
 		}
+		fmt.Printf("XXX OnRecvCreateUpgradePacket: success=%t\n", err == nil)
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				types.EventTypeCreateUpgradePacket,
 				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err == nil)),
 			),
 		)
 	// this line is used by starport scaffolding # ibc/packet/module/recv
@@ -228,7 +230,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 		sdk.NewEvent(
 			eventType,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-			sdk.NewAttribute(types.AttributeKeyAck, fmt.Sprintf("%v", ack)),
+			sdk.NewAttribute(types.AttributeKeyAck, ack.String()),
 		),
 	)
 
@@ -237,7 +239,8 @@ func (im IBCModule) OnAcknowledgementPacket(
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				eventType,
-				sdk.NewAttribute(types.AttributeKeyAckSuccess, string(resp.Result)),
+				//sdk.NewAttribute(types.AttributeKeyAckSuccess, string(resp.Result)),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%x", resp.Result)),
 			),
 		)
 	case *channeltypes.Acknowledgement_Error:
