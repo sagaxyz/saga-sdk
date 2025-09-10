@@ -172,13 +172,13 @@ func (im IBCModule) OnRecvPacket(
 			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
 		}
 		fmt.Printf("XXX OnRecvCreateUpgradePacket: success=%t\n", err == nil)
-		ctx.EventManager().EmitEvent(
+		/*ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				types.EventTypeCreateUpgradePacket,
 				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err == nil)),
 			),
-		)
+		)*/
 	// this line is used by starport scaffolding # ibc/packet/module/recv
 	default:
 		err := fmt.Errorf("unrecognized %s packet type: %T", types.ModuleName, packet)
@@ -209,6 +209,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 	}
 
 	var eventType string
+	_ = eventType
 
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
@@ -226,7 +227,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 		return errorsmod.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
 	}
 
-	ctx.EventManager().EmitEvent(
+	/*ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			eventType,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
@@ -250,7 +251,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 				sdk.NewAttribute(types.AttributeKeyAckError, resp.Error),
 			),
 		)
-	}
+	}*/
 
 	return nil
 }
