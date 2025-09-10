@@ -14,9 +14,10 @@ import (
 )
 
 type Keeper struct {
-	cdc      codec.BinaryCodec
-	storeKey storetypes.StoreKey
-	memKey   storetypes.StoreKey
+	cdc             codec.BinaryCodec
+	storeKey        storetypes.StoreKey
+	memKey          storetypes.StoreKey
+	upgradeStoreKey storetypes.StoreKey
 
 	// the address capable of executing a MsgUpdateParams message. Typically, this
 	// should be the x/gov module account.
@@ -31,7 +32,7 @@ type Keeper struct {
 	connectionKeeper types.ConnectionKeeper
 }
 
-func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, uk *upgradekeeper.Keeper, channelKeeper types.ChannelKeeper, consumerKeeper types.ConsumerKeeper, clientKeeper types.ClientKeeper, connectionKeeper types.ConnectionKeeper) Keeper {
+func New(cdc codec.BinaryCodec, storeKey, memKey, upgradeStoreKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, uk *upgradekeeper.Keeper, channelKeeper types.ChannelKeeper, consumerKeeper types.ConsumerKeeper, clientKeeper types.ClientKeeper, connectionKeeper types.ConnectionKeeper) Keeper {
 	if _, err := sdk.AccAddressFromBech32(authority); err != nil {
 		panic(fmt.Sprintf("invalid authority address: %s", authority))
 	}
@@ -40,6 +41,7 @@ func New(cdc codec.BinaryCodec, storeKey, memKey storetypes.StoreKey, authority 
 		cdc:              cdc,
 		storeKey:         storeKey,
 		memKey:           memKey,
+		upgradeStoreKey:  upgradeStoreKey,
 		authority:        authority,
 		ibcKeeperFn:      ibcKeeperFn,
 		upgradeKeeper:    uk,

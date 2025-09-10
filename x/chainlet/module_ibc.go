@@ -9,6 +9,7 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
+
 	"github.com/sagaxyz/saga-sdk/x/chainlet/keeper"
 	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
@@ -146,6 +147,7 @@ func (im IBCModule) OnRecvPacket(
 	case *types.ChainletPacketData_CreateUpgradePacket:
 		packetAck, err := im.keeper.OnRecvCreateUpgradePacket(ctx, modulePacket, *packet.CreateUpgradePacket)
 		if err != nil {
+			fmt.Printf("XXX OnRecvCreateUpgradePacket: error=%s\n", err)
 			ack = channeltypes.NewErrorAcknowledgement(err)
 		} else {
 			// Encode packet acknowledgment
@@ -153,13 +155,15 @@ func (im IBCModule) OnRecvPacket(
 			if err != nil {
 				return channeltypes.NewErrorAcknowledgement(errorsmod.Wrap(sdkerrors.ErrJSONMarshal, err.Error()))
 			}
-			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
+			//ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
+			_ = packetAckBytes
+			ack = channeltypes.NewResultAcknowledgement([]byte("success"))
 		}
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				types.EventTypeCreateUpgradePacket,
 				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err == nil)),
 			),
 		)
 	// this line is used by starport scaffolding # ibc/packet/module/recv
@@ -169,6 +173,7 @@ func (im IBCModule) OnRecvPacket(
 	}
 
 	// NOTE: acknowledgement will be written synchronously during IBC handler execution.
+	fmt.Printf("XXX OnRecvCreateUpgradePacket: returning ack %+v (success=%t)\n", ack, ack.Success())
 	return ack
 }
 
@@ -214,7 +219,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 		sdk.NewEvent(
 			eventType,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-			sdk.NewAttribute(types.AttributeKeyAck, fmt.Sprintf("%v", ack)),
+			sdk.NewAttribute(types.AttributeKeyAck, ack.String()),
 		),
 	)
 
@@ -223,7 +228,8 @@ func (im IBCModule) OnAcknowledgementPacket(
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				eventType,
-				sdk.NewAttribute(types.AttributeKeyAckSuccess, string(resp.Result)),
+				//sdk.NewAttribute(types.AttributeKeyAckSuccess, string(resp.Result)),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%x", resp.Result)),
 			),
 		)
 	case *channeltypes.Acknowledgement_Error:

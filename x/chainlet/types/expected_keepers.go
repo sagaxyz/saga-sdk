@@ -17,7 +17,8 @@ type ParamSubspace interface {
 
 type UpgradeKeeper interface {
 	GetUpgradePlan(context.Context) (upgradetypes.Plan, error)
-	ScheduleUpgrade(context.Context, upgradetypes.Plan) error
+	//ScheduleUpgrade(context.Context, upgradetypes.Plan) error
+	GetDoneHeight(context.Context, string) (int64, error)
 }
 
 type ConsumerKeeper interface {
