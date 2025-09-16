@@ -7,7 +7,6 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
@@ -134,7 +133,7 @@ func (k Keeper) ScheduleUpgrade(ctx context.Context, plan upgradetypes.Plan) err
 	}
 
 	//store := k.storeService.OpenKVStore(ctx)
-	store := sdkCtx.KVStore(storetypes.NewKVStoreKey(upgradetypes.StoreKey))
+	store := sdkCtx.KVStore(k.upgradeStoreKey)
 
 	// clear any old IBC state stored by previous plan
 	oldPlan, err := k.upgradeKeeper.GetUpgradePlan(ctx)
@@ -169,7 +168,7 @@ func (k Keeper) ClearIBCState(ctx context.Context, lastHeight int64) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	// delete IBC client and consensus state from store if this is IBC plan
 	//store := k.storeService.OpenKVStore(ctx)
-	store := sdkCtx.KVStore(storetypes.NewKVStoreKey(upgradetypes.StoreKey))
+	store := sdkCtx.KVStore(k.upgradeStoreKey)
 	store.Delete(upgradetypes.UpgradedClientKey(lastHeight))
 	/*err := store.Delete(upgradetypes.UpgradedClientKey(lastHeight))
 	if err != nil {
