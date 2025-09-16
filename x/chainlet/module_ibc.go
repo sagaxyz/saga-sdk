@@ -174,7 +174,6 @@ func (im IBCModule) OnRecvPacket(
 			_ = packetAckBytes
 			ack = channeltypes.NewResultAcknowledgement([]byte("success"))
 		}
-		fmt.Printf("XXX OnRecvCreateUpgradePacket: success=%t, ack %v\n", err == nil, ack)
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				types.EventTypeCreateUpgradePacket,
@@ -189,7 +188,7 @@ func (im IBCModule) OnRecvPacket(
 	}
 
 	// NOTE: acknowledgement will be written synchronously during IBC handler execution.
-	fmt.Printf("XXX OnRecvCreateUpgradePacket: returning ack %+v\n", ack)
+	fmt.Printf("XXX OnRecvCreateUpgradePacket: returning ack %+v (success=%t)\n", ack, ack.Success())
 	return ack
 }
 
