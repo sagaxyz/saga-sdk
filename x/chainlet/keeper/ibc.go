@@ -70,6 +70,11 @@ func (k Keeper) OnRecvCreateUpgradePacket(ctx sdk.Context, packet channeltypes.P
 		return packetAck, err
 	}
 
+	cstore := ctx.KVStore(k.storeKey)
+	cstore.Set([]byte("test-key"), []byte("123"))
+
+	return packetAck, nil
+
 	_, err = k.upgradeKeeper.GetUpgradePlan(ctx)
 	if err == nil || !errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) {
 		return packetAck, errors.New("existing upgrade plan found")
