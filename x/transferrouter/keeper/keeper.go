@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"cosmossdk.io/collections"
@@ -12,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
 	corestore "cosmossdk.io/core/store"
@@ -21,15 +23,16 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 
+	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
+	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
 var (
-	ParamsPrefix        = collections.NewPrefix(0) // Stores params
-	CallQueuePrefix     = collections.NewPrefix(1) // Stores the call queue
-	CallQueueHashPrefix = collections.NewPrefix(2) // Stores the call queue hash
+	ParamsPrefix       = collections.NewPrefix(0) // Stores params
+	PacketQueuePrefix  = collections.NewPrefix(2) // Stores the packets
+	PacketResultPrefix = collections.NewPrefix(3) // Stores the packet results
 )
 
 type ChannelKeeper interface {
@@ -56,10 +59,16 @@ type BankKeeper interface {
 
 type ERC20Keeper interface {
 	GetCoinAddress(ctx sdk.Context, denom string) (common.Address, error)
+	GetTokenPairID(ctx sdk.Context, token string) []byte
+	GetTokenPair(ctx sdk.Context, id []byte) (erc20types.TokenPair, bool)
+	BalanceOf(ctx sdk.Context, abi abi.ABI, contract, account common.Address) *big.Int
 }
 
 type AccountKeeper interface {
+	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	GetSequence(ctx context.Context, addr sdk.AccAddress) (uint64, error)
+	NewAccountWithAddress(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+	SetAccount(ctx context.Context, account sdk.AccountI)
 }
 
 type Keeper struct {
@@ -67,15 +76,16 @@ type Keeper struct {
 	storeService corestore.KVStoreService
 	authority    string
 
-	Schema    collections.Schema
-	Params    collections.Item[types.Params]
-	CallQueue collections.Map[uint64, types.CallQueueItem]
+	Schema      collections.Schema
+	Params      collections.Item[types.Params]
+	PacketQueue collections.Map[uint64, channeltypes.Packet]
 
 	Erc20Keeper    ERC20Keeper
 	ChannelKeeper  ChannelKeeper
 	TransferKeeper TransferKeeper
 	BankKeeper     BankKeeper
 	AccountKeeper  AccountKeeper
+	EVMKeeper      *evmkeeper.Keeper
 
 	ics4Wrapper porttypes.ICS4Wrapper
 }
@@ -89,6 +99,7 @@ func NewKeeper(cdc codec.BinaryCodec,
 	transferKeeper TransferKeeper,
 	bankKeeper BankKeeper,
 	accountKeeper AccountKeeper,
+	evmKeeper *evmkeeper.Keeper,
 	authority string) Keeper {
 
 	sb := collections.NewSchemaBuilder(storeSvc)
@@ -101,6 +112,7 @@ func NewKeeper(cdc codec.BinaryCodec,
 		TransferKeeper: transferKeeper,
 		BankKeeper:     bankKeeper,
 		AccountKeeper:  accountKeeper,
+		EVMKeeper:      evmKeeper,
 		ics4Wrapper:    ics4Wrapper,
 		Params: collections.NewItem(
 			sb,
@@ -108,12 +120,12 @@ func NewKeeper(cdc codec.BinaryCodec,
 			"params",
 			codec.CollValue[types.Params](cdc),
 		),
-		CallQueue: collections.NewMap(
+		PacketQueue: collections.NewMap(
 			sb,
-			CallQueuePrefix,
-			"call_queue",
+			PacketQueuePrefix,
+			"packet_queue",
 			collections.Uint64Key,
-			codec.CollValue[types.CallQueueItem](cdc),
+			codec.CollValue[channeltypes.Packet](cdc),
 		),
 	}
 
@@ -142,14 +154,16 @@ func (k Keeper) WriteAcknowledgementForPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	data transfertypes.FungibleTokenPacketData,
-	inFlightPacket *types.InFlightPacket,
 	ack channeltypes.Acknowledgement,
 ) error {
 	// Lookup module by channel capability
-	_, chanCap, err := k.ChannelKeeper.LookupModuleByChannel(ctx, inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
+	_, chanCap, err := k.ChannelKeeper.LookupModuleByChannel(ctx, packet.GetSourcePort(), packet.GetSourceChannel())
 	if err != nil {
 		return fmt.Errorf("could not retrieve module from port-id: %w", err)
 	}
+
+	// TODO: implement?
+	nonrefundable := false
 
 	// for forwarded packets, the funds were moved into an escrow account if the denom originated on this chain.
 	// On an ack error or timeout on a forwarded packet, the funds in the escrow account
@@ -157,25 +171,26 @@ func (k Keeper) WriteAcknowledgementForPacket(
 	if !ack.Success() {
 		// If this packet is non-refundable due to some action that took place between the initial ibc transfer and the forward
 		// we write a successful ack containing details on what happened regardless of ack error or timeout
-		if inFlightPacket.Nonrefundable {
+		if nonrefundable {
 			// we are not allowed to refund back to the source chain.
 			// attempt to move funds to user recoverable account on this chain.
-			if err := k.moveFundsToUserRecoverableAccount(ctx, packet, data, inFlightPacket); err != nil {
-				return err
-			}
+			// TODO: re-ADD
+			// if err := k.moveFundsToUserRecoverableAccount(ctx, packet, data, inFlightPacket); err != nil {
+			// 	return err
+			// }
 
 			ackResult := fmt.Sprintf("packet forward failed after point of no return: %s", ack.GetError())
 			newAck := channeltypes.NewResultAcknowledgement([]byte(ackResult))
 
 			return k.WriteIBCAcknowledgment(ctx, chanCap, channeltypes.Packet{
-				Data:               inFlightPacket.PacketData,
-				Sequence:           inFlightPacket.RefundSequence,
-				SourcePort:         inFlightPacket.PacketSrcPortId,
-				SourceChannel:      inFlightPacket.PacketSrcChannelId,
-				DestinationPort:    inFlightPacket.RefundPortId,
-				DestinationChannel: inFlightPacket.RefundChannelId,
-				TimeoutHeight:      clienttypes.MustParseHeight(inFlightPacket.PacketTimeoutHeight),
-				TimeoutTimestamp:   inFlightPacket.PacketTimeoutTimestamp,
+				Data:               packet.Data,
+				Sequence:           packet.Sequence,
+				SourcePort:         packet.SourcePort,
+				SourceChannel:      packet.SourceChannel,
+				DestinationPort:    packet.DestinationPort,
+				DestinationChannel: packet.DestinationChannel,
+				TimeoutHeight:      packet.TimeoutHeight,
+				TimeoutTimestamp:   packet.TimeoutTimestamp,
 			}, newAck)
 		}
 
@@ -206,11 +221,14 @@ func (k Keeper) WriteAcknowledgementForPacket(
 		fmt.Println("denomTrace", denomTrace, "fullDenomPath", fullDenomPath, "denomTrace.IBCDenom()", denomTrace.IBCDenom())
 		coin := sdk.NewCoin(denomTrace.IBCDenom(), amount)
 
+		// TODO: @facu during callbacks the escrow address is not the gateway contract address, it's the isolated address
+		// let's make sure we send the funds back to the correct address
+
 		// escrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
-		refundEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
+		refundEscrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
 
 		// Override the receiver address to the gateway contract address
-		gatewayAddr := common.HexToAddress("0x0000000000000000000000000000000000006a7e")
+		gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345") // TODO: make this configurable
 		escrowAddress := sdk.AccAddress(gatewayAddr.Bytes())
 
 		newToken := sdk.NewCoins(coin)
@@ -222,7 +240,7 @@ func (k Keeper) WriteAcknowledgementForPacket(
 			// funds were moved to escrow account for transfer, so they need to either:
 			// - move to the other escrow account, in the case of native denom
 			// - burn
-			if transfertypes.SenderChainIsSource(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId, fullDenomPath) {
+			if transfertypes.SenderChainIsSource(packet.SourcePort, packet.SourceChannel, fullDenomPath) {
 				// transfer funds from escrow account for forwarded packet to escrow account going back for refund.
 				balances := k.BankKeeper.GetAllBalances(ctx, escrowAddress)
 				k.Logger(ctx).Info("Balances of escrow!", "balances", balances)
@@ -268,14 +286,14 @@ func (k Keeper) WriteAcknowledgementForPacket(
 	}
 
 	return k.WriteIBCAcknowledgment(ctx, chanCap, channeltypes.Packet{
-		Data:               inFlightPacket.PacketData,
-		Sequence:           inFlightPacket.RefundSequence,
-		SourcePort:         inFlightPacket.PacketSrcPortId,
-		SourceChannel:      inFlightPacket.PacketSrcChannelId,
-		DestinationPort:    inFlightPacket.RefundPortId,
-		DestinationChannel: inFlightPacket.RefundChannelId,
-		TimeoutHeight:      clienttypes.MustParseHeight(inFlightPacket.PacketTimeoutHeight),
-		TimeoutTimestamp:   inFlightPacket.PacketTimeoutTimestamp,
+		Data:               packet.Data,
+		Sequence:           packet.Sequence,
+		SourcePort:         packet.SourcePort,
+		SourceChannel:      packet.SourceChannel,
+		DestinationPort:    packet.DestinationPort,
+		DestinationChannel: packet.DestinationChannel,
+		TimeoutHeight:      packet.TimeoutHeight,
+		TimeoutTimestamp:   packet.TimeoutTimestamp,
 	}, ack)
 }
 

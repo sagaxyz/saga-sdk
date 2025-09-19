@@ -11,6 +11,8 @@ message Params {
   string known_signer_private_key = 2;
 
   string known_signer_address = 3; // the address of the known signer, just to avoid re-calculating it
+
+  string gateway_contract_address = 4;
 } 
 
 // CallQueueItem is to store a call in the queue to be executed on the next block.

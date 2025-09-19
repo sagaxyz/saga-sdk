@@ -10,6 +10,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core"
 	cmn "github.com/evmos/evmos/v20/precompiles/common"
@@ -20,7 +21,7 @@ import (
 )
 
 // PrecompileAddress of the Gateway EVM extension in hex format.
-const PrecompileAddress = "0x0000000000000000000000000000000000006a7e"
+const PrecompileAddress = "0x5A6A8Ce46E34c2cd998129d013fA0253d3892345"
 
 var _ vm.PrecompiledContract = &Precompile{}
 
@@ -30,13 +31,14 @@ var _ vm.PrecompiledContract = &Precompile{}
 var f embed.FS
 
 type EVMKeeper interface {
-	// CallEVMWithData(
-	// 	ctx sdk.Context,
-	// 	from common.Address,
-	// 	contract *common.Address,
-	// 	data []byte,
-	// 	commit bool,
-	// ) (*evmtypes.MsgEthereumTxResponse, error)
+	CallEVMWithData(
+		ctx sdk.Context,
+		from common.Address,
+		contract *common.Address,
+		data []byte,
+		commit bool,
+	) (*evmtypes.MsgEthereumTxResponse, error)
+	CallEVM(ctx sdk.Context, abi abi.ABI, from, contract common.Address, commit bool, method string, args ...interface{}) (*evmtypes.MsgEthereumTxResponse, error)
 	ApplyMessage(ctx sdk.Context, msg ethtypes.Message, tracer vm.EVMLogger, commit bool) (*evmtypes.MsgEthereumTxResponse, error)
 }
 
@@ -100,6 +102,7 @@ func (p Precompile) RequiredGas(input []byte) uint64 {
 func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz []byte, err error) {
 	ctx, stateDB, snapshot, method, initialGas, args, err := p.RunSetup(evm, contract, readOnly, p.IsTransaction)
 	if err != nil {
+		fmt.Println("error!!111 !!!!!!!!!!!!!!!!!!!!!!!!!", err)
 		return nil, err
 	}
 

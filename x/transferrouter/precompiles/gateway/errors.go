@@ -3,9 +3,11 @@
 
 package gateway
 
+import "errors"
+
 const (
 	// ErrInvalidTarget is raised when the target address is invalid.
-	ErrInvalidTarget = "invalid target address"
+	ErrInvalidSequence = "invalid sequence"
 	// ErrInvalidSender is raised when the sender is invalid.
 	ErrInvalidSender = "invalid sender: %s"
 	// ErrInvalidValue is raised when the value is invalid.
@@ -24,4 +26,11 @@ const (
 	ErrContractPaused = "contract is paused"
 	// ErrUnauthorized is raised when the caller is not authorized.
 	ErrUnauthorized = "caller is not authorized"
+)
+
+var (
+	// ErrAllowanceFailed is raised when the allowance fails.
+	ErrAllowanceFailed = errors.New("allowance failed")
+	// ErrEVMCallFailed is raised when the EVM call fails.
+	ErrEVMCallFailed = errors.New("evm call failed")
 )

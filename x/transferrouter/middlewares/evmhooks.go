@@ -1,22 +1,12 @@
 package middlewares
 
 import (
-	"bytes"
-	"errors"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	coretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	evmostypes "github.com/evmos/evmos/v20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
-	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
 type EvmHooks struct {
@@ -30,97 +20,97 @@ func NewEvmHooks(k keeper.Keeper) evmtypes.EvmHooks {
 func (h *EvmHooks) PostTxProcessing(ctx sdk.Context, sender common.Address, msg core.Message, receipt *ethtypes.Receipt) error {
 	h.k.Logger(ctx).Info("PostTxProcessing", "sender", sender, "msg", msg, "receipt", receipt)
 
-	chainId, err := evmostypes.ParseChainID(ctx.ChainID())
-	if err != nil {
-		h.k.Logger(ctx).Error("failed to parse chain id", "error", err)
-		return err
-	}
+	// chainId, err := evmostypes.ParseChainID(ctx.ChainID())
+	// if err != nil {
+	// 	h.k.Logger(ctx).Error("failed to parse chain id", "error", err)
+	// 	return err
+	// }
 
-	// only perform the following checks if the sender is the known signer
-	params, err := h.k.Params.Get(ctx)
-	if err != nil {
-		return err
-	}
-	privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
-	if err != nil {
-		return err
-	}
-	knownSignerAddress := crypto.PubkeyToAddress(privKey.PublicKey)
+	// // only perform the following checks if the sender is the known signer
+	// params, err := h.k.Params.Get(ctx)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// Return early if the sender is not the known signer
-	if !bytes.Equal(sender.Bytes(), knownSignerAddress.Bytes()) {
-		h.k.Logger(ctx).Info("Sender is not the known signer, skipping post tx processing")
-		return nil
-	}
+	// knownSignerAddress, err := sdk.AccAddressFromBech32(params.KnownSignerAddress)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// find call
+	// // Return early if the sender is not the known signer
+	// if !bytes.Equal(sender.Bytes(), knownSignerAddress.Bytes()) {
+	// 	h.k.Logger(ctx).Info("Sender is not the known signer, skipping post tx processing")
+	// 	return nil
+	// }
 
-	var (
-		callQueueItem types.CallQueueItem
-		seq           uint64
-		found         bool
-	)
+	// // find call
 
-	err = h.k.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
-		// TODO: for now we do it with data, but we must make sure this tx is the one we are looking for
-		if bytes.Equal(value.ToMsgEthereumTx(msg.Nonce(), chainId).AsTransaction().Data(), msg.Data()) {
-			found = true
-			seq = key
-			callQueueItem = value
-			return true, nil
-		}
-		return false, nil
-	})
+	// var (
+	// 	callQueueItem types.CallQueueItem
+	// 	seq           uint64
+	// 	found         bool
+	// )
 
-	if !found {
-		h.k.Logger(ctx).Error("Call not found in call queue, reverting tx")
-		return errors.New("call not found in call queue, reverting tx")
-	}
+	// err = h.k.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
+	// 	// TODO: for now we do it with data, but we must make sure this tx is the one we are looking for
+	// 	if bytes.Equal(value.ToMsgEthereumTx(msg.Nonce(), chainId).AsTransaction().Data(), msg.Data()) {
+	// 		found = true
+	// 		seq = key
+	// 		callQueueItem = value
+	// 		return true, nil
+	// 	}
+	// 	return false, nil
+	// })
 
-	// send IBC acknowledgement
-	packet := channeltypes.Packet{
-		Sequence:           seq,
-		SourceChannel:      callQueueItem.InFlightPacket.PacketSrcChannelId,
-		SourcePort:         callQueueItem.InFlightPacket.PacketSrcPortId,
-		DestinationChannel: callQueueItem.InFlightPacket.RefundChannelId,
-		DestinationPort:    callQueueItem.InFlightPacket.RefundPortId,
-		Data:               callQueueItem.InFlightPacket.PacketData,
-		TimeoutHeight:      clienttypes.MustParseHeight(callQueueItem.InFlightPacket.PacketTimeoutHeight),
-		TimeoutTimestamp:   callQueueItem.InFlightPacket.PacketTimeoutTimestamp,
-	}
+	// if !found {
+	// 	h.k.Logger(ctx).Error("Call not found in call queue, reverting tx")
+	// 	return errors.New("call not found in call queue, reverting tx")
+	// }
 
-	var ack channeltypes.Acknowledgement
-	if receipt.Status == coretypes.ReceiptStatusSuccessful {
-		h.k.Logger(ctx).Info("Receipt status successful, creating result acknowledgement")
-		ack = channeltypes.NewResultAcknowledgement([]byte{1})
-	} else {
-		h.k.Logger(ctx).Info("Receipt status unsuccessful, creating error acknowledgement")
-		ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
-	}
-	h.k.Logger(ctx).Info("Created acknowledgment", "ack", ack, "receipt", receipt)
+	// // send IBC acknowledgement
+	// packet := channeltypes.Packet{
+	// 	Sequence:           seq,
+	// 	SourceChannel:      callQueueItem.InFlightPacket.PacketSrcChannelId,
+	// 	SourcePort:         callQueueItem.InFlightPacket.PacketSrcPortId,
+	// 	DestinationChannel: callQueueItem.InFlightPacket.RefundChannelId,
+	// 	DestinationPort:    callQueueItem.InFlightPacket.RefundPortId,
+	// 	Data:               callQueueItem.InFlightPacket.PacketData,
+	// 	TimeoutHeight:      clienttypes.MustParseHeight(callQueueItem.InFlightPacket.PacketTimeoutHeight),
+	// 	TimeoutTimestamp:   callQueueItem.InFlightPacket.PacketTimeoutTimestamp,
+	// }
 
-	h.k.Logger(ctx).Info("Writing IBC acknowledgment...")
-	var data transfertypes.FungibleTokenPacketData
-	err = transfertypes.ModuleCdc.UnmarshalJSON(callQueueItem.InFlightPacket.PacketData, &data)
-	if err != nil {
-		h.k.Logger(ctx).Error("failed to unmarshal packet data", "error", err)
-		return err
-	}
-	err = h.k.WriteAcknowledgementForPacket(ctx, packet, data, callQueueItem.InFlightPacket, ack)
-	if err != nil {
-		h.k.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)
-		return err
-	}
-	h.k.Logger(ctx).Info("Successfully wrote IBC acknowledgment")
+	// var ack channeltypes.Acknowledgement
+	// if receipt.Status == coretypes.ReceiptStatusSuccessful {
+	// 	h.k.Logger(ctx).Info("Receipt status successful, creating result acknowledgement")
+	// 	ack = channeltypes.NewResultAcknowledgement([]byte{1})
+	// } else {
+	// 	h.k.Logger(ctx).Info("Receipt status unsuccessful, creating error acknowledgement")
+	// 	ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
+	// }
+	// h.k.Logger(ctx).Info("Created acknowledgment", "ack", ack, "receipt", receipt)
 
-	// remove call from call queue
-	h.k.Logger(ctx).Info("Removing call from queue", "seq", seq)
-	err = h.k.CallQueue.Remove(ctx, seq)
-	if err != nil {
-		h.k.Logger(ctx).Error("failed to remove call from queue", "error", err)
-		return err
-	}
-	h.k.Logger(ctx).Info("Successfully removed call from queue")
+	// h.k.Logger(ctx).Info("Writing IBC acknowledgment...")
+	// var data transfertypes.FungibleTokenPacketData
+	// err = transfertypes.ModuleCdc.UnmarshalJSON(callQueueItem.InFlightPacket.PacketData, &data)
+	// if err != nil {
+	// 	h.k.Logger(ctx).Error("failed to unmarshal packet data", "error", err)
+	// 	return err
+	// }
+	// err = h.k.WriteAcknowledgementForPacket(ctx, packet, data, callQueueItem.InFlightPacket, ack)
+	// if err != nil {
+	// 	h.k.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)
+	// 	return err
+	// }
+	// h.k.Logger(ctx).Info("Successfully wrote IBC acknowledgment")
+
+	// // remove call from call queue
+	// h.k.Logger(ctx).Info("Removing call from queue", "seq", seq)
+	// err = h.k.CallQueue.Remove(ctx, seq)
+	// if err != nil {
+	// 	h.k.Logger(ctx).Error("failed to remove call from queue", "error", err)
+	// 	return err
+	// }
+	// h.k.Logger(ctx).Info("Successfully removed call from queue")
 
 	return nil
 }

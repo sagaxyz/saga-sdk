@@ -4,18 +4,11 @@ pragma solidity ^0.8.20;
 /// @title Gateway Interface
 /// @notice Interface for the Gateway contract
 interface IGateway {
-    /// @notice Execute a call to another contract
-    /// @param target The target contract address
-    /// @param value The amount of ETH to send with the call
-    /// @param data The calldata to send to the target contract
-    /// @param note Additional metadata note
-    /// @return result The return data from the target contract
+    /// @notice Execute the related call to an IBC packet
+    /// @param sequence The packet sequence to execute
     function execute(
-        address target,
-        uint256 value,
-        bytes calldata data,
-        bytes calldata note
-    ) external returns (bytes memory result);
+        uint256 sequence
+    ) external;
 
     /// @notice Emit a metadata note
     /// @param ref Reference identifier for the note

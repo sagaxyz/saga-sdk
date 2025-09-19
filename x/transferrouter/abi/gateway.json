@@ -173,24 +173,9 @@
         {
             "inputs": [
                 {
-                    "internalType": "address",
-                    "name": "target",
-                    "type": "address"
-                },
-                {
                     "internalType": "uint256",
-                    "name": "value",
+                    "name": "sequence",
                     "type": "uint256"
-                },
-                {
-                    "internalType": "bytes",
-                    "name": "data",
-                    "type": "bytes"
-                },
-                {
-                    "internalType": "bytes",
-                    "name": "note",
-                    "type": "bytes"
                 }
             ],
             "name": "execute",

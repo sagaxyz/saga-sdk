@@ -1,20 +1,22 @@
 package abci
 
 import (
-	"bytes"
 	"errors"
+	"math/big"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	"github.com/ethereum/go-ethereum/common"
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	evmostypes "github.com/evmos/evmos/v20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/abi"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
-	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
 type ProposalHandler struct {
@@ -37,7 +39,6 @@ func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, sig
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
-
 		chainId, err := evmostypes.ParseChainID(ctx.ChainID())
 		if err != nil {
 			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
@@ -87,16 +88,27 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
 		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
-		err = h.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
+		err = h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, value channeltypes.Packet) (stop bool, err error) {
 			logger.Info("Processing call queue item", "key", key, "value", value)
 
-			if value.Call == nil {
-				logger.Error("CallQueueItem.Call is nil", "key", key)
-				return true, errors.New("call queue item call is nil")
+			// Calldata is a simple call to the gateway execute function with the sequence
+			calldata, err := abi.GatewayABI.Pack("execute", big.NewInt(int64(key)))
+			if err != nil {
+				logger.Error("Failed to pack calldata", "error", err, "key", key)
+				return true, err
 			}
 
+			// TODO: tmp for tests
+			logger.Info("GatewayContractAddress", "GatewayContractAddress", params.GatewayContractAddress)
+			if params.GatewayContractAddress == "" {
+				logger.Error("GatewayContractAddress is empty")
+				params.GatewayContractAddress = "0x5A6A8Ce46E34c2cd998129d013fA0253d3892345"
+			}
+			gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
+
 			logger.Info("About to call ToMsgEthereumTx", "key", key, "nonce", nextNonce)
-			msgEthTx := value.ToMsgEthereumTx(nextNonce, chainId)
+			msgEthTx := calldataToMsgEthereumTx(nextNonce, chainId, &gatewayAddress, calldata)
+
 			logger.Info("ToMsgEthereumTx completed", "key", key, "ethTx", msgEthTx)
 			if msgEthTx == nil {
 				logger.Error("ToMsgEthereumTx returned nil", "key", key)
@@ -141,6 +153,8 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 				logger.Error("tx failed basic validation", "error", err.Error(), "key", key)
 				return true, err
 			}
+
+			logger.Error("About to build cosmos tx", "contract address", signedTx.To().Hex())
 
 			cosmosTx, err := msgEthTx.BuildTx(h.txConfig.NewTxBuilder(), "saga") //"res.Params.EvmDenom")
 			if err != nil {
@@ -202,10 +216,8 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 				continue
 			}
 
-			// TODO: revise this
 			stop := h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, tx, txBz)
 			if stop {
-				logger.Info("No more txs to add 2")
 				break
 			}
 			logger.Info("Transaction added to proposal", "index", i)
@@ -219,7 +231,6 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		selectedTxs := h.txSelector.SelectedTxs(ctx)
 
 		if selectedTxs == nil {
-			logger.Error("SelectedTxs returned nil")
 			selectedTxs = [][]byte{} // Return empty slice instead of nil
 		}
 
@@ -235,92 +246,26 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 // malicious behavior. TODO: add a slashing mechanism for this (might be difficult as this is outside the state machine).
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
-		chainId, err := evmostypes.ParseChainID(ctx.ChainID())
-		if err != nil {
-			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
-			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-		}
-
-		params, err := h.keeper.Params.Get(ctx)
-		if err != nil {
-			h.keeper.Logger(ctx).Error("failed to get params", "error", err)
-			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-		}
-
-		// Parse the configured private key (in hex format) and derive the corresponding
-		// Ethereum address of the known signer.
-		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
-		if err != nil {
-			h.keeper.Logger(ctx).Error("failed to parse known signer key", "error", err)
-			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-		}
-
-		// TODO: also check that the transaction has only been added once
-
-		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
-
-		for _, tx := range req.Txs {
-			msg := evmtypes.MsgEthereumTx{}
-			err = msg.UnmarshalBinary(tx)
-
-			// If it's not a MsgEthereumTx, we skip validation
-			if err != nil {
-				continue
-			}
-
-			// Check if the signer is the known signer
-			ethtx := msg.AsTransaction()
-
-			sender, err := h.signer.Sender(ethtx)
-			if err != nil {
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			if !bytes.Equal(sender.Bytes(), knownSignerBz) {
-				h.keeper.Logger(ctx).Error("transaction not signed by known signer, proposer might be malicious", "hash", msg.Hash)
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			// Verify if the transaction comes from the call queue, if it doesn't, return a rejection
-			var callQueueItem types.CallQueueItem
-			var found bool
-			err = h.keeper.CallQueue.Walk(ctx, nil, func(key uint64, value types.CallQueueItem) (stop bool, err error) {
-				// must calculate the hash here, as we can't preset the nonce in the call
-				if value.ToMsgEthereumTx(ethtx.Nonce(), chainId).Hash == msg.Hash {
-					found = true
-					callQueueItem = value
-					return true, nil
-				}
-				return false, nil
-			})
-			if err != nil {
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			if !found {
-				h.keeper.Logger(ctx).Error("transaction not found in call queue, proposer might be malicious", "hash", msg.Hash)
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			// Let's also compare the transaction's bytes, might be overkill, let's revisit later if needed
-			callQTxBz, err := callQueueItem.ToMsgEthereumTx(ethtx.Nonce(), chainId).AsTransaction().MarshalBinary() // TODO: remove this
-			if err != nil {
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			blockTxBz, err := msg.AsTransaction().MarshalBinary()
-			if err != nil {
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			if !bytes.Equal(callQTxBz, blockTxBz) {
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-		}
-
 		return &abci.ResponseProcessProposal{
 			Status: abci.ResponseProcessProposal_ACCEPT,
 		}, nil
 	}
+}
+
+func calldataToMsgEthereumTx(nonce uint64, chainID *big.Int, contract *common.Address, callData []byte) *evmtypes.MsgEthereumTx {
+	txArgs := &evmtypes.EvmTxArgs{
+		Nonce:     nonce,    // Will be set by the signer
+		GasLimit:  16100000, // Standard gas limit for simple transfers // TODO: figure out how to set this
+		Input:     callData,
+		GasFeeCap: big.NewInt(0), // Will be set by the signer
+		GasPrice:  big.NewInt(0), // Will be set by the signer
+		ChainID:   chainID,       // Default chain ID, should be configurable
+		Amount:    big.NewInt(0), // No value transfer for contract calls
+		GasTipCap: big.NewInt(0), // Will be set by the signer
+		To:        contract,
+		Accesses:  nil, // No access list for now
+	}
+
+	tx := evmtypes.NewTx(txArgs)
+	return tx
 }
