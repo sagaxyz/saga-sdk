@@ -6,6 +6,7 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
+	ibctypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 )
 
@@ -27,7 +28,7 @@ type ConsumerKeeper interface {
 
 type ClientKeeper interface {
 	GetClientState(sdk.Context, string) (ibcexported.ClientState, bool)
-	GetClientLatestHeight(sdk.Context, string) (ibcexported.Height)
+	GetClientLatestHeight(sdk.Context, string) (ibctypes.Height)
 }
 
 type ConnectionKeeper interface {
