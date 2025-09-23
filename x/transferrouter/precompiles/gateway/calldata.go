@@ -11,7 +11,7 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/sagaxyz/saga-sdk/x/transferrouter/abi"
+	"github.com/evmos/evmos/v20/contracts"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 )
 
@@ -103,34 +103,12 @@ func createERC20TransferCallData(
 	k.Logger(ctx).Info("coinAddr", "address", coinAddr.Hex(), "denom", denom)
 
 	// transfer(address recipient, uint256 amount) → bool
-	erc20CallData, err := abi.ERC20ABI.Pack("transfer", recipientAddrHex, amountBig)
+	erc20 := contracts.ERC20MinterBurnerDecimalsContract.ABI
+	erc20CallData, err := erc20.Pack("transfer", recipientAddrHex, amountBig)
 	if err != nil {
 		k.Logger(ctx).Error("failed to pack ERC20 call data", "error", err)
 		return nil, fmt.Errorf("failed to pack ERC20 call data: %w", err)
 	}
 
 	return erc20CallData, nil
-
-	// Use provided memo or create a default one
-	if memo == nil {
-		txHash := tmhash.Sum(ctx.TxBytes())
-		txHashHex := hex.EncodeToString(txHash)
-		memo, err = json.Marshal(map[string]interface{}{
-			"txHash": txHashHex,
-		})
-		if err != nil {
-			k.Logger(ctx).Error("failed to marshal memo", "error", err)
-			return nil, fmt.Errorf("failed to marshal memo: %w", err)
-		}
-	}
-
-	// Now assemble the call data for the gateway
-	// function execute(address target,uint256 value, bytes calldata data, bytes calldata note)
-	gatewayCallData, err := abi.GatewayABI.Pack("execute", coinAddr, big.NewInt(0), erc20CallData, memo)
-	if err != nil {
-		k.Logger(ctx).Error("failed to pack gateway call data", "error", err)
-		return nil, fmt.Errorf("failed to pack gateway call data: %w", err)
-	}
-
-	return gatewayCallData, nil
 }

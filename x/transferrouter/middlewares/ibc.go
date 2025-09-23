@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
 	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 )
 
@@ -134,8 +135,6 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
 
-	logger.Info("OnRecvPacket called with memo!!!asdasdasdasdasasd21345678976543======++++++======", "memo", data.Memo)
-
 	// If it's a PFM packet meant to be forwarded, we return early as we won't handle it here
 	d := make(map[string]interface{})
 	err := json.Unmarshal([]byte(data.Memo), &d)
@@ -145,19 +144,19 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
 
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+
 	// Override the receiver address to the gateway contract address
-	gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345") // TODO: make this configurable
+	gatewayAddr := common.HexToAddress(params.GatewayContractAddress)
 	overrideReceiver := sdk.AccAddress(gatewayAddr.Bytes())
-
-	// Generate secure isolated address from sender.
-	isolatedAddr := GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
-	isolatedAddrHex := common.BytesToAddress(isolatedAddr.Bytes())
-
-	logger.Info("OnRecvPacket called with isolatedAddrHex", "isolatedAddrHex", isolatedAddrHex)
 
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
-	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().GasRemaining(), callbacktypes.DestinationCallbackKey)
+	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
 	logger.Info("OnRecvPacket called with cbData", "cbData", cbData, "isCbPacket", isCbPacket, "err", err)
 
 	if isCbPacket {
@@ -175,7 +174,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		receiverHex := common.BytesToAddress(receiver.Bytes())
 
 		// Generate secure isolated address from sender.
-		isolatedAddr := GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
+		isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
 		isolatedAddrHex := common.BytesToAddress(isolatedAddr.Bytes())
 
 		overrideReceiver = isolatedAddr
@@ -201,6 +200,13 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		}
 	}
 
+	// 1. Store the packet in the call queue
+	err = i.k.PacketQueue.Set(ctx, packet.Sequence, packet)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to set packet in call queue", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+
 	// Move tokens to an escrow account (gateway contract or the isolated address for callback packets)
 	err = i.receiveFunds(ctx, packet, data, overrideReceiver.String(), relayer)
 	if err != nil {
@@ -208,52 +214,6 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 		return newErrorAcknowledgement(err)
 	}
 
-	// params, err := i.k.Params.Get(ctx)
-	// if err != nil {
-	// 	i.k.Logger(ctx).Error("failed to get params", "error", err)
-	// 	return newErrorAcknowledgement(err)
-	// }
-
-	// assemble the call data, erc20 transfer for now
-	// callData, err := CreateGatewayERC20TransferExecuteCallDataFromPacket(ctx, i.k, packet, data)
-	// if err != nil {
-	// 	i.k.Logger(ctx).Error("failed to create gateway execute call data", "error", err)
-	// 	return newErrorAcknowledgement(err)
-	// }
-
-	// knownSignerAddress, err := sdk.AccAddressFromBech32(params.KnownSignerAddress)
-	// if err != nil {
-	// 	i.k.Logger(ctx).Error("failed to parse known signer address", "error", err)
-	// 	return newErrorAcknowledgement(err)
-	// }
-
-	// 1. Store the packet in the call queue
-	i.k.PacketQueue.Set(ctx, packet.Sequence, packet)
-
-	// i.k.CallQueue.Set(ctx, packet.Sequence, types.CallQueueItem{
-	// 	Call: &types.Call{
-	// 		From:     knownSignerAddress.Bytes(),
-	// 		Contract: gatewayAddr.Bytes(),
-	// 		Data:     callData,
-	// 		Commit:   true,
-	// 	},
-	// 	InFlightPacket: &types.InFlightPacket{
-	// 		OriginalSenderAddress:  data.Sender,
-	// 		RefundChannelId:        packet.SourceChannel,
-	// 		RefundPortId:           packet.SourcePort,
-	// 		PacketSrcChannelId:     packet.SourceChannel,
-	// 		PacketSrcPortId:        packet.SourcePort,
-	// 		PacketTimeoutTimestamp: packet.TimeoutTimestamp,
-	// 		PacketTimeoutHeight:    packet.TimeoutHeight.String(),
-	// 		PacketData:             packet.Data,
-	// 		RefundSequence:         packet.Sequence,
-	// 		RetriesRemaining:       0,
-	// 		Timeout:                0,
-	// 		Nonrefundable:          false,
-	// 	},
-	// })
-
-	// Do not return the acknowledgement, we will write it in the post handler
 	return nil
 }
 

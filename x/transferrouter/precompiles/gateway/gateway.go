@@ -30,6 +30,16 @@ var _ vm.PrecompiledContract = &Precompile{}
 //go:embed abi.json
 var f embed.FS
 
+var ABI abi.ABI
+
+func init() {
+	var err error
+	ABI, err = cmn.LoadABI(f, "abi.json")
+	if err != nil {
+		panic(err)
+	}
+}
+
 type EVMKeeper interface {
 	CallEVMWithData(
 		ctx sdk.Context,
@@ -57,14 +67,9 @@ func NewPrecompile(
 	transferKeeper transferrouterkeeper.Keeper,
 	evmKeeper EVMKeeper,
 ) (*Precompile, error) {
-	newAbi, err := cmn.LoadABI(f, "abi.json")
-	if err != nil {
-		return nil, err
-	}
-
 	p := &Precompile{
 		Precompile: cmn.Precompile{
-			ABI:                  newAbi,
+			ABI:                  ABI,
 			AuthzKeeper:          authzKeeper,
 			KvGasConfig:          storetypes.KVGasConfig(),
 			TransientKVGasConfig: storetypes.TransientGasConfig(),
@@ -102,7 +107,6 @@ func (p Precompile) RequiredGas(input []byte) uint64 {
 func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz []byte, err error) {
 	ctx, stateDB, snapshot, method, initialGas, args, err := p.RunSetup(evm, contract, readOnly, p.IsTransaction)
 	if err != nil {
-		fmt.Println("error!!111 !!!!!!!!!!!!!!!!!!!!!!!!!", err)
 		return nil, err
 	}
 

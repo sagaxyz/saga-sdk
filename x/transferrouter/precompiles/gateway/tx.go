@@ -22,7 +22,7 @@ import (
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmante "github.com/evmos/evmos/v20/x/evm/ante"
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
-	"github.com/sagaxyz/saga-sdk/x/transferrouter/middlewares"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
 	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 )
 
@@ -48,7 +48,6 @@ func (p Precompile) Execute(
 	})
 
 	if err != nil {
-		p.transferKeeper.Logger(ctx).Error("Failed to walk packet queue", "error", err)
 		return nil, err
 	}
 
@@ -67,6 +66,8 @@ func (p Precompile) Execute(
 	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
 
 	success := false
+	// This defer is used so we can write the cached context events back to the main context, but also to clear the returned error,
+	// so it can still remove the packet from the queue if the execution fails.
 	defer func() {
 		if retErr == nil {
 			// Write cachedCtx events back to ctx.
@@ -75,7 +76,7 @@ func (p Precompile) Execute(
 
 		}
 
-		retErr = nil // fix later this weird logic
+		retErr = nil
 
 		// delete the packet from the queue
 		err = p.transferKeeper.PacketQueue.Remove(ctx, sequence)
@@ -94,15 +95,6 @@ func (p Precompile) Execute(
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
 		}
 		p.transferKeeper.Logger(ctx).Info("Created acknowledgment", "ack", ack, "receipt", success)
-
-		// NIL CHECK: Check for potential nil pointer dereferences
-		p.transferKeeper.Logger(ctx).Info("NIL CHECK",
-			"packetIsNil", packet.Data == nil,
-			"transferKeeperIsNil", transfertypes.ModuleCdc == nil,
-			"evmKeeperIsNil", p.evmKeeper == nil,
-			"methodIsNil", method == nil,
-			"stateDBIsNil", stateDB == nil,
-			"contractIsNil", contract == nil)
 
 		err = p.transferKeeper.WriteAcknowledgementForPacket(ctx, packet, packetData, ack)
 		if err != nil {
@@ -134,9 +126,7 @@ func (p Precompile) Execute(
 	p.transferKeeper.Logger(ctx).Info("Set initial from address", "fromAddress", fromAddress.Hex())
 
 	// if the packet is a callback packet we process it as such, if not, we assume it's a normal erc20 transfer
-	p.transferKeeper.Logger(ctx).Info("Checking if packet is callback packet", "gasRemaining", ctx.GasMeter().GasRemaining())
-	cbData, isCbPacket, err := callbacktypes.GetCallbackData(packetData, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().GasRemaining(), callbacktypes.DestinationCallbackKey)
-	p.transferKeeper.Logger(ctx).Info("Retrieved callback data", "cbData", cbData, "isCbPacket", isCbPacket, "err", err)
+	cbData, isCbPacket, err := callbacktypes.GetCallbackData(packetData, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
 	if isCbPacket {
 		p.transferKeeper.Logger(ctx).Info("Processing callback packet")
 		if err != nil {
@@ -150,7 +140,7 @@ func (p Precompile) Execute(
 		p.transferKeeper.Logger(ctx).Info("Set callback target address", "target", target.Hex())
 
 		// Generate secure isolated address from sender, we know this address is initialized in the IBC OnRecvPacket
-		isolatedAddr := middlewares.GenerateIsolatedAddress(packet.GetDestChannel(), cbData.SenderAddress)
+		isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), cbData.SenderAddress)
 		fromAddress = common.BytesToAddress(isolatedAddr.Bytes())
 		p.transferKeeper.Logger(ctx).Info("Generated isolated address", "isolatedAddress", fromAddress.Hex(), "destChannel", packet.GetDestChannel())
 
@@ -191,12 +181,10 @@ func (p Precompile) Execute(
 		var approveSuccess bool
 		err = erc20.ABI.UnpackIntoInterface(&approveSuccess, "approve", res.Ret)
 		if err != nil {
-			p.transferKeeper.Logger(ctx).Error("Failed to unpack approve return", "error", err)
 			return nil, errorsmod.Wrapf(ErrAllowanceFailed, "failed to unpack approve return: %v", err)
 		}
 
 		if !approveSuccess {
-			p.transferKeeper.Logger(ctx).Error("Approve call returned false")
 			return nil, errorsmod.Wrapf(ErrAllowanceFailed, "failed to set allowance")
 		}
 		p.transferKeeper.Logger(ctx).Info("Approve call successful")
@@ -204,7 +192,6 @@ func (p Precompile) Execute(
 		p.transferKeeper.Logger(ctx).Info("Starting callback EVM call", "fromAddress", fromAddress.Hex(), "target", target.Hex(), "calldataLength", len(cbData.Calldata))
 		res, err = p.evmKeeper.CallEVMWithData(cachedCtx, fromAddress, &target, cbData.Calldata, true)
 		if err != nil {
-			p.transferKeeper.Logger(ctx).Error("Callback EVM call failed", "error", err)
 			return nil, errorsmod.Wrapf(ErrEVMCallFailed, "EVM returned error: %s", err.Error())
 		}
 		p.transferKeeper.Logger(ctx).Info("Callback EVM call completed", "gasUsed", res.GasUsed, "success", !res.Failed())

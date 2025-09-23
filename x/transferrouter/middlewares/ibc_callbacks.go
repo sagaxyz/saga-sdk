@@ -2,13 +2,11 @@ package middlewares
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/address"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/evmos/evmos/v20/contracts"
@@ -16,6 +14,7 @@ import (
 	evmostypes "github.com/evmos/evmos/v20/types"
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmante "github.com/evmos/evmos/v20/x/evm/ante"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
 	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 )
 
@@ -36,12 +35,6 @@ var (
 	ErrEVMCallFailed          = errorsmod.Register(ModuleName, 8, "evm call failed")
 	ErrOutOfGas               = errorsmod.Register(ModuleName, 9, "out of gas")
 )
-
-// GenerateIsolatedAddress generates an isolated address for the given channel ID and sender address.
-// This provides a safe address to call the receiver contract address with custom calldata
-func GenerateIsolatedAddress(channelID string, sender string) sdk.AccAddress {
-	return sdk.AccAddress(address.Module(ModuleName, []byte(channelID), []byte(sender))[:20])
-}
 
 // IBCReceivePacketCallback handles IBC packet callbacks for cross-chain contract execution.
 // This function processes incoming IBC packets that contain callback data and executes
@@ -80,14 +73,12 @@ func (i IBCMiddleware) IBCReceivePacketCallback(
 	contractAddress string,
 	version string,
 ) error {
-
-	fmt.Println("IBCReceivePacketCallback called?!?!?!?!?!?!?!?!?")
 	data, err := callbacktypes.UnmarshalPacketData(packet.GetData(), version, "")
 	if err != nil {
 		return err
 	}
 
-	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, version, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().GasRemaining(), callbacktypes.DestinationCallbackKey)
+	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, version, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
 	if err != nil {
 		return err
 	}
@@ -114,7 +105,7 @@ func (i IBCMiddleware) IBCReceivePacketCallback(
 	receiverHex := common.BytesToAddress(receiver.Bytes())
 
 	// Generate secure isolated address from sender.
-	isolatedAddr := GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
+	isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
 	isolatedAddrHex := common.BytesToAddress(isolatedAddr.Bytes())
 
 	// Ensure receiver address is equal to the isolated address.

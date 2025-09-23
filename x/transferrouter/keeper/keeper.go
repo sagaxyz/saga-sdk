@@ -21,6 +21,8 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
+	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 
@@ -162,46 +164,37 @@ func (k Keeper) WriteAcknowledgementForPacket(
 		return fmt.Errorf("could not retrieve module from port-id: %w", err)
 	}
 
-	// TODO: implement?
-	nonrefundable := false
-
-	// for forwarded packets, the funds were moved into an escrow account if the denom originated on this chain.
-	// On an ack error or timeout on a forwarded packet, the funds in the escrow account
-	// should be moved to the other escrow account on the other side or burned.
+	// for packets w/callbacks, the funds were moved into an escrow account if the denom originated on this chain.
+	// On an ack error or timeout on a packet w/callbacks, the funds in the escrow account
+	// should be moved to the other escrow account on the other side or burnt.
 	if !ack.Success() {
-		// If this packet is non-refundable due to some action that took place between the initial ibc transfer and the forward
-		// we write a successful ack containing details on what happened regardless of ack error or timeout
-		if nonrefundable {
-			// we are not allowed to refund back to the source chain.
-			// attempt to move funds to user recoverable account on this chain.
-			// TODO: re-ADD
-			// if err := k.moveFundsToUserRecoverableAccount(ctx, packet, data, inFlightPacket); err != nil {
-			// 	return err
-			// }
+		// Override the receiver address to the gateway contract address
+		params, err := k.Params.Get(ctx)
+		if err != nil {
+			k.Logger(ctx).Error("failed to get params", "error", err)
+			return err
+		}
+		gatewayAddr := common.HexToAddress(params.GatewayContractAddress)
+		escrowAddress := sdk.AccAddress(gatewayAddr.Bytes())
 
-			ackResult := fmt.Sprintf("packet forward failed after point of no return: %s", ack.GetError())
-			newAck := channeltypes.NewResultAcknowledgement([]byte(ackResult))
+		// If it's a callback packet, we override the escrow address to the isolated address (as that's where the funds were received)
+		_, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
 
-			return k.WriteIBCAcknowledgment(ctx, chanCap, channeltypes.Packet{
-				Data:               packet.Data,
-				Sequence:           packet.Sequence,
-				SourcePort:         packet.SourcePort,
-				SourceChannel:      packet.SourceChannel,
-				DestinationPort:    packet.DestinationPort,
-				DestinationChannel: packet.DestinationChannel,
-				TimeoutHeight:      packet.TimeoutHeight,
-				TimeoutTimestamp:   packet.TimeoutTimestamp,
-			}, newAck)
+		if isCbPacket {
+			if err != nil {
+				// if isCbPacket is true and the error != nil, we have a malformed packet
+				return fmt.Errorf("failed to get callback data: %w", err)
+			}
+			// Generate secure isolated address from sender and override the escrow address
+			isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
+			escrowAddress = isolatedAddr
 		}
 
-		//fullDenomPath := data.Denom
 		fullDenomPath := getDenomForThisChain(
 			packet.DestinationPort, packet.DestinationChannel,
 			packet.SourcePort, packet.SourceChannel,
 			data.Denom,
 		)
-
-		var err error
 
 		// deconstruct the token denomination into the denomination trace info
 		// to determine if the sender is the source chain
@@ -218,22 +211,11 @@ func (k Keeper) WriteAcknowledgementForPacket(
 		}
 
 		denomTrace := transfertypes.ParseDenomTrace(fullDenomPath)
-		fmt.Println("denomTrace", denomTrace, "fullDenomPath", fullDenomPath, "denomTrace.IBCDenom()", denomTrace.IBCDenom())
 		coin := sdk.NewCoin(denomTrace.IBCDenom(), amount)
 
-		// TODO: @facu during callbacks the escrow address is not the gateway contract address, it's the isolated address
-		// let's make sure we send the funds back to the correct address
-
-		// escrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
 		refundEscrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
 
-		// Override the receiver address to the gateway contract address
-		gatewayAddr := common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345") // TODO: make this configurable
-		escrowAddress := sdk.AccAddress(gatewayAddr.Bytes())
-
 		newToken := sdk.NewCoins(coin)
-
-		k.Logger(ctx).Info("Escrow address!!!!", "escrowAddress", escrowAddress.String(), "coins", newToken)
 
 		// Sender chain is source
 		if transfertypes.SenderChainIsSource(packet.SourcePort, packet.SourceChannel, fullDenomPath) {
@@ -242,8 +224,6 @@ func (k Keeper) WriteAcknowledgementForPacket(
 			// - burn
 			if transfertypes.SenderChainIsSource(packet.SourcePort, packet.SourceChannel, fullDenomPath) {
 				// transfer funds from escrow account for forwarded packet to escrow account going back for refund.
-				balances := k.BankKeeper.GetAllBalances(ctx, escrowAddress)
-				k.Logger(ctx).Info("Balances of escrow!", "balances", balances)
 				if err := k.BankKeeper.SendCoins(
 					ctx, escrowAddress, refundEscrowAddress, newToken,
 				); err != nil {
@@ -303,58 +283,6 @@ func (k Keeper) unescrowToken(ctx sdk.Context, token sdk.Coin) {
 	currentTotalEscrow := k.TransferKeeper.GetTotalEscrowForDenom(ctx, token.GetDenom())
 	newTotalEscrow := currentTotalEscrow.Sub(token)
 	k.TransferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
-}
-
-// moveFundsToUserRecoverableAccount will move the funds from the escrow account to the user recoverable account
-// this is only used when the maximum timeouts have been reached or there is an acknowledgement error and the packet is nonrefundable,
-// i.e. an operation has occurred to make the original packet funds inaccessible to the user, e.g. a swap.
-// We cannot refund the funds back to the original chain, so we move them to an account on this chain that the user can access.
-func (k Keeper) moveFundsToUserRecoverableAccount(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	data transfertypes.FungibleTokenPacketData,
-	inFlightPacket *types.InFlightPacket,
-) error {
-	fullDenomPath := data.Denom
-
-	amount, ok := sdkmath.NewIntFromString(data.Amount)
-	if !ok {
-		return fmt.Errorf("failed to parse amount from packet data for forward recovery: %s", data.Amount)
-	}
-	denomTrace := transfertypes.ParseDenomTrace(fullDenomPath)
-	token := sdk.NewCoin(denomTrace.IBCDenom(), amount)
-
-	userAccount, err := userRecoverableAccount(inFlightPacket)
-	if err != nil {
-		return fmt.Errorf("failed to get user recoverable account: %w", err)
-	}
-
-	if !transfertypes.SenderChainIsSource(packet.SourcePort, packet.SourceChannel, fullDenomPath) {
-		// mint vouchers back to sender
-		if err := k.BankKeeper.MintCoins(
-			ctx, transfertypes.ModuleName, sdk.NewCoins(token),
-		); err != nil {
-			return err
-		}
-
-		if err := k.BankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, userAccount, sdk.NewCoins(token)); err != nil {
-			panic(fmt.Sprintf("unable to send coins from module to account despite previously minting coins to module account: %v", err))
-		}
-		return nil
-	}
-
-	escrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
-
-	if err := k.BankKeeper.SendCoins(
-		ctx, escrowAddress, userAccount, sdk.NewCoins(token),
-	); err != nil {
-		return fmt.Errorf("failed to send coins from escrow account to user recoverable account: %w", err)
-	}
-
-	// update the total escrow amount for the denom.
-	k.unescrowToken(ctx, token)
-
-	return nil
 }
 
 // userRecoverableAccount finds an account on this chain that the original sender of the packet can recover funds from.
