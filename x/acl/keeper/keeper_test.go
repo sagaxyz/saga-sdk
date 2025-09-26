@@ -25,7 +25,7 @@ type TestSuite struct {
 
 	ctx          sdk.Context
 	aclKeeper    keeper.Keeper
-	paramsKeeper paramskeeper.Keeper
+	paramsKeeper paramskeeper.Keeper //nolint:staticcheck
 	queryClient  types.QueryClient
 	encCfg       moduletestutil.TestEncodingConfig
 
@@ -51,9 +51,10 @@ func (suite *TestSuite) SetupTest() {
 		},
 		nil)
 	ctx = ctx.WithBlockHeader(tmproto.Header{Time: tmtime.Now()})
-	suite.ctx = ctx 
+	suite.ctx = ctx
 	encCfg := moduletestutil.MakeTestEncodingConfig(acl.AppModuleBasic{})
 
+	//nolint:staticcheck
 	suite.paramsKeeper = paramskeeper.NewKeeper(
 		encCfg.Codec,
 		encCfg.Amino,
