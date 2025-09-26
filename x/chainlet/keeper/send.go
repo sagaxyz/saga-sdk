@@ -7,9 +7,9 @@ import (
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ccvtypes "github.com/cosmos/interchain-security/v5/x/ccv/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	ccvtypes "github.com/cosmos/interchain-security/v7/x/ccv/types"
 
 	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
@@ -25,11 +25,11 @@ func (k *Keeper) getConsumerConnectionID(ctx sdk.Context) (connectionID string, 
 		err = fmt.Errorf("consumer channel %s not found", ccvChannelID)
 		return
 	}
-	if len(ccvChannel.GetConnectionHops()) == 0 {
+	if len(ccvChannel.ConnectionHops) == 0 {
 		err = fmt.Errorf("no connections for channel %s", ccvChannelID)
 		return
 	}
-	connectionID = ccvChannel.GetConnectionHops()[0]
+	connectionID = ccvChannel.ConnectionHops[0]
 	return
 }
 
@@ -86,14 +86,11 @@ func (k Keeper) Send(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("connection %s not found", ccvConnectionID)
 	}
-	clientState, ex := k.clientKeeper.GetClientState(sdkCtx, connEnd.ClientId)
-	if !ex {
-		return fmt.Errorf("client state missing for client ID '%s'", connEnd.ClientId)
-	}
+	latestHeight := k.clientKeeper.GetClientLatestHeight(sdkCtx, connEnd.ClientId)
 	p := k.GetParams(sdkCtx)
 	timeoutHeight := clienttypes.Height{
-		RevisionNumber: clientState.GetLatestHeight().GetRevisionNumber(),
-		RevisionHeight: clientState.GetLatestHeight().GetRevisionHeight() + p.TimeoutHeight,
+		RevisionNumber: latestHeight.GetRevisionNumber(),
+		RevisionHeight: latestHeight.GetRevisionHeight() + p.TimeoutHeight,
 	}
 	timeoutTimestamp := uint64(sdkCtx.BlockTime().Add(p.TimeoutTime).UnixNano())
 
