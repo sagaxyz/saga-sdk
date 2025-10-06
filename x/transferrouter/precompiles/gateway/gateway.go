@@ -122,15 +122,9 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 		case ExecuteMethod:
 			p.transferKeeper.Logger(ctx).Info("ExecuteMethod!!!!")
 			bz, err = p.Execute(ctx, evm.Origin, contract, stateDB, method, args)
-		case EmitNoteMethod:
-			bz, err = p.EmitNote(ctx, evm.Origin, contract, stateDB, method, args)
-		case PauseMethod:
-			bz, err = p.Pause(ctx, evm.Origin, contract, stateDB, method, args)
-		case UnpauseMethod:
-			bz, err = p.Unpause(ctx, evm.Origin, contract, stateDB, method, args)
-		// Gateway queries
-		case OwnerMethod:
-			bz, err = p.Owner(ctx, contract, method, args)
+		case ExecuteSrcCallbackMethod:
+			p.transferKeeper.Logger(ctx).Info("ExecuteSrcCallbackMethod!!!!")
+			bz, err = p.ExecuteSrcCallback(ctx, evm.Origin, contract, stateDB, method, args)
 		default:
 			return nil, fmt.Errorf(cmn.ErrUnknownMethod, method.Name)
 		}
@@ -168,10 +162,7 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 func (Precompile) IsTransaction(method string) bool {
 	switch method {
 	case ExecuteMethod,
-		EmitNoteMethod,
-		PauseMethod,
-		UnpauseMethod,
-		OwnerMethod:
+		ExecuteSrcCallbackMethod:
 		return true
 	default:
 		return false

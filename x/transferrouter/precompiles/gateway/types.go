@@ -13,18 +13,9 @@ const (
 	// ExecuteMethod defines the ABI method name for the Gateway Execute
 	// transaction.
 	ExecuteMethod = "execute"
-	// EmitNoteMethod defines the ABI method name for the Gateway EmitNote
+	// ExecuteSrcCallbackMethod defines the ABI method name for the Gateway ExecuteSrcCallback
 	// transaction.
-	EmitNoteMethod = "emitNote"
-	// PauseMethod defines the ABI method name for the Gateway Pause
-	// transaction.
-	PauseMethod = "pause"
-	// UnpauseMethod defines the ABI method name for the Gateway Unpause
-	// transaction.
-	UnpauseMethod = "unpause"
-	// OwnerMethod defines the ABI method name for the Gateway Owner
-	// query.
-	OwnerMethod = "owner"
+	ExecuteSrcCallbackMethod = "executeSrcCallback"
 )
 
 // EventGatewayExecute is the event type emitted when an execute call is made.

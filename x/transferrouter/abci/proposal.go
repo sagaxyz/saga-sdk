@@ -8,7 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -17,6 +16,7 @@ import (
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	precompilesgateway "github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
 type ProposalHandler struct {
@@ -46,16 +46,11 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		}
 
 		logger := h.keeper.Logger(ctx)
-		logger.Info("PrepareProposalHandler start", "height", ctx.BlockHeight(), "txs_in_request", len(req.Txs), "maxTxBytes", req.MaxTxBytes)
 
-		// 1. Add the calls to the proposal
 		var maxBlockGas uint64
 		consParams := ctx.ConsensusParams()
 		if consParams.Block != nil {
 			maxBlockGas = uint64(consParams.Block.MaxGas)
-			logger.Info("Block max gas loaded", "maxBlockGas", maxBlockGas)
-		} else {
-			logger.Error("Consensus params Block is nil")
 		}
 
 		defer h.txSelector.Clear()
@@ -65,17 +60,14 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			logger.Error("Failed to get params", "error", err)
 			return nil, errors.New("failed to get params")
 		}
-		logger.Info("Params retrieved", "knownSignerPrivateKey_len", len(params.KnownSignerPrivateKey))
 
 		// Parse the configured private key (in hex format) and derive the corresponding
 		// Ethereum address of the known signer.
 		if params.KnownSignerPrivateKey == "" {
-			logger.Error("KnownSignerPrivateKey is empty")
 			return nil, errors.New("known signer private key is empty")
 		}
 		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
 		if err != nil {
-			logger.Error("failed to parse private key", "error", err)
 			return nil, errors.New("failed to parse private key")
 		}
 
@@ -83,18 +75,14 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(knownSignerBz))
 		if err != nil {
 			nextNonce = 0
-			logger.Error("failed to get sequence", "error", err)
 		}
 
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
 		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
-		err = h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, value channeltypes.Packet) (stop bool, err error) {
-			logger.Debug("Processing call queue item", "key", key, "value", value)
-
-			// Calldata is a simple call to the gateway execute function with the sequence
-			calldata, err := precompilesgateway.ABI.Pack("execute", big.NewInt(int64(key)))
+		err = h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+			// Calldata is a simple call to the gateway execute function
+			calldata, err := precompilesgateway.ABI.Pack("execute")
 			if err != nil {
-				logger.Error("Failed to pack calldata", "error", err, "key", key)
 				return true, err
 			}
 
@@ -166,7 +154,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("tx verifier is nil")
 		}
 
-		for i, txBz := range req.Txs {
+		for _, txBz := range req.Txs {
 			if txBz == nil {
 				continue
 			}
@@ -202,9 +190,8 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	}
 }
 
-// ProcessProposalHandler checks if the transaction added by the proposer is derived from a call in the queue.
-// This is to prevent the proposer from adding arbitrary transactions, which is a security risk, and could be considered
-// malicious behavior. TODO: add a slashing mechanism for this (might be difficult as this is outside the state machine).
+// ProcessProposalHandler has no checks, it just accepts the block. This is due to the fact that the injected message
+// can't be manipulated by the proposer, as the actual calldata is get during execution.
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
 		return &abci.ResponseProcessProposal{
@@ -215,14 +202,14 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 
 func calldataToMsgEthereumTx(nonce uint64, chainID *big.Int, contract *common.Address, callData []byte) *evmtypes.MsgEthereumTx {
 	txArgs := &evmtypes.EvmTxArgs{
-		Nonce:     nonce,    // Will be set by the signer
-		GasLimit:  16100000, // Standard gas limit for simple transfers // TODO: figure out how to set this
+		Nonce:     nonce,
+		GasLimit:  16100000, // TODO: figure out how to set this
 		Input:     callData,
-		GasFeeCap: big.NewInt(0), // Will be set by the signer
-		GasPrice:  big.NewInt(0), // Will be set by the signer
-		ChainID:   chainID,       // Default chain ID, should be configurable
+		GasFeeCap: big.NewInt(0),
+		GasPrice:  big.NewInt(0),
+		ChainID:   chainID,
 		Amount:    big.NewInt(0), // No value transfer for contract calls
-		GasTipCap: big.NewInt(0), // Will be set by the signer
+		GasTipCap: big.NewInt(0),
 		To:        contract,
 		Accesses:  nil, // No access list for now
 	}

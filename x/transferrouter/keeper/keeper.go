@@ -32,9 +32,10 @@ import (
 )
 
 var (
-	ParamsPrefix       = collections.NewPrefix(0) // Stores params
-	PacketQueuePrefix  = collections.NewPrefix(2) // Stores the packets
-	PacketResultPrefix = collections.NewPrefix(3) // Stores the packet results
+	ParamsPrefix           = collections.NewPrefix(0) // Stores params
+	PacketQueuePrefix      = collections.NewPrefix(2) // Stores the packets
+	PacketResultPrefix     = collections.NewPrefix(3) // Stores the packet results
+	SrcCallbackQueuePrefix = collections.NewPrefix(4) // Stores the src callback queue
 )
 
 type ChannelKeeper interface {
@@ -78,9 +79,10 @@ type Keeper struct {
 	storeService corestore.KVStoreService
 	authority    string
 
-	Schema      collections.Schema
-	Params      collections.Item[types.Params]
-	PacketQueue collections.Map[uint64, channeltypes.Packet]
+	Schema           collections.Schema
+	Params           collections.Item[types.Params]
+	PacketQueue      collections.Map[uint64, types.PacketQueueItem]
+	SrcCallbackQueue collections.Map[uint64, types.PacketQueueItem]
 
 	Erc20Keeper    ERC20Keeper
 	ChannelKeeper  ChannelKeeper
@@ -127,7 +129,14 @@ func NewKeeper(cdc codec.BinaryCodec,
 			PacketQueuePrefix,
 			"packet_queue",
 			collections.Uint64Key,
-			codec.CollValue[channeltypes.Packet](cdc),
+			codec.CollValue[types.PacketQueueItem](cdc),
+		),
+		SrcCallbackQueue: collections.NewMap(
+			sb,
+			SrcCallbackQueuePrefix,
+			"src_callback_queue",
+			collections.Uint64Key,
+			codec.CollValue[types.PacketQueueItem](cdc),
 		),
 	}
 

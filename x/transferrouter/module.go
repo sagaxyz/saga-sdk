@@ -12,7 +12,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -122,19 +121,6 @@ func (am AppModule) BeginBlock(_ sdk.Context) {}
 
 // EndBlock returns no validator updates.
 func (am AppModule) EndBlock(ctx context.Context) ([]abci.ValidatorUpdate, error) {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	am.keeper.Logger(sdkCtx).Info("EndBlock called!!!! ================================")
-	count := 0
-	am.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, value channeltypes.Packet) (stop bool, err error) {
-		count++
-		return false, nil
-
-	})
-	if count > 2 {
-		am.keeper.Logger(sdkCtx).Info("Clearing packet queue", "count", count)
-		am.keeper.PacketQueue.Clear(ctx, nil)
-		return nil, nil
-	}
 	return nil, nil
 }
 
