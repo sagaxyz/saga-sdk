@@ -9,35 +9,56 @@ The transferrouter module is responsible for routing native internal transfers, 
 This module has 4 main components:
 
 1. IBC middleware: in charge of intercepting incoming IBC packets and storing them in the call queue.
-2. ABCI++ Prepare and ProcessProposal: in charge of adding the signed calls to the block, and checking the contents of the block against the call queue to avoid a malicious block proposer to add bad calls to the block.
-3. PostTxProcessing: in charge of writing the IBC acknowledgement if needed, and also removing the call from the queue.
-4. Gateway contract: a contract in the EVM that will send the tokens to the receiver.
+2. ABCI++ PrepareProposal: in charge of adding the signed calls to the gateway precompile contract in the block.
+3. Gateway contract: a precompile contract that will send the tokens to the receiver and emit Ethereum logs.
+4. Transferrouter keeper: stores the calls to the gateway precompile contract for the incoming IBC transfers and also the source callback queue (acknowledgments and timeouts).
 
 ### ABCI++
 
-We only use the PrepareProposal and ProcessProposal methods of the ABCI++ interface.
+We only use the PrepareProposal method of the ABCI++ interface.
 
-PrepareProposal is called only once per block to the block proposer. During this call, the proposer must add the calls in the queue to the block as MsgEthereumTx. To do this, it uses the known signer's private key to sign the transactions. It will then fill up the block with other transactions that are in the mempool, except for any transaction that uses the known signer's key (which should also be rejected by check tx -- TODO: add this check).
+PrepareProposal is called only once per block to the block proposer. During this call, the proposer must add the calls in the queue to the block as MsgEthereumTx. To do this, it uses the known signer's private key to sign the transactions. It will then fill up the block with other transactions that are in the mempool.
 
-ProcessProposal is called for each block to each validator. During this call, the validator will check the contents of the block against the call queue. If the calls do not precisely match the contents of the call queue, the block is rejected. This is in order to avoid a malicious block proposer to add bad calls to the block. Also, any other transaction that use the known signer will be rejected.
+These new transactions just call the execute method of the gateway precompile contract, which doesn't take any arguments, as the precompile contract can read the call queue from the state.
+
+ProcessProposal is not implemented, as we don't need to do any validation of the block.
 
 ### IBC middleware
 
-In the IBC middleware, only the RecvPacket method is overridden, which is called when a new IBC packet is received. It will store the packet in the call queue as a new transfer along with the original packet. The default behavior is overridden and the tokens being transferred end up in an escrow account (known signer's address). Any packet that is not a transfer to the local chain will fall back to the default behavior, such as Packet Forward Middleware packets, or packets that are not transfers.
+In the IBC middleware the RecvPacket method is called when a new IBC packet is received. It will store the packet in the call queue as a new transfer along with the original packet. The default behavior is overridden and the tokens being transferred end up in an escrow account (the gateway contract address). Any packet that is not a transfer to the local chain will fall back to the default behavior, such as Packet Forward Middleware packets, or packets that are not transfers.
 
-### PostTxProcessing
+Also the OnTimeoutPacket and OnAcknowledgementPacket methods are overridden to store the source callback queue (acknowledgments and timeouts), if necessary.
 
-The PostTxProcessing is called after the MsgEthereumTx is executed, it will check against the list of transactions in the call queue and if the transaction is found, it will write the IBC acknowledgement if needed, and remove the call from the queue.
+### Gateway precompile contract
+
+The gateway precompile contract has 2 methods:
+- execute: executes the next call in the queue, which is an incoming IBC transfer.
+- executeSrcCallback: executes the next source callback in the queue, which is an acknowledgment or a timeout.
+
+These methods do not accept any arguments and get the necessary information directly from the state, this is in order to avoid a malicious block proposer to add bad calls to the block.
+
+Future work: the methods can be used to make multiple calls per block, this is currently not implemented but could be added in the future by adding a param.
+
+During these executions, any logs produced by the call will be emitted to the EVM, along with an `Executed` event that contains information about the call, including the original tx hash and the success/failure of the call.
+
+```solidity
+    event Executed(
+        uint256 sequence,
+        bool success,
+        bytes txhash,
+        bool isCallback,
+        bool isSourceCallback,
+        bytes ret
+    );
+```
 
 ## Flows
 
 ### Incoming IBC transfer
 
-1. A new IBC transfer is received, and in OnRecvPacket, the transfer is stored in the call queue as a new transfer along with the original packet. The default behavior is overridden and the tokens being transferred end up in a temporary escrow account.
-2. On the next block (H+1), during PrepareProposal, the block proposer will add at the top of the block as many MsgEthereumTx as there are calls in the queue (TBD: if we have a limit to avoid blocking other normal txs). The signer of the message will be a publicly known private key.
-3. During ProcessProposal, validators will check the contents of the block against the call queue. If the calls do not precisely match the contents of the call queue, the block is rejected. This is in order to avoid a malicious block proposer to add bad calls to the block. Also, any other transaction that uses the escrow account will be rejected.
-4. During FinalizeBlock, the created Txs will call the Gateway contract in order to send the tokens to the end receiver.
-5. Each MsgEthereumTx will call a PostTxProcessing (EVM hook) that will write the IBC acknowledgement and remove the call from the queue.
+1. A new IBC transfer is received, and in OnRecvPacket, the transfer is stored in the call queue as a new transfer along with the original packet. The default behavior is overridden and the tokens being transferred end up in an escrow account (the gateway contract address).
+2. On the next block (H+1), during PrepareProposal, the block proposer will add at the top of the block as many MsgEthereumTx as there are calls in the queue . The signer of the message will be a publicly known private key. Note: external actors can also add these calls to the block, as they can call the execute method of the gateway precompile contract.
+3. During FinalizeBlock, the created Txs will call the Gateway contract in order to send the tokens to the end receiver. The gateway contract will also emit any necessary logs and produce an IBC acknowledgment.
 
 ### Outgoing IBC transfer
 
@@ -49,17 +70,26 @@ TBD: the behavior of the native ICS 20 transfer, as we didn't add an event.
 
 When a timeout or an error acknowledgement is received, we proceed to refund the tokens to the sender.
 
+## Callbacks
+
+They are implemented as defined in the [ADR-008](https://github.com/cosmos/ibc-go/blob/main/docs/architecture/adr-008-app-caller-cbs.md).
+
+### Destination callbacks
+
+The destination callbacks are handled by the gateway precompile contract. If there is a callback defined, the tokens are redirected to a generated isolated address that is derived from the sender and the destination channel.
+
+If a callback is defined but the receiver is different from the isolated address, the tokens are refunded to the sender.
+
+The gateway contract decides whether to execute a callback or perform a normal ERC20 transfer.
+
+### Source callbacks
+
+For source callbacks, when we receive a call to OnTimeoutPacket or OnAcknowledgementPacket, we store the call in the call queue as a new source callback along with the original packet. Then this is executed in the next block as a MsgEthereumTx by the gateway precompile contract.
+
+
 ## Security considerations and mitigations
 
-### Malicious block proposer
-
-A malicious block proposer can try to steal funds from the escrow account by adding a bad call to the block. This is mitigated by the ProcessProposal call, which will check the contents of the block against the call queue. If the calls do not precisely match the contents of the call queue, the block is rejected. Additionally, a social slashing mechanism could be implemented to punish the block proposer for doing this, by informing in the logs about any mismatch.
-
-### Attempts to use the escrow account/known signer's key
-
-Any transaction that uses the escrow account or the known signer's key will be rejected. This is mitigated by the ProcessProposal call, which will check the contents of the block against the call queue. If the calls do not match the contents of the call queue, the block is rejected.
-
-Also an antehandler can be implemented to reject any transaction that uses the escrow account or the known signer's key, this is to avoid getting useless transactions into the mempool.
+No additional security considerations are needed, as the calls can't be externally modified, the calls are defined in the gateway precompile contract and the ICS20 precompile.
 
 ## Working with other modules/IBC middlewares
 

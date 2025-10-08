@@ -10,10 +10,6 @@ interface IGateway {
     // @notice Execute the next source callback in the queue, if any.
     function executeSrcCallback() external;
 
-    /// @notice Get the current owner address
-    /// @return The address of the current owner
-    function owner() external view returns (address);
-
     /// @notice Event emitted when a call is executed
     event Executed(
         uint256 sequence,

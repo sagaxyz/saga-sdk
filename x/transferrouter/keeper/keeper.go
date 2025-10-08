@@ -57,7 +57,6 @@ type BankKeeper interface {
 	BurnCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 	MintCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 	SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
-	GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins // TODO: remove this, just for debugging
 }
 
 type ERC20Keeper interface {
@@ -72,6 +71,7 @@ type AccountKeeper interface {
 	GetSequence(ctx context.Context, addr sdk.AccAddress) (uint64, error)
 	NewAccountWithAddress(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	SetAccount(ctx context.Context, account sdk.AccountI)
+	GetModuleAccountAndPermissions(ctx context.Context, moduleName string) (sdk.ModuleAccountI, []string)
 }
 
 type Keeper struct {
@@ -160,7 +160,6 @@ func (k Keeper) WriteIBCAcknowledgment(ctx sdk.Context, chanCap *capabilitytypes
 }
 
 // WriteAcknowledgementForPacket writes an acknowledgement for a packet (copied from PFM)
-// TODO: modify the escrow account to be the known signer address
 func (k Keeper) WriteAcknowledgementForPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,

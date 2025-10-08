@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"math/big"
 
@@ -76,6 +77,33 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		if err != nil {
 			nextNonce = 0
 		}
+		gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
+
+		// Add the source callback queue
+		err = h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+			// Calldata is a simple call to the gateway executeSrcCallback function
+			calldata, err := precompilesgateway.ABI.Pack("executeSrcCallback")
+			if err != nil {
+				return true, err
+			}
+
+			cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+			if err != nil {
+				return true, err
+			}
+
+			if h.txSelector == nil {
+				return true, errors.New("tx selector is nil")
+			}
+
+			stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
+			if stop {
+				return true, nil
+			}
+
+			nextNonce = nextNonce + 1
+			return false, nil
+		})
 
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
 		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
@@ -86,46 +114,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 				return true, err
 			}
 
-			gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
-			msgEthTx := calldataToMsgEthereumTx(nextNonce, chainId, &gatewayAddress, calldata)
-
-			if msgEthTx == nil {
-				return true, errors.New("failed to convert to ethereum tx")
-			}
-
-			if h.signer == nil {
-				return true, errors.New("signer is nil")
-			}
-
-			ethtx := msgEthTx.AsTransaction()
-			ethtx.ChainId().Set(chainId)
-
-			if ethtx == nil {
-				return true, errors.New("as transaction returned nil")
-			}
-
-			signedTx, err := ethcoretypes.SignTx(ethtx, h.signer, privKey)
-			if err != nil {
-				return true, err
-			}
-
-			msgEthTx = &evmtypes.MsgEthereumTx{}
-			err = msgEthTx.FromEthereumTx(signedTx)
-			if err != nil {
-				return true, err
-			}
-
-			if err := msgEthTx.ValidateBasic(); err != nil {
-				return true, err
-			}
-
-			cosmosTx, err := msgEthTx.BuildTx(h.txConfig.NewTxBuilder(), "saga") // TODO: get denom from params
-			if err != nil {
-				return true, err
-			}
-
-			// Encode transaction by default Tx encoder
-			txBytes, err := h.txConfig.TxEncoder()(cosmosTx)
+			cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
 			if err != nil {
 				return true, err
 			}
@@ -200,11 +189,11 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	}
 }
 
-func calldataToMsgEthereumTx(nonce uint64, chainID *big.Int, contract *common.Address, callData []byte) *evmtypes.MsgEthereumTx {
+func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
 	txArgs := &evmtypes.EvmTxArgs{
 		Nonce:     nonce,
 		GasLimit:  16100000, // TODO: figure out how to set this
-		Input:     callData,
+		Input:     calldata,
 		GasFeeCap: big.NewInt(0),
 		GasPrice:  big.NewInt(0),
 		ChainID:   chainID,
@@ -215,5 +204,43 @@ func calldataToMsgEthereumTx(nonce uint64, chainID *big.Int, contract *common.Ad
 	}
 
 	tx := evmtypes.NewTx(txArgs)
-	return tx
+
+	if h.signer == nil {
+		return nil, nil, errors.New("signer is nil")
+	}
+
+	ethtx := tx.AsTransaction()
+	ethtx.ChainId().Set(chainID)
+
+	if ethtx == nil {
+		return nil, nil, errors.New("as transaction returned nil")
+	}
+
+	signedTx, err := ethcoretypes.SignTx(ethtx, h.signer, privKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tx = &evmtypes.MsgEthereumTx{}
+	err = tx.FromEthereumTx(signedTx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := tx.ValidateBasic(); err != nil {
+		return nil, nil, err
+	}
+
+	cosmosTx, err := tx.BuildTx(h.txConfig.NewTxBuilder(), "saga") // TODO: get denom from params
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Encode transaction by default Tx encoder
+	txBytes, err := h.txConfig.TxEncoder()(cosmosTx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cosmosTx, txBytes, nil
 }

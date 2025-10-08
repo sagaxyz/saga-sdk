@@ -9,12 +9,10 @@ import "ibc/core/channel/v1/channel.proto";
 message Params {
   // enabled specifies if the module functionality is turned on.
   bool enabled = 1;
-  // known_signer is the address of the known signer.
+
   string known_signer_private_key = 2;
 
-  string known_signer_address = 3; // the address of the known signer, just to avoid re-calculating it
-
-  string gateway_contract_address = 4;
+  string gateway_contract_address = 3;
 } 
 
 

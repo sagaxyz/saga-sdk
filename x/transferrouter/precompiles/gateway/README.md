@@ -1,69 +1,99 @@
 # Gateway Precompile
 
-This directory contains the Gateway precompile contract for the TransferRouter module.
+This directory contains the Gateway precompile for the `transferrouter` module. It exposes a minimal EVM interface used by contracts and off-chain callers to process queued IBC packets and their callbacks on Saga EVM.
 
-## Overview
+## Address
 
-The Gateway precompile provides Ethereum-compatible smart contract functionality for executing calls to other contracts and emitting metadata notes within the Saga network.
+- **Precompile address**: `0x5A6A8Ce46E34c2cd998129d013fA0253d3892345`
 
-## Purpose
+## What it does
 
-- Enables smart contract interactions with the TransferRouter module
-- Provides a standardized interface for contract execution and metadata emission
-- Allows developers to integrate gateway functionality into their dApps
+- **execute()**: Processes the next queued IBC transfer packet. Depending on the packet:
+  - Performs an ERC20 transfer to the intended recipient; or
+  - Executes a destination-side callback against a target contract after setting a temporary allowance from an isolated address.
+- **executeSrcCallback()**: Processes the next queued source-side callback (acknowledgement or timeout) by calling the originating contract’s callback function.
+- Emits an `Executed` event for every attempt (success or failure) and forwards any EVM logs produced by the underlying calls.
 
-## Structure
+## Solidity interface
 
-The Gateway precompile follows the standard precompile pattern used in the Saga SDK:
+The ABI is provided in `abi.json`. The Solidity interface lives in `GatewayI.sol` and can be used directly from contracts:
 
-- `gateway.go` - Main precompile implementation with the `Precompile` struct and core methods
-- `types.go` - Type definitions, constants, and helper functions
-- `tx.go` - Transaction handling methods (execute, emitNote, pause, unpause)
-- `query.go` - Query methods (owner)
-- `events.go` - Event emission functions
-- `errors.go` - Error constants
-- `abi.json` - Ethereum ABI definition for the precompile contract
-- `GatewayI.sol` - Solidity interface for the Gateway contract
+```solidity
+pragma solidity ^0.8.20;
 
-## Methods
+interface IGateway {
+    function execute() external;
+    function executeSrcCallback() external;
+    event Executed(
+        uint256 sequence,
+        bool success,
+        bytes txhash,
+        bool isCallback,
+        bool isSourceCallback,
+        bytes ret
+    );
+}
+```
 
-### Transactions
-- `execute(address target, uint256 value, bytes data, bytes note)` - Execute a call to another contract
-- `emitNote(bytes32 ref, bytes data)` - Emit a metadata note
-- `pause()` - Pause the contract
-- `unpause()` - Unpause the contract
-- `approve(address grantee, address target, uint256 value, bytes data, bytes note)` - Approve execute authorization
-- `revoke(address grantee, address target)` - Revoke execute authorization
-- `increaseAllowance(address grantee, address target, uint256 value, bytes data, bytes note)` - Increase execute allowance
-- `decreaseAllowance(address grantee, address target, uint256 value, bytes data, bytes note)` - Decrease execute allowance
+## Event semantics
 
-### Queries
-- `owner()` - Get the current owner address
+`Executed(uint256 sequence, bool success, bytes txhash, bool isCallback, bool isSourceCallback, bytes ret)`
 
-### Events
-- `Executed(address target, uint256 value, bytes data, bool success, bytes result, bytes note)` - Emitted when a call is executed
-- `Note(bytes32 ref, bytes data)` - Emitted when a note is emitted
-- `OwnershipTransferred(address previousOwner, address newOwner)` - Emitted when ownership is transferred
-- `Paused(address account)` - Emitted when the contract is paused
-- `Unpaused(address account)` - Emitted when the contract is unpaused
+- **sequence**: IBC packet sequence processed by this call.
+- **success**: Whether the inner EVM call(s) completed successfully.
+- **txhash**: Original transaction hash that enqueued the packet (as raw bytes).
+- **isCallback**: Whether this processed a destination-side callback.
+- **isSourceCallback**: Whether this processed a source-side callback (ack/timeout).
+- **ret**: Raw return bytes from the last inner EVM call (if any).
 
-## Usage
+## Using from Solidity
 
-The Gateway precompile can be called from Ethereum smart contracts deployed on the Saga network to interact with the underlying TransferRouter module.
+```solidity
+pragma solidity ^0.8.20;
+
+interface IGateway {
+    function execute() external;
+    function executeSrcCallback() external;
+}
+
+contract UseGateway {
+    address constant GATEWAY = 0x5A6A8Ce46E34c2cd998129d013fA0253d3892345;
+
+    function processNextPacket() external {
+        IGateway(GATEWAY).execute();
+    }
+
+    function processNextSourceCallback() external {
+        IGateway(GATEWAY).executeSrcCallback();
+    }
+}
+```
+
+Notes:
+- Both functions are transactions (state-changing). They will process at most one queued item per call.
+- On success, logs from the inner execution are forwarded to the caller’s receipt and an `Executed` event is emitted by the precompile.
+
+## File layout
+
+- `gateway.go` – Precompile wiring, dispatch, gas handling, and address.
+- `tx.go` – Core logic for packet execution and callbacks.
+- `events.go` – Emission of the `Executed` event and log forwarding.
+- `calldata.go` – Helpers to build EVM calldata from IBC transfer packets.
+- `types.go` – Method names, helper structs, and constants.
+- `errors.go` – Error values and messages.
+- `abi.json` – ABI for the precompile.
+- `GatewayI.sol` – Solidity interface.
+
+## Behavior details
+
+- For destination callbacks, the precompile creates a short-lived allowance from an isolated address, invokes the target contract with the provided calldata, and ensures no funds remain in the isolated address after execution.
+- For plain ERC20 transfers, the precompile calls the token contract’s `transfer(address,uint256)` on behalf of the gateway.
+- In all cases, an `Executed` event is emitted even when the inner execution fails, so explorers and off-chain indexers can observe outcomes.
 
 ## Related
 
-- [TransferRouter Module](../../../README.md)
-- [ICS20 Precompile](../ics20/README.md)
+- `x/transferrouter` module overview: `../../README.md`
 
-## Development Status
+## Status
 
-This is a boilerplate implementation. The following components need to be implemented:
-
-- Actual call execution logic in `executeCall()`
-- Owner checking logic in `getOwner()`
-- Pause/unpause functionality
-- Authorization methods (approve, revoke, etc.)
-- Integration with TransferRouter keeper methods
-- Proper error handling and validation
-- Comprehensive testing 
+The precompile currently exposes only `execute()` and `executeSrcCallback()`. Functionality such as pause/unpause, ownership, notes, or per-target approvals is not part of this precompile.

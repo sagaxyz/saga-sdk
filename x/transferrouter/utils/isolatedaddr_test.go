@@ -19,9 +19,9 @@ func TestGenerateIsolatedAddress(t *testing.T) {
 	}{
 		{
 			channelID:   "channel-0",
-			sender:      "cosmos1k2qsqdthcn84ph8cx2nuq5nacz4f8e9hu4n5ku",
-			expected:    "saga1zg3e0kwv2tc2sae3eu4ly45n5e2klk5tku9up2",
-			expectedHex: "0x122397d9cC52f0A87731Cf2bF25693A6556fDa8B",
+			sender:      "cosmos1srkyl542x05en2vwwazhce6pachseq4e209ycs",
+			expected:    "saga1y0xwpzngnwz0yms5jdyz4lgj3sssrzcxj89hr2",
+			expectedHex: "0x23ccE08a689b84f26e1493482aFD128c21018B06",
 		},
 	}
 

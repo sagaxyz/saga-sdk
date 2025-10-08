@@ -4,6 +4,8 @@
 package gateway
 
 import (
+	"math/big"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -44,7 +46,8 @@ func (p Precompile) emitGatewayExecuteEvent(
 	// Prepare the event data: sequence, success, txhash, isCallback, isSourceCallback, ret
 	// All parameters are non-indexed, so they go in the data field
 	arguments := abi.Arguments{event.Inputs[0], event.Inputs[1], event.Inputs[2], event.Inputs[3], event.Inputs[4], event.Inputs[5]}
-	packed, err := arguments.Pack(sequence, success, txhash, isCallback, isSourceCallback, ret)
+	seqBig := new(big.Int).SetUint64(sequence)
+	packed, err := arguments.Pack(seqBig, success, txhash, isCallback, isSourceCallback, ret)
 	if err != nil {
 		return err
 	}

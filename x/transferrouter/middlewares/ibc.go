@@ -37,7 +37,7 @@ func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
 func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
 	err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
 	if err != nil {
-		i.k.Logger(ctx).Error("failed to add src callback to queue", "error", err)
+		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 	}
 
 	return i.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
@@ -47,41 +47,8 @@ func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channelty
 func (i IBCMiddleware) OnTimeoutPacket(ctx sdk.Context, packet channeltypes.Packet, relayer sdk.AccAddress) error {
 	err := i.addSrcCallbackToQueue(ctx, packet, nil, true)
 	if err != nil {
-		i.k.Logger(ctx).Error("failed to add src callback to queue", "error", err)
+		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 	}
-	// if the packet is a callback packet, we need to handle it
-
-	// cbData, isCbPacket, err := callbacktypes.GetCallbackData(packet.GetData(), callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.SourceCallbackKey)
-	// if isCbPacket {
-	// 	if err != nil {
-	// 		i.k.Logger(ctx).Error("failed to get callback data", "error", err)
-	// 		return nil
-	// 	}
-	// if it's a callback packet, we need to handle it
-	// callbackAddressHex := common.HexToAddress(cbData.CallbackAddress)
-	// callbackAccount := i.k.EVMKeeper.GetAccountOrEmpty(ctx, callbackAddressHex)
-	// if !callbackAccount.IsContract() {
-	// 	i.k.Logger(ctx).Error("provided callback address is not a contract", "address", callbackAddressHex)
-	// 	return nil
-	// }
-
-	// // pack the call data
-	// callData, err := callback.ABI.Pack("onPacketTimeout", packet.SourceChannel, packet.SourcePort, packet.Sequence, packet.Data)
-	// if err != nil {
-	// 	i.k.Logger(ctx).Error("failed to pack call data", "error", err)
-	// 	return nil
-	// }
-
-	// 	// add the callback data to the callback queue
-	// 	err = i.k.SrcCallbackQueue.Set(ctx, packet.Sequence, types.CallbackQueueItem{
-	// 		Contract: callbackAddressHex.Bytes(),
-	// 		Data:     callData,
-	// 	})
-	// 	if err != nil {
-	// 		i.k.Logger(ctx).Error("failed to set callback queue", "error", err)
-	// 		return nil
-	// 	}
-	// }
 	return i.app.OnTimeoutPacket(ctx, packet, relayer)
 }
 
@@ -99,7 +66,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	d := make(map[string]interface{})
 	err := json.Unmarshal([]byte(data.Memo), &d)
 	if err == nil && d["forward"] != nil {
-		logger.Info("Packet handled by PFM")
+		logger.Debug("Packet handled by PFM")
 		// a packet meant to be forwarded, let the PFM module handle it
 		return i.app.OnRecvPacket(ctx, packet, relayer)
 	}
@@ -117,7 +84,6 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
 	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
-	logger.Info("OnRecvPacket called with cbData", "cbData", cbData, "isCbPacket", isCbPacket, "err", err)
 
 	if isCbPacket {
 		if err != nil {
@@ -228,34 +194,12 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 		return nil
 	}
 
-	ack := channeltypes.Acknowledgement{}
-	err := transfertypes.ModuleCdc.UnmarshalJSON(acknowledgement, &ack)
-	if err != nil {
-		return err
-	}
-
 	// get callback data
 	_, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.SourceCallbackKey)
 	if isCbPacket {
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
 		}
-
-		// callbackAddressHex := common.HexToAddress(callbackData.CallbackAddress)
-
-		// source callback does not contain calldata, it only calls:
-		// function onPacketAcknowledgement(
-		// 	string memory channelId,
-		// 	string memory portId,
-		// 	uint64 sequence,
-		// 	bytes memory data,
-		// 	bytes memory acknowledgement
-		// ) external;
-
-		// callData, err := callback.ABI.Pack("onPacketAcknowledgement", packet.SourceChannel, packet.SourcePort, packet.Sequence, packet.Data, acknowledgement)
-		// if err != nil {
-		// 	i.k.Logger(ctx).Error("failed to pack call data", "error", err)
-		// }
 
 		// add the callback data to the callback queue
 		err = i.k.SrcCallbackQueue.Set(ctx, packet.Sequence, types.PacketQueueItem{

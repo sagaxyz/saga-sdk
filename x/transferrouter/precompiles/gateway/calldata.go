@@ -38,9 +38,7 @@ func CreateERC20TransferExecuteCallDataFromPacket(
 	sourcePrefix := transfertypes.GetDenomPrefix(packet.GetSourcePort(), packet.GetSourceChannel())
 	// NOTE: sourcePrefix contains the trailing "/"
 	prefixedDenom := sourcePrefix + data.Denom
-	k.Logger(ctx).Info("prefixedDenom", "prefixedDenom", prefixedDenom)
 	denomTrace := transfertypes.ParseDenomTrace(prefixedDenom)
-	k.Logger(ctx).Info("denomTrace", "denomTrace", denomTrace)
 
 	// Create memo with transaction hash
 	txHash := tmhash.Sum(ctx.TxBytes())
@@ -92,15 +90,6 @@ func createERC20TransferCallData(
 		k.Logger(ctx).Error("failed to parse amount", "amount", amount)
 		return nil, fmt.Errorf("failed to parse amount: %s", amount)
 	}
-
-	// Get the coin address for the denomination
-	coinAddr, err := k.Erc20Keeper.GetCoinAddress(ctx, denom)
-	if err != nil {
-		k.Logger(ctx).Error("failed to get coin address", "error", err)
-		return nil, fmt.Errorf("failed to get coin address: %w", err)
-	}
-
-	k.Logger(ctx).Info("coinAddr", "address", coinAddr.Hex(), "denom", denom)
 
 	// transfer(address recipient, uint256 amount) → bool
 	erc20 := contracts.ERC20MinterBurnerDecimalsContract.ABI
