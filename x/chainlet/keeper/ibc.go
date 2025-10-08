@@ -68,8 +68,7 @@ func (k Keeper) OnRecvCreateUpgradePacket(ctx sdk.Context, packet channeltypes.P
 	if err == nil || !errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) {
 		return packetAck, errors.New("existing upgrade plan found")
 	}
-	//err = k.upgradeKeeper.ScheduleUpgrade(ctx, upgradetypes.Plan{
-	err = k.ScheduleUpgrade(ctx, upgradetypes.Plan{
+	err = k.upgradeKeeper.ScheduleUpgrade(ctx, upgradetypes.Plan{
 		Name:   data.Name,
 		Height: int64(data.Height),
 		Info:   data.Info,

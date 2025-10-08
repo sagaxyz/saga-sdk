@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	errorsmod "cosmossdk.io/errors"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	ccvtypes "github.com/cosmos/interchain-security/v7/x/ccv/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
@@ -46,8 +44,7 @@ func (k Keeper) Send(ctx context.Context) error {
 		}
 		return err
 	}
-	if sdkCtx.BlockHeight() != plan.Height-1 {
-		k.Logger(sdkCtx).Debug(fmt.Sprintf("skipping until the upgrade height is reached: %d >= %d", plan.Height-1, sdkCtx.BlockHeight()))
+	if sdkCtx.BlockHeight() != plan.Height-2 {
 		return nil
 	}
 
@@ -101,78 +98,5 @@ func (k Keeper) Send(ctx context.Context) error {
 		return err
 	}
 	k.Logger(sdkCtx).Info("sent IBC message about reaching the upgrade height for the current plan")
-	return nil
-}
-
-// ScheduleUpgrade schedules an upgrade based on the specified plan.
-// If there is another Plan already scheduled, it will cancel and overwrite it.
-// ScheduleUpgrade will also write the upgraded IBC ClientState to the upgraded client
-// path if it is specified in the plan.
-func (k Keeper) ScheduleUpgrade(ctx context.Context, plan upgradetypes.Plan) error {
-	if err := plan.ValidateBasic(); err != nil {
-		return err
-	}
-
-	// NOTE: allow for the possibility of chains to schedule upgrades in begin block of the same block
-	// as a strategy for emergency hard fork recoveries
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	if plan.Height < sdkCtx.HeaderInfo().Height {
-		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "upgrade cannot be scheduled in the past")
-	}
-
-	doneHeight, err := k.upgradeKeeper.GetDoneHeight(ctx, plan.Name)
-	if err != nil {
-		return err
-	}
-
-	if doneHeight != 0 {
-		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "upgrade with name %s has already been completed", plan.Name)
-	}
-
-	//store := k.storeService.OpenKVStore(ctx)
-	store := sdkCtx.KVStore(k.upgradeStoreKey)
-
-	// clear any old IBC state stored by previous plan
-	oldPlan, err := k.upgradeKeeper.GetUpgradePlan(ctx)
-	// if there's an error but it's not ErrNoUpgradePlanFound, return error
-	if err != nil && !errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) {
-		return err
-	}
-
-	if err == nil {
-		err = k.ClearIBCState(ctx, oldPlan.Height)
-		if err != nil {
-			return err
-		}
-	}
-
-	bz, err := k.cdc.Marshal(&plan)
-	if err != nil {
-		return err
-	}
-
-	store.Set(upgradetypes.PlanKey(), bz)
-	/*err = store.Set(upgradetypes.PlanKey(), bz)
-	if err != nil {
-		return err
-	}*/
-
-	return nil
-}
-
-// ClearIBCState clears any planned IBC state
-func (k Keeper) ClearIBCState(ctx context.Context, lastHeight int64) error {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	// delete IBC client and consensus state from store if this is IBC plan
-	//store := k.storeService.OpenKVStore(ctx)
-	store := sdkCtx.KVStore(k.upgradeStoreKey)
-	store.Delete(upgradetypes.UpgradedClientKey(lastHeight))
-	/*err := store.Delete(upgradetypes.UpgradedClientKey(lastHeight))
-	if err != nil {
-		return err
-	}
-
-	return store.Delete(upgradetypes.UpgradedConsStateKey(lastHeight))*/
-	store.Delete(upgradetypes.UpgradedConsStateKey(lastHeight))
 	return nil
 }
