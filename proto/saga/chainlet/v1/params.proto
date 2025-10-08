@@ -1,0 +1,20 @@
+syntax = "proto3";
+package saga.chainlet.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/chainlet/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (amino.name) = "saga/x/chainlet/v1/Params";
+  option (gogoproto.equal) = true;
+
+  uint64 timeout_height = 1;
+  google.protobuf.Duration timeout_time = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdduration) = true
+  ];
+}

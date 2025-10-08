@@ -8,15 +8,15 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
-	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+	callbacktypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
-	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 )
 
 var _ porttypes.IBCModule = IBCMiddleware{}
@@ -34,32 +34,43 @@ func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
 }
 
 // OnAcknowledgementPacket implements types.IBCModule.
-func (i IBCMiddleware) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
+func (i IBCMiddleware) OnAcknowledgementPacket(
+	ctx sdk.Context,
+	channelVersion string,
+	packet channeltypes.Packet,
+	acknowledgement []byte,
+	relayer sdk.AccAddress,
+) error {
 	err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 	}
 
-	return i.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
+	return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
 }
 
 // OnTimeoutPacket implements types.IBCModule.
-func (i IBCMiddleware) OnTimeoutPacket(ctx sdk.Context, packet channeltypes.Packet, relayer sdk.AccAddress) error {
+func (i IBCMiddleware) OnTimeoutPacket(
+	ctx sdk.Context,
+	channelVersion string,
+	packet channeltypes.Packet,
+	relayer sdk.AccAddress,
+) error {
 	err := i.addSrcCallbackToQueue(ctx, packet, nil, true)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 	}
-	return i.app.OnTimeoutPacket(ctx, packet, relayer)
+	return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
 }
 
 // OnRecvPacket implements types.IBCModule.
-func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet, relayer sdk.AccAddress) exported.Acknowledgement {
+func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, relayer sdk.AccAddress) exported.Acknowledgement {
 	logger := i.k.Logger(ctx)
 
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		logger.Debug(fmt.Sprintf("OnRecvPacket payload is not a FungibleTokenPacketData: %s", err.Error()))
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
 
 	// If it's a PFM packet meant to be forwarded, we return early as we won't handle it here
@@ -68,7 +79,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	if err == nil && d["forward"] != nil {
 		logger.Debug("Packet handled by PFM")
 		// a packet meant to be forwarded, let the PFM module handle it
-		return i.app.OnRecvPacket(ctx, packet, relayer)
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
 
 	params, err := i.k.Params.Get(ctx)
@@ -84,6 +95,19 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
 	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
+
+	callbackData, isCbPacket, err := callbacktypes.GetDestCallbackData(
+		ctx, i.app, packet, im.maxCallbackGas,
+	)
+	// OnRecvPacket is not blocked if the packet does not opt-in to callbacks
+	if !isCbPacket {
+		return ack
+	}
+	// if the packet does opt-in to callbacks but the callback data is malformed,
+	// then the packet receive is rejected.
+	if err != nil {
+		return channeltypes.NewErrorAcknowledgement(err)
+	}
 
 	if isCbPacket {
 		if err != nil {

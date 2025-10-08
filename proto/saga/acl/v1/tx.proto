@@ -27,11 +27,11 @@ service Msg {
   rpc RemoveAllowed(MsgRemoveAllowed) returns (MsgRemoveAllowedResponse) {
     option (google.api.http).get = "/saga/acl/v1/tx/remove_allowed";
   };
-  // Enable enables the access control based on the allowed list. 
+  // Enable enables the access control based on the allowed list.
   rpc Enable(MsgEnable) returns (MsgEnableResponse) {
     option (google.api.http).get = "/saga/acl/v1/tx/enable";
   };
-  // Disable disables the access control based on the allowed list. 
+  // Disable disables the access control based on the allowed list.
   rpc Disable(MsgDisable) returns (MsgDisableResponse) {
     option (google.api.http).get = "/saga/acl/v1/tx/disable";
   };
@@ -39,40 +39,40 @@ service Msg {
 
 message MsgAddAdmins {
   option (cosmos.msg.v1.signer) = "sender";
-  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   repeated string admins = 2;
 }
 message MsgAddAdminsResponse {}
 
 message MsgRemoveAdmins {
   option (cosmos.msg.v1.signer) = "sender";
-  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   repeated string admins = 2;
 }
 message MsgRemoveAdminsResponse {}
 
 message MsgAddAllowed {
   option (cosmos.msg.v1.signer) = "sender";
-  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   repeated string allowed = 2;
 }
 message MsgAddAllowedResponse {}
 
 message MsgRemoveAllowed {
   option (cosmos.msg.v1.signer) = "sender";
-  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   repeated string allowed = 2;
 }
 message MsgRemoveAllowedResponse {}
 
 message MsgEnable {
   option (cosmos.msg.v1.signer) = "sender";
-  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
 }
 message MsgEnableResponse {}
 
 message MsgDisable {
   option (cosmos.msg.v1.signer) = "sender";
-  string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
 }
 message MsgDisableResponse {}

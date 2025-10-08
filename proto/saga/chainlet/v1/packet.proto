@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package saga.chainlet.v1;
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/chainlet/types";
+
+message ChainletPacketData {
+  oneof packet {
+    NoData noData = 1;
+    ConfirmUpgradePacketData confirmUpgradePacket = 2;
+  }
+}
+
+message NoData {}
+
+// ConfirmUpgradePacketData defines a struct for the packet payload
+message ConfirmUpgradePacketData {
+  string chainId = 1;
+  uint64 height = 2;
+  string plan = 3;
+}
+
+// UpgradePacketAck defines a struct for the packet acknowledgment
+message ConfirmUpgradePacketAck {}

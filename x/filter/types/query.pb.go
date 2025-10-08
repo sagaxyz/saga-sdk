@@ -66,7 +66,8 @@ func (m *QueryParamsRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryParamsRequest proto.InternalMessageInfo
 
-// QueryParamsResponse defines the response type for querying x/filter parameters.
+// QueryParamsResponse defines the response type for querying x/filter
+// parameters.
 type QueryParamsResponse struct {
 	// params define the evm module parameters.
 	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`

@@ -2,29 +2,28 @@ package keeper
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 
 	"cosmossdk.io/collections"
+	"cosmossdk.io/collections/corecompat"
 	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	corestore "cosmossdk.io/core/store"
+	// corestore "cosmossdk.io/core/store"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
+	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
 	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
@@ -76,7 +75,7 @@ type AccountKeeper interface {
 
 type Keeper struct {
 	cdc          codec.BinaryCodec
-	storeService corestore.KVStoreService
+	storeService corecompat.KVStoreService
 	authority    string
 
 	Schema           collections.Schema
@@ -96,7 +95,7 @@ type Keeper struct {
 
 // New returns a new Keeper instance.
 func NewKeeper(cdc codec.BinaryCodec,
-	storeSvc corestore.KVStoreService,
+	storeSvc corecompat.KVStoreService,
 	erc20Keeper ERC20Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
 	channelKeeper ChannelKeeper,
@@ -291,28 +290,6 @@ func (k Keeper) unescrowToken(ctx sdk.Context, token sdk.Coin) {
 	currentTotalEscrow := k.TransferKeeper.GetTotalEscrowForDenom(ctx, token.GetDenom())
 	newTotalEscrow := currentTotalEscrow.Sub(token)
 	k.TransferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
-}
-
-// userRecoverableAccount finds an account on this chain that the original sender of the packet can recover funds from.
-// If the destination receiver of the original packet is a valid bech32 address for this chain, we use that address.
-// Otherwise, if the sender of the original packet is a valid bech32 address for another chain, we translate that address to this chain.
-// Note that for the fallback, the coin type of the source chain sender account must be compatible with this chain.
-func userRecoverableAccount(inFlightPacket *types.InFlightPacket) (sdk.AccAddress, error) {
-	var originalData transfertypes.FungibleTokenPacketData
-	err := transfertypes.ModuleCdc.UnmarshalJSON(inFlightPacket.PacketData, &originalData)
-	if err == nil {
-		sender, err := sdk.AccAddressFromBech32(originalData.Receiver)
-		if err == nil {
-			return sender, nil
-		}
-	}
-
-	_, sender, fallbackErr := bech32.DecodeAndConvert(inFlightPacket.OriginalSenderAddress)
-	if fallbackErr == nil {
-		return sender, nil
-	}
-
-	return nil, fmt.Errorf("failed to decode bech32 addresses: %w", errors.Join(err, fallbackErr))
 }
 
 func getDenomForThisChain(port, channel, counterpartyPort, counterpartyChannel, denom string) string {

@@ -13,6 +13,4 @@ message GenesisState {
 }
 
 // Params defines the module's params
-message Params {
-  bool enable = 1;
-}
+message Params { bool enable = 1; }
