@@ -3,8 +3,8 @@ package callback
 import (
 	"embed"
 
+	cmn "github.com/cosmos/evm/precompiles/common"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	cmn "github.com/evmos/evmos/v20/precompiles/common"
 )
 
 // Embed abi json file to the executable binary. Needed when importing as dependency.

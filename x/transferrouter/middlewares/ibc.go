@@ -7,7 +7,6 @@ import (
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	callbacktypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
@@ -22,13 +21,24 @@ import (
 var _ porttypes.IBCModule = IBCMiddleware{}
 
 type IBCMiddleware struct {
-	app porttypes.IBCModule
-	k   keeper.Keeper
+	app            IBCModuleWithUnmarshaler
+	k              keeper.Keeper
+	maxCallbackGas uint64
+}
+
+type IBCModuleWithUnmarshaler struct {
+	porttypes.IBCModule
+	porttypes.PacketDataUnmarshaler
 }
 
 func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
+	// check if app implements IBCModuleWithUnmarshaler
+	if _, ok := app.(IBCModuleWithUnmarshaler); !ok {
+		panic("app does not implement IBCModuleWithUnmarshaler")
+	}
+
 	return IBCMiddleware{
-		app: app,
+		app: app.(IBCModuleWithUnmarshaler),
 		k:   k,
 	}
 }
@@ -94,15 +104,14 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
-	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
-
-	callbackData, isCbPacket, err := callbacktypes.GetDestCallbackData(
-		ctx, i.app, packet, im.maxCallbackGas,
+	cbData, isCbPacket, err := callbacktypes.GetDestCallbackData(
+		ctx, i.app, packet, i.maxCallbackGas,
 	)
 	// OnRecvPacket is not blocked if the packet does not opt-in to callbacks
 	if !isCbPacket {
-		return ack
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
+
 	// if the packet does opt-in to callbacks but the callback data is malformed,
 	// then the packet receive is rejected.
 	if err != nil {
@@ -110,16 +119,11 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	}
 
 	if isCbPacket {
-		if err != nil {
-			// if isCbPacket is true and the error != nil, we have a malformed packet
-			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
-			return newErrorAcknowledgement(err)
-		}
 		// if it's a callback packet, we need to receive tokens in the expected address
 		receiver, err := sdk.AccAddressFromBech32(data.Receiver)
 		if err != nil {
 			i.k.Logger(ctx).Error("acc addr from bech32 conversion failed for receiver address", "error", err)
-			return i.app.OnRecvPacket(ctx, packet, relayer)
+			return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 		}
 		receiverHex := common.BytesToAddress(receiver.Bytes())
 
@@ -163,7 +167,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	}
 
 	// Move tokens to an escrow account (gateway contract or the isolated address for callback packets)
-	err = i.receiveFunds(ctx, packet, data, overrideReceiver.String(), relayer)
+	err = i.receiveFunds(ctx, channelVersion, packet, data, overrideReceiver.String(), relayer)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to receive funds", "error", err)
 		return newErrorAcknowledgement(err)
@@ -193,13 +197,13 @@ func (i IBCMiddleware) OnChanOpenConfirm(ctx sdk.Context, portID string, channel
 }
 
 // OnChanOpenInit implements types.IBCModule.
-func (i IBCMiddleware) OnChanOpenInit(ctx sdk.Context, order channeltypes.Order, connectionHops []string, portID string, channelID string, channelCap *capabilitytypes.Capability, counterparty channeltypes.Counterparty, version string) (string, error) {
-	return i.app.OnChanOpenInit(ctx, order, connectionHops, portID, channelID, channelCap, counterparty, version)
+func (i IBCMiddleware) OnChanOpenInit(ctx sdk.Context, order channeltypes.Order, connectionHops []string, portID string, channelID string, counterparty channeltypes.Counterparty, version string) (string, error) {
+	return i.app.OnChanOpenInit(ctx, order, connectionHops, portID, channelID, counterparty, version)
 }
 
 // OnChanOpenTry implements types.IBCModule.
-func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, connectionHops []string, portID string, channelID string, channelCap *capabilitytypes.Capability, counterparty channeltypes.Counterparty, counterpartyVersion string) (version string, err error) {
-	return i.app.OnChanOpenTry(ctx, order, connectionHops, portID, channelID, channelCap, counterparty, counterpartyVersion)
+func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, connectionHops []string, portID string, channelID string, counterparty channeltypes.Counterparty, counterpartyVersion string) (version string, err error) {
+	return i.app.OnChanOpenTry(ctx, order, connectionHops, portID, channelID, counterparty, counterpartyVersion)
 }
 
 // helper functions
@@ -219,7 +223,7 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 	}
 
 	// get callback data
-	_, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.SourceCallbackKey)
+	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.app, packet, i.maxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
@@ -244,6 +248,7 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 // address and returns an error if the funds cannot be received. (from PFM, thank you!)
 func (i IBCMiddleware) receiveFunds(
 	ctx sdk.Context,
+	channelVersion string,
 	packet channeltypes.Packet,
 	data transfertypes.FungibleTokenPacketData,
 	overrideReceiver string,
@@ -268,7 +273,7 @@ func (i IBCMiddleware) receiveFunds(
 		TimeoutTimestamp:   packet.TimeoutTimestamp,
 	}
 
-	ack := i.app.OnRecvPacket(ctx, overridePacket, relayer)
+	ack := i.app.OnRecvPacket(ctx, channelVersion, overridePacket, relayer)
 
 	if ack == nil {
 		return fmt.Errorf("ack is nil")

@@ -8,10 +8,10 @@ import (
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/evm/contracts"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/evmos/v20/contracts"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 )
 

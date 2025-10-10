@@ -17,16 +17,16 @@ import (
 
 	// corestore "cosmossdk.io/core/store"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+	callbacktypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
-	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
@@ -154,23 +154,19 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 }
 
 // WriteIBCAcknowledgment writes the IBC acknowledgment for the call queue item
-func (k Keeper) WriteIBCAcknowledgment(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet ibcexported.PacketI, ack ibcexported.Acknowledgement) error {
-	return k.ics4Wrapper.WriteAcknowledgement(ctx, chanCap, packet, ack)
+func (k Keeper) WriteIBCAcknowledgment(ctx sdk.Context, packet ibcexported.PacketI, ack ibcexported.Acknowledgement) error {
+	return k.ics4Wrapper.WriteAcknowledgement(ctx, packet, ack)
 }
 
 // WriteAcknowledgementForPacket writes an acknowledgement for a packet (copied from PFM)
 func (k Keeper) WriteAcknowledgementForPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
+	packetDataUnmarshaler porttypes.PacketDataUnmarshaler,
 	data transfertypes.FungibleTokenPacketData,
 	ack channeltypes.Acknowledgement,
+	maxCallbackGas uint64,
 ) error {
-	// Lookup module by channel capability
-	_, chanCap, err := k.ChannelKeeper.LookupModuleByChannel(ctx, packet.GetSourcePort(), packet.GetSourceChannel())
-	if err != nil {
-		return fmt.Errorf("could not retrieve module from port-id: %w", err)
-	}
-
 	// for packets w/callbacks, the funds were moved into an escrow account if the denom originated on this chain.
 	// On an ack error or timeout on a packet w/callbacks, the funds in the escrow account
 	// should be moved to the other escrow account on the other side or burnt.
@@ -185,7 +181,7 @@ func (k Keeper) WriteAcknowledgementForPacket(
 		escrowAddress := sdk.AccAddress(gatewayAddr.Bytes())
 
 		// If it's a callback packet, we override the escrow address to the isolated address (as that's where the funds were received)
-		_, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
+		_, isCbPacket, err := callbacktypes.GetDestCallbackData(ctx, packetDataUnmarshaler, packet, maxCallbackGas)
 
 		if isCbPacket {
 			if err != nil {
@@ -272,7 +268,7 @@ func (k Keeper) WriteAcknowledgementForPacket(
 		}
 	}
 
-	return k.WriteIBCAcknowledgment(ctx, chanCap, channeltypes.Packet{
+	return k.WriteIBCAcknowledgment(ctx, channeltypes.Packet{
 		Data:               packet.Data,
 		Sequence:           packet.Sequence,
 		SourcePort:         packet.SourcePort,
@@ -292,13 +288,14 @@ func (k Keeper) unescrowToken(ctx sdk.Context, token sdk.Coin) {
 	k.TransferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
 }
 
+// TODO: make sure this works in IBC v10
 func getDenomForThisChain(port, channel, counterpartyPort, counterpartyChannel, denom string) string {
 	counterpartyPrefix := transfertypes.GetDenomPrefix(counterpartyPort, counterpartyChannel)
 	if strings.HasPrefix(denom, counterpartyPrefix) {
 		// unwind denom
 		unwoundDenom := denom[len(counterpartyPrefix):]
 		denomTrace := transfertypes.ParseDenomTrace(unwoundDenom)
-		if denomTrace.Path == "" {
+		if denomTrace.Path() == "" {
 			// denom is now unwound back to native denom
 			return unwoundDenom
 		}

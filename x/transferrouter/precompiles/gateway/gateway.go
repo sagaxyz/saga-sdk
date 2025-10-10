@@ -10,13 +10,13 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	cmn "github.com/cosmos/evm/precompiles/common"
+	vmtypes "github.com/cosmos/evm/x/vm/types"
+	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core"
-	cmn "github.com/evmos/evmos/v20/precompiles/common"
-	"github.com/evmos/evmos/v20/x/evm/core/vm"
-	corevm "github.com/evmos/evmos/v20/x/evm/core/vm"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	transferrouterkeeper "github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 )
 
@@ -47,17 +47,19 @@ type EVMKeeper interface {
 		contract *common.Address,
 		data []byte,
 		commit bool,
-	) (*evmtypes.MsgEthereumTxResponse, error)
-	CallEVM(ctx sdk.Context, abi abi.ABI, from, contract common.Address, commit bool, method string, args ...interface{}) (*evmtypes.MsgEthereumTxResponse, error)
-	ApplyMessage(ctx sdk.Context, msg ethtypes.Message, tracer vm.EVMLogger, commit bool) (*evmtypes.MsgEthereumTxResponse, error)
+	) (*vmtypes.MsgEthereumTxResponse, error)
+	CallEVM(ctx sdk.Context, abi abi.ABI, from, contract common.Address, commit bool, method string, args ...interface{}) (*vmtypes.MsgEthereumTxResponse, error)
+	ApplyMessage(ctx sdk.Context, msg ethtypes.Message, tracer vm.EVMLogger, commit bool) (*vmtypes.MsgEthereumTxResponse, error)
 }
 
-var _ corevm.PrecompiledContract = &Precompile{}
+var _ vm.PrecompiledContract = &Precompile{}
 
 type Precompile struct {
 	cmn.Precompile
-	transferKeeper transferrouterkeeper.Keeper
-	evmKeeper      EVMKeeper
+	transferKeeper        transferrouterkeeper.Keeper
+	evmKeeper             EVMKeeper
+	packetDataUnmarshaler porttypes.PacketDataUnmarshaler
+	maxCallbackGas        uint64
 }
 
 // NewPrecompile creates a new Gateway Precompile instance as a
@@ -66,6 +68,8 @@ func NewPrecompile(
 	authzKeeper authzkeeper.Keeper,
 	transferKeeper transferrouterkeeper.Keeper,
 	evmKeeper EVMKeeper,
+	packetDataUnmarshaler porttypes.PacketDataUnmarshaler,
+	maxCallbackGas uint64,
 ) (*Precompile, error) {
 	p := &Precompile{
 		Precompile: cmn.Precompile{
@@ -75,8 +79,10 @@ func NewPrecompile(
 			TransientKVGasConfig: storetypes.TransientGasConfig(),
 			ApprovalExpiration:   cmn.DefaultExpirationDuration, // should be configurable in the future.
 		},
-		transferKeeper: transferKeeper,
-		evmKeeper:      evmKeeper,
+		transferKeeper:        transferKeeper,
+		evmKeeper:             evmKeeper,
+		packetDataUnmarshaler: packetDataUnmarshaler,
+		maxCallbackGas:        maxCallbackGas,
 	}
 
 	// SetAddress defines the address of the Gateway compile contract.

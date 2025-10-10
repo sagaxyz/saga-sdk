@@ -7,10 +7,10 @@ import (
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/evm/x/vm/statedb"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/evmos/evmos/v20/x/evm/core/vm"
 )
 
 // emitGatewayExecuteEvent creates a new Gateway execute event emitted on an Execute transaction.
@@ -26,7 +26,7 @@ import (
 */
 func (p Precompile) emitGatewayExecuteEvent(
 	ctx sdk.Context,
-	stateDB vm.StateDB,
+	stateDB statedb.StateDB,
 	precompileAddr common.Address,
 	sequence uint64,
 	success bool,

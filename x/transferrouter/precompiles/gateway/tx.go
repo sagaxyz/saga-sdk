@@ -11,22 +11,24 @@ import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/evm/contracts"
+	"github.com/cosmos/evm/ibc"
+	evmostypes "github.com/cosmos/evm/types"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	"github.com/cosmos/evm/x/vm"
+	evmante "github.com/cosmos/evm/x/vm/ante"
+	"github.com/cosmos/evm/x/vm/statedb"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
+	callbacktypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/evmos/evmos/v20/contracts"
-	"github.com/evmos/evmos/v20/ibc"
-	evmostypes "github.com/evmos/evmos/v20/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmante "github.com/evmos/evmos/v20/x/evm/ante"
-	"github.com/evmos/evmos/v20/x/evm/core/vm"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/callback"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
-	callbacktypes "github.com/sagaxyz/saga-sdk/x/transferrouter/v10types"
 )
 
 // Execute executes a call to another contract through the Gateway precompile.
@@ -34,7 +36,7 @@ func (p Precompile) Execute(
 	ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB vm.StateDB,
+	stateDB statedb.StateDB,
 	method *abi.Method,
 	args []interface{},
 ) (retBz []byte, retErr error) {
@@ -70,7 +72,7 @@ func (p Precompile) Execute(
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
 		}
 
-		err = p.transferKeeper.WriteAcknowledgementForPacket(ctx, packet, packetData, ack)
+		err = p.transferKeeper.WriteAcknowledgementForPacket(ctx, packet, p.packetDataUnmarshaler, packetData, ack, p.maxCallbackGas) // TODO: maxCallbackGas is wrong
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)
 			retErr = err
@@ -103,7 +105,7 @@ func (p Precompile) Execute(
 	)
 
 	// if the packet is a callback packet we process it as such, if not, we assume it's a normal erc20 transfer
-	cbData, isCbPacket, err := callbacktypes.GetCallbackData(packetData, callbacktypes.V1, packet.GetDestPort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.DestinationCallbackKey)
+	cbData, isCbPacket, err := callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
 	if isCbPacket {
 		p.transferKeeper.Logger(ctx).Debug("Processing callback packet")
 		if err != nil {
@@ -161,7 +163,7 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 	return packet, nil
 }
 
-func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB vm.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
+func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB statedb.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
 	callData, err := CreateERC20TransferExecuteCallDataFromPacket(ctx, p.transferKeeper, packet, packetData)
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("Failed to create gateway execute call data", "error", err)
@@ -278,7 +280,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB vm.StateDB,
+	stateDB statedb.StateDB,
 	method *abi.Method,
 	args []interface{},
 ) (retBz []byte, retErr error) {
@@ -295,7 +297,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	// the from address is the IBC module address, this is only so the contracts can verify the caller
 	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, "txrouter")
 
-	cbData, err := getSourceCallbackData(ctx, packetQueueItem)
+	cbData, err := getSourceCallbackData(ctx, packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
 	if err != nil {
 		return nil, err
 	}
@@ -342,12 +344,17 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	return nil, nil
 }
 
-func getSourceCallbackData(ctx sdk.Context, packetQueueItem types.PacketQueueItem) (*callbacktypes.CallbackData, error) {
+func getSourceCallbackData(
+	ctx sdk.Context,
+	packetQueueItem types.PacketQueueItem,
+	packetDataUnmarshaler porttypes.PacketDataUnmarshaler,
+	maxCallbackGas uint64,
+) (*callbacktypes.CallbackData, error) {
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packetQueueItem.Packet.Data, &data); err != nil {
 		return nil, err
 	}
-	cbData, isCbPacket, err := callbacktypes.GetCallbackData(data, callbacktypes.V1, packetQueueItem.Packet.GetSourcePort(), ctx.GasMeter().GasRemaining(), ctx.GasMeter().Limit(), callbacktypes.SourceCallbackKey)
+	cbData, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, packetDataUnmarshaler, *packetQueueItem.Packet, maxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			return nil, err
