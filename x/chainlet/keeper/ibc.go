@@ -2,8 +2,10 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 
 	errorsmod "cosmossdk.io/errors"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
@@ -29,25 +31,11 @@ func (k Keeper) TransmitConfirmUpgradePacket(
 	return k.ibcKeeperFn().ChannelKeeper.SendPacket(ctx, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, packetBytes)
 }
 
-// OnRecvConfirmUpgradePacket processes packet reception
-func (k Keeper) OnRecvConfirmUpgradePacket(ctx sdk.Context, packet channeltypes.Packet, data types.ConfirmUpgradePacketData) (packetAck types.ConfirmUpgradePacketAck, err error) {
-	// validate packet data upon receiving
-	if err := data.ValidateBasic(); err != nil {
-		return packetAck, err
-	}
-
-	return packetAck, nil
-}
-
 // OnAcknowledgementConfirmUpgradePacket responds to the success or failure of a packet
 // acknowledgement written on the receiving chain.
 func (k Keeper) OnAcknowledgementConfirmUpgradePacket(ctx sdk.Context, packet channeltypes.Packet, data types.ConfirmUpgradePacketData, ack channeltypes.Acknowledgement) error {
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
-
-		// TODO: failed acknowledgement logic
-		_ = dispatchedAck.Error
-
 		return nil
 	case *channeltypes.Acknowledgement_Result:
 		// Decode the packet acknowledgment
@@ -57,9 +45,6 @@ func (k Keeper) OnAcknowledgementConfirmUpgradePacket(ctx sdk.Context, packet ch
 			// The counter-party module doesn't implement the correct acknowledgment format
 			return errors.New("cannot unmarshal acknowledgment")
 		}
-
-		// TODO: successful acknowledgement logic
-
 		return nil
 	default:
 		// The counter-party module doesn't implement the correct acknowledgment format
@@ -69,8 +54,61 @@ func (k Keeper) OnAcknowledgementConfirmUpgradePacket(ctx sdk.Context, packet ch
 
 // OnTimeoutConfirmUpgradePacket responds to the case where a packet has not been transmitted because of a timeout
 func (k Keeper) OnTimeoutConfirmUpgradePacket(ctx sdk.Context, packet channeltypes.Packet, data types.ConfirmUpgradePacketData) error {
-
-	// TODO: packet timeout logic
-
 	return nil
+}
+
+// OnRecvCreateUpgradePacket processes packet reception
+func (k Keeper) OnRecvCreateUpgradePacket(ctx sdk.Context, packet channeltypes.Packet, data types.CreateUpgradePacketData) (packetAck types.CreateUpgradePacketAck, err error) {
+	// validate packet data upon receiving
+	if err := data.ValidateBasic(); err != nil {
+		return packetAck, err
+	}
+
+	_, err = k.upgradeKeeper.GetUpgradePlan(ctx)
+	if err == nil || !errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) {
+		return packetAck, errors.New("existing upgrade plan found")
+	}
+	err = k.upgradeKeeper.ScheduleUpgrade(ctx, upgradetypes.Plan{
+		Name:   data.Name,
+		Height: int64(data.Height),
+		Info:   data.Info,
+	})
+	if err != nil {
+		return packetAck, err
+	}
+	plan, err := k.upgradeKeeper.GetUpgradePlan(ctx)
+	if err != nil {
+		return packetAck, errors.New("upgrade plan not found")
+	}
+	k.Logger(ctx).Debug(fmt.Sprintf("upgrade plan %s created: %+v", plan.Name, plan))
+
+	return packetAck, nil
+}
+
+// OnRecvCancelUpgradePacket processes packet reception
+func (k Keeper) OnRecvCancelUpgradePacket(ctx sdk.Context, packet channeltypes.Packet, data types.CancelUpgradePacketData) (packetAck types.CancelUpgradePacketAck, err error) {
+	// validate packet data upon receiving
+	if err := data.ValidateBasic(); err != nil {
+		return packetAck, err
+	}
+
+	plan, err := k.upgradeKeeper.GetUpgradePlan(ctx)
+	if err != nil {
+		if errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) {
+			//NOTE: Returning a nil error allows to clear an invalid upgrade on the provider.
+			return packetAck, nil
+		}
+		return packetAck, err
+	}
+	if plan.Name != data.Plan {
+		return packetAck, fmt.Errorf("plan does not match: %s != %s", plan.Name, data.Plan)
+	}
+
+	err = k.upgradeKeeper.ClearUpgradePlan(ctx)
+	if err != nil {
+		return packetAck, err
+	}
+	k.Logger(ctx).Debug(fmt.Sprintf("upgrade plan %s canceled: %+v", plan.Name, plan))
+
+	return packetAck, nil
 }

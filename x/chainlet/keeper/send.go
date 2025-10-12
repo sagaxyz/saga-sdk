@@ -44,8 +44,7 @@ func (k Keeper) Send(ctx context.Context) error {
 		}
 		return err
 	}
-	if sdkCtx.BlockHeight() < plan.Height-1 {
-		k.Logger(sdkCtx).Debug(fmt.Sprintf("skipping until the upgrade height is reached: %d >= %d", plan.Height-1, sdkCtx.BlockHeight()))
+	if sdkCtx.BlockHeight() != plan.Height-2 {
 		return nil
 	}
 
@@ -88,11 +87,21 @@ func (k Keeper) Send(ctx context.Context) error {
 	}
 	latestHeight := k.clientKeeper.GetClientLatestHeight(sdkCtx, connEnd.ClientId)
 	p := k.GetParams(sdkCtx)
-	timeoutHeight := clienttypes.Height{
-		RevisionNumber: latestHeight.GetRevisionNumber(),
-		RevisionHeight: latestHeight.GetRevisionHeight() + p.TimeoutHeight,
+	var timeoutTimestamp uint64
+	if p.TimeoutTime > 0 {
+		un := sdkCtx.BlockTime().Add(p.TimeoutTime).UnixNano()
+		if un < 0 {
+			return errors.New("timeout negative")
+		}
+		timeoutTimestamp = uint64(un)
 	}
-	timeoutTimestamp := uint64(sdkCtx.BlockTime().Add(p.TimeoutTime).UnixNano())
+	var timeoutHeight clienttypes.Height
+	if p.TimeoutHeight > 0 {
+		timeoutHeight = clienttypes.Height{
+			RevisionNumber: latestHeight.GetRevisionNumber(),
+			RevisionHeight: latestHeight.GetRevisionHeight() + p.TimeoutHeight,
+		}
+	}
 
 	_, err = k.TransmitConfirmUpgradePacket(sdkCtx, packetData, types.PortID, sourceChannel.ChannelId, timeoutHeight, timeoutTimestamp)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
+
 	"github.com/sagaxyz/saga-sdk/x/chainlet/keeper"
 	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
@@ -35,8 +36,8 @@ func (im IBCModule) OnChanOpenInit(
 	counterparty channeltypes.Counterparty,
 	version string,
 ) (string, error) {
-	if order != channeltypes.ORDERED {
-		return "", errorsmod.Wrapf(channeltypes.ErrInvalidChannelOrdering, "expected %s channel, got %s ", channeltypes.ORDERED, order)
+	if order != channeltypes.UNORDERED {
+		return "", errorsmod.Wrapf(channeltypes.ErrInvalidChannelOrdering, "expected %s channel, got %s ", channeltypes.UNORDERED, order)
 	}
 
 	// Require portID is the portID module is bound to
@@ -62,8 +63,8 @@ func (im IBCModule) OnChanOpenTry(
 	counterparty channeltypes.Counterparty,
 	counterpartyVersion string,
 ) (string, error) {
-	if order != channeltypes.ORDERED {
-		return "", errorsmod.Wrapf(channeltypes.ErrInvalidChannelOrdering, "expected %s channel, got %s ", channeltypes.ORDERED, order)
+	if order != channeltypes.UNORDERED {
+		return "", errorsmod.Wrapf(channeltypes.ErrInvalidChannelOrdering, "expected %s channel, got %s ", channeltypes.UNORDERED, order)
 	}
 
 	// Require portID is the portID module is bound to
@@ -143,26 +144,45 @@ func (im IBCModule) OnRecvPacket(
 
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
-	case *types.ChainletPacketData_ConfirmUpgradePacket:
-	packetAck, err := im.keeper.OnRecvConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket)
-	if err != nil {
-		ack = channeltypes.NewErrorAcknowledgement(err)
-	} else {
-		// Encode packet acknowledgment
-		packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
+	case *types.ChainletPacketData_CreateUpgradePacket:
+		packetAck, err := im.keeper.OnRecvCreateUpgradePacket(ctx, modulePacket, *packet.CreateUpgradePacket)
 		if err != nil {
-			return channeltypes.NewErrorAcknowledgement(errorsmod.Wrap(sdkerrors.ErrJSONMarshal, err.Error()))
+			ack = channeltypes.NewErrorAcknowledgement(err)
+		} else {
+			// Encode packet acknowledgment
+			packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
+			if err != nil {
+				return channeltypes.NewErrorAcknowledgement(errorsmod.Wrap(sdkerrors.ErrJSONMarshal, err.Error()))
+			}
+			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
 		}
-		ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
-	}
-	/*ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			types.EventTypeConfirmUpgradePacket,
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-			sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
-		),
-	)*/
-// this line is used by starport scaffolding # ibc/packet/module/recv
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeCreateUpgradePacket,
+				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err == nil)),
+			),
+		)
+	case *types.ChainletPacketData_CancelUpgradePacket:
+		packetAck, err := im.keeper.OnRecvCancelUpgradePacket(ctx, modulePacket, *packet.CancelUpgradePacket)
+		if err != nil {
+			ack = channeltypes.NewErrorAcknowledgement(err)
+		} else {
+			// Encode packet acknowledgment
+			packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
+			if err != nil {
+				return channeltypes.NewErrorAcknowledgement(errorsmod.Wrap(sdkerrors.ErrJSONMarshal, err.Error()))
+			}
+			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
+		}
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeCreateUpgradePacket,
+				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err == nil)),
+			),
+		)
+	// this line is used by starport scaffolding # ibc/packet/module/recv
 	default:
 		err := fmt.Errorf("unrecognized %s packet type: %T", types.ModuleName, packet)
 		return channeltypes.NewErrorAcknowledgement(err)
@@ -197,13 +217,14 @@ func (im IBCModule) OnAcknowledgementPacket(
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
 	case *types.ChainletPacketData_ConfirmUpgradePacket:
-	err := im.keeper.OnAcknowledgementConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket, ack)
-	if err != nil {
-		return err
-	}
-	//TODO type
-	//eventType = types.EventTypeConfirmUpgradePacket
-// this line is used by starport scaffolding # ibc/packet/module/ack
+		err := im.keeper.OnAcknowledgementConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket, ack)
+		if err != nil {
+			return err
+		}
+		eventType = types.EventTypeConfirmUpgradePacket
+	case *types.ChainletPacketData_CreateUpgradePacket:
+		return nil
+	// this line is used by starport scaffolding # ibc/packet/module/ack
 	default:
 		errMsg := fmt.Sprintf("unrecognized %s packet type: %T", types.ModuleName, packet)
 		return errorsmod.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
@@ -213,7 +234,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 		sdk.NewEvent(
 			eventType,
 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-			sdk.NewAttribute(types.AttributeKeyAck, fmt.Sprintf("%v", ack)),
+			sdk.NewAttribute(types.AttributeKeyAck, ack.String()),
 		),
 	)
 
@@ -222,7 +243,8 @@ func (im IBCModule) OnAcknowledgementPacket(
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				eventType,
-				sdk.NewAttribute(types.AttributeKeyAckSuccess, string(resp.Result)),
+				//sdk.NewAttribute(types.AttributeKeyAckSuccess, string(resp.Result)),
+				sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%x", resp.Result)),
 			),
 		)
 	case *channeltypes.Acknowledgement_Error:
@@ -256,11 +278,13 @@ func (im IBCModule) OnTimeoutPacket(
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
 	case *types.ChainletPacketData_ConfirmUpgradePacket:
-	err := im.keeper.OnTimeoutConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket)
-	if err != nil {
-		return err
-	}
-// this line is used by starport scaffolding # ibc/packet/module/timeout
+		err := im.keeper.OnTimeoutConfirmUpgradePacket(ctx, modulePacket, *packet.ConfirmUpgradePacket)
+		if err != nil {
+			return err
+		}
+	case *types.ChainletPacketData_CreateUpgradePacket:
+		return nil
+		// this line is used by starport scaffolding # ibc/packet/module/timeout
 	default:
 		errMsg := fmt.Sprintf("unrecognized %s packet type: %T", types.ModuleName, packet)
 		return errorsmod.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
