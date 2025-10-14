@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	evmostypes "github.com/cosmos/evm/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
@@ -18,6 +17,7 @@ import (
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	precompilesgateway "github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
 )
 
 type ProposalHandler struct {
@@ -40,7 +40,7 @@ func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, sig
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
-		chainId, err := evmostypes.ParseChainID(ctx.ChainID())
+		chainId, err := utils.ParseChainID(ctx.ChainID())
 		if err != nil {
 			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
 			return nil, errors.New("failed to parse chain id")
@@ -222,10 +222,7 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 	}
 
 	tx = &evmtypes.MsgEthereumTx{}
-	err = tx.FromEthereumTx(signedTx)
-	if err != nil {
-		return nil, nil, err
-	}
+	tx.FromEthereumTx(signedTx)
 
 	if err := tx.ValidateBasic(); err != nil {
 		return nil, nil, err

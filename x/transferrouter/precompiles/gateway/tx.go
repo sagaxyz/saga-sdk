@@ -5,6 +5,7 @@ package gateway
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	errorsmod "cosmossdk.io/errors"
@@ -15,7 +16,6 @@ import (
 	"github.com/cosmos/evm/ibc"
 	evmostypes "github.com/cosmos/evm/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
-	"github.com/cosmos/evm/x/vm"
 	evmante "github.com/cosmos/evm/x/vm/ante"
 	"github.com/cosmos/evm/x/vm/statedb"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/callback"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
@@ -36,7 +37,7 @@ func (p Precompile) Execute(
 	ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB statedb.StateDB,
+	stateDB *statedb.StateDB,
 	method *abi.Method,
 	args []interface{},
 ) (retBz []byte, retErr error) {
@@ -72,7 +73,10 @@ func (p Precompile) Execute(
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
 		}
 
-		err = p.transferKeeper.WriteAcknowledgementForPacket(ctx, packet, p.packetDataUnmarshaler, packetData, ack, p.maxCallbackGas) // TODO: maxCallbackGas is wrong
+		// TODO: burn tokens from the isolated address in case of callback and from the gateway contract address in case of normal transfer.
+		// this is because we've received the tokens, but the callback failed or the transfer failed, so they are going to be re-minted on the source chain.
+
+		err = p.transferKeeper.WriteIBCAcknowledgment(ctx, packet, ack)
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)
 			retErr = err
@@ -90,7 +94,12 @@ func (p Precompile) Execute(
 	// Check if the token pair exists and get the ERC20 contract address
 	// for the native ERC20 or the precompile.
 	// This call fails if the token does not exist or is not registered.
-	coin := ibc.GetReceivedCoin(packet.GetSourcePort(), packet.GetSourceChannel(), packet.GetDestPort(), packet.GetDestChannel(), packetData.Denom, packetData.Amount)
+	// parse the transferred denom
+	token := transfertypes.Token{
+		Denom:  transfertypes.ExtractDenomFromPath(packetData.Denom),
+		Amount: packetData.Amount,
+	}
+	coin := ibc.GetReceivedCoin(packet, token)
 
 	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, coin.Denom)
 	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
@@ -163,7 +172,7 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 	return packet, nil
 }
 
-func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB statedb.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
+func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB *statedb.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
 	callData, err := CreateERC20TransferExecuteCallDataFromPacket(ctx, p.transferKeeper, packet, packetData)
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("Failed to create gateway execute call data", "error", err)
@@ -175,7 +184,9 @@ func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB sta
 	fromAddress := common.BytesToAddress(p.Address().Bytes()) // the sender for normal ERC20 transfers is the gateway contract address
 	target := tokenPair.GetERC20Contract()
 
-	result, err := p.evmKeeper.CallEVMWithData(cachedCtx, fromAddress, &target, callData, true)
+	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
+
+	result, err := p.evmKeeper.CallEVMWithData(cachedCtx, fromAddress, &target, callData, true, remainingGas)
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("EVM message call failed", "error", err)
 		return nil, nil, err
@@ -216,10 +227,10 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	// Call the EVM with the remaining gas as the maximum gas limit.
 	// Up to now, the remaining gas is equal to the callback gas limit set by the user.
 	// NOTE: use the cached ctx for the EVM calls.
-	res, err := p.evmKeeper.CallEVM(cachedCtx, erc20.ABI, common.Address(isolatedAddr), tokenPair.GetERC20Contract(), true, "approve", target, amountInt.BigInt())
+	res, err := p.evmKeeper.CallEVM(cachedCtx, erc20.ABI, common.Address(isolatedAddr), tokenPair.GetERC20Contract(), true, remainingGas, "approve", target, amountInt.BigInt())
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("ERC20 approve call failed", "error", err)
-		return nil, nil, errorsmod.Wrapf(ErrAllowanceFailed, "failed to set allowance: %w", err)
+		return nil, nil, fmt.Errorf("failed to set allowance: %w", err)
 	}
 
 	// only add logs if the call was successful
@@ -237,7 +248,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	var approveSuccess bool
 	err = erc20.ABI.UnpackIntoInterface(&approveSuccess, "approve", res.Ret)
 	if err != nil {
-		return nil, nil, errorsmod.Wrapf(ErrAllowanceFailed, "failed to unpack approve return: %w", err)
+		return nil, nil, errorsmod.Wrapf(ErrAllowanceFailed, "failed to unpack approve return: %v", err)
 	}
 
 	if !approveSuccess {
@@ -245,9 +256,9 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	}
 	// NOTE: use the cached ctx for the EVM calls.
 	p.transferKeeper.Logger(ctx).Debug("Starting callback EVM call", "fromAddress", isolatedAddr.String(), "target", target.Hex(), "calldataLength", len(cbData.Calldata))
-	res, err = p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(isolatedAddr), &target, cbData.Calldata, true)
+	res, err = p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(isolatedAddr), &target, cbData.Calldata, true, remainingGas)
 	if err != nil {
-		return nil, nil, errorsmod.Wrapf(ErrEVMCallFailed, "EVM returned error: %w", err)
+		return nil, nil, fmt.Errorf("EVM returned error: %w", err)
 	}
 
 	// only add logs if the call was successful
@@ -280,7 +291,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB statedb.StateDB,
+	stateDB *statedb.StateDB,
 	method *abi.Method,
 	args []interface{},
 ) (retBz []byte, retErr error) {
@@ -318,7 +329,9 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 		}
 	}
 
-	res, resErr := p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(acc.GetAddress().Bytes()), &target, calldata, true)
+	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
+
+	res, resErr := p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(acc.GetAddress().Bytes()), &target, calldata, true, remainingGas)
 
 	var returnBz []byte
 	if resErr == nil {

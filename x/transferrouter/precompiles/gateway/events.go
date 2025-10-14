@@ -26,7 +26,7 @@ import (
 */
 func (p Precompile) emitGatewayExecuteEvent(
 	ctx sdk.Context,
-	stateDB statedb.StateDB,
+	stateDB *statedb.StateDB,
 	precompileAddr common.Address,
 	sequence uint64,
 	success bool,

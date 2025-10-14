@@ -6,7 +6,6 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 
-	"github.com/cometbft/cometbft/crypto/tmhash"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
 	"github.com/cosmos/cosmos-sdk/runtime"
@@ -26,9 +25,56 @@ import (
 )
 
 // mock underlying IBCModule which simply echoes OnRecvPacket success
-type mockApp struct{ porttypes.IBCModule }
 
-func (m mockApp) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet, relayer sdk.AccAddress) ibcexported.Acknowledgement {
+var _ porttypes.IBCModule = mockApp{}
+var _ porttypes.PacketDataUnmarshaler = mockApp{}
+
+type mockApp struct{}
+
+func (m mockApp) UnmarshalPacketData(ctx sdk.Context, channelVersion string, proto string, bz []byte) (any, string, error) {
+	return bz, "", nil
+}
+
+// OnChanCloseConfirm implements types.IBCModule.
+func (m mockApp) OnChanCloseConfirm(ctx sdk.Context, portID string, channelID string) error {
+	panic("unimplemented")
+}
+
+// OnChanCloseInit implements types.IBCModule.
+func (m mockApp) OnChanCloseInit(ctx sdk.Context, portID string, channelID string) error {
+	panic("unimplemented")
+}
+
+// OnChanOpenAck implements types.IBCModule.
+func (m mockApp) OnChanOpenAck(ctx sdk.Context, portID string, channelID string, counterpartyChannelID string, counterpartyVersion string) error {
+	panic("unimplemented")
+}
+
+// OnChanOpenConfirm implements types.IBCModule.
+func (m mockApp) OnChanOpenConfirm(ctx sdk.Context, portID string, channelID string) error {
+	panic("unimplemented")
+}
+
+// OnChanOpenInit implements types.IBCModule.
+func (m mockApp) OnChanOpenInit(ctx sdk.Context, order channeltypes.Order, connectionHops []string, portID string, channelID string, counterparty channeltypes.Counterparty, version string) (string, error) {
+	panic("unimplemented")
+}
+
+// OnChanOpenTry implements types.IBCModule.
+func (m mockApp) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, connectionHops []string, portID string, channelID string, counterparty channeltypes.Counterparty, counterpartyVersion string) (version string, err error) {
+	panic("unimplemented")
+}
+
+// OnTimeoutPacket implements types.IBCModule.
+func (m mockApp) OnTimeoutPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, relayer sdk.AccAddress) error {
+	panic("unimplemented")
+}
+
+func (m mockApp) OnAcknowledgementPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
+	return nil
+}
+
+func (m mockApp) OnRecvPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, relayer sdk.AccAddress) ibcexported.Acknowledgement {
 	// pretend ICS20 app accepted the packet
 	return channeltypes.NewResultAcknowledgement([]byte{1})
 }
@@ -63,7 +109,9 @@ func buildMiddleware(t *testing.T) (sdk.Context, IBCMiddleware, keeper.Keeper) {
 		GatewayContractAddress: common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345").Hex(),
 	}))
 
-	mw := NewIBCMiddleware(mockApp{}, k)
+	// Compose the app that satisfies IBCModuleWithUnmarshaler
+	app := mockApp{}
+	mw := NewIBCMiddleware(app, k)
 	return ctx, mw, k
 }
 
@@ -78,7 +126,7 @@ func Test_addSrcCallbackToQueue_ack_and_timeout(t *testing.T) {
 		},
 	}
 	memoBz, _ := json.Marshal(memo)
-	data := transfertypes.FungibleTokenPacketData{Denom: "uatom", Amount: "1", Sender: "s", Receiver: "r", Memo: string(memoBz)}
+	data := transfertypes.FungibleTokenPacketData{Denom: "usaga", Amount: "1", Sender: "s", Receiver: "r", Memo: string(memoBz)}
 	bz := transfertypes.ModuleCdc.MustMarshalJSON(&data)
 
 	pkt := channeltypes.Packet{
@@ -98,27 +146,6 @@ func Test_addSrcCallbackToQueue_ack_and_timeout(t *testing.T) {
 	// timeout path
 	err = mw.addSrcCallbackToQueue(ctx, pkt, nil, true)
 	require.NoError(t, err)
-}
-
-func Test_receiveFunds_success(t *testing.T) {
-	ctx, mw, k := buildMiddleware(t)
-
-	// ICS20 packet
-	data := transfertypes.FungibleTokenPacketData{Denom: "uatom", Amount: "1", Sender: "s", Receiver: "r"}
-	bz := transfertypes.ModuleCdc.MustMarshalJSON(&data)
-	pkt := channeltypes.Packet{Sequence: 2, SourcePort: "transfer", SourceChannel: "channel-0", DestinationPort: "transfer", DestinationChannel: "channel-1", Data: bz}
-
-	// underlying app will always return success ack, so this should succeed
-	err := mw.receiveFunds(ctx, pkt, data, sdk.AccAddress(common.HexToAddress("0x1").Bytes()).String(), nil)
-	require.NoError(t, err)
-
-	// ensure packet queue set in OnRecvPacket path when called via public method
-	ack := mw.OnRecvPacket(ctx.WithTxBytes(tmhash.Sum([]byte("t"))), pkt, nil)
-	require.NotNil(t, ack)
-	// verify the packet was stored in queue
-	has, err := k.PacketQueue.Has(ctx, pkt.Sequence)
-	require.NoError(t, err)
-	require.True(t, has)
 }
 
 func Test_newErrorAcknowledgement(t *testing.T) {

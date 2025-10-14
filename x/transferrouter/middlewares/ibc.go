@@ -26,7 +26,7 @@ type IBCMiddleware struct {
 	maxCallbackGas uint64
 }
 
-type IBCModuleWithUnmarshaler struct {
+type IBCModuleWithUnmarshaler interface {
 	porttypes.IBCModule
 	porttypes.PacketDataUnmarshaler
 }

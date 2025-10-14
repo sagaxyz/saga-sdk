@@ -2,28 +2,20 @@ package keeper
 
 import (
 	"context"
-	"fmt"
 	"math/big"
-	"strings"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/corecompat"
 	"cosmossdk.io/log"
-	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	// corestore "cosmossdk.io/core/store"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	callbacktypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
-	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
-
-	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
@@ -153,156 +145,8 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", types.ModuleName)
 }
 
-// WriteIBCAcknowledgment writes the IBC acknowledgment for the call queue item
+// WriteIBCAcknowledgment writes the IBC acknowledgment for the call queue item.
+// As we don't modify outgoing txs, we just pass this call to the original transferkeeper.
 func (k Keeper) WriteIBCAcknowledgment(ctx sdk.Context, packet ibcexported.PacketI, ack ibcexported.Acknowledgement) error {
 	return k.ics4Wrapper.WriteAcknowledgement(ctx, packet, ack)
-}
-
-// WriteAcknowledgementForPacket writes an acknowledgement for a packet (copied from PFM)
-func (k Keeper) WriteAcknowledgementForPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	packetDataUnmarshaler porttypes.PacketDataUnmarshaler,
-	data transfertypes.FungibleTokenPacketData,
-	ack channeltypes.Acknowledgement,
-	maxCallbackGas uint64,
-) error {
-	// for packets w/callbacks, the funds were moved into an escrow account if the denom originated on this chain.
-	// On an ack error or timeout on a packet w/callbacks, the funds in the escrow account
-	// should be moved to the other escrow account on the other side or burnt.
-	if !ack.Success() {
-		// Override the receiver address to the gateway contract address
-		params, err := k.Params.Get(ctx)
-		if err != nil {
-			k.Logger(ctx).Error("failed to get params", "error", err)
-			return err
-		}
-		gatewayAddr := common.HexToAddress(params.GatewayContractAddress)
-		escrowAddress := sdk.AccAddress(gatewayAddr.Bytes())
-
-		// If it's a callback packet, we override the escrow address to the isolated address (as that's where the funds were received)
-		_, isCbPacket, err := callbacktypes.GetDestCallbackData(ctx, packetDataUnmarshaler, packet, maxCallbackGas)
-
-		if isCbPacket {
-			if err != nil {
-				// if isCbPacket is true and the error != nil, we have a malformed packet
-				return fmt.Errorf("failed to get callback data: %w", err)
-			}
-			// Generate secure isolated address from sender and override the escrow address
-			isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), data.Sender)
-			escrowAddress = isolatedAddr
-		}
-
-		fullDenomPath := getDenomForThisChain(
-			packet.DestinationPort, packet.DestinationChannel,
-			packet.SourcePort, packet.SourceChannel,
-			data.Denom,
-		)
-
-		// deconstruct the token denomination into the denomination trace info
-		// to determine if the sender is the source chain
-		if strings.HasPrefix(data.Denom, "ibc/") {
-			fullDenomPath, err = k.TransferKeeper.DenomPathFromHash(ctx, data.Denom)
-			if err != nil {
-				return err
-			}
-		}
-
-		amount, ok := sdkmath.NewIntFromString(data.Amount)
-		if !ok {
-			return fmt.Errorf("failed to parse amount from packet data for forward refund: %s", data.Amount)
-		}
-
-		denomTrace := transfertypes.ParseDenomTrace(fullDenomPath)
-		coin := sdk.NewCoin(denomTrace.IBCDenom(), amount)
-
-		refundEscrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
-
-		newToken := sdk.NewCoins(coin)
-
-		// Sender chain is source
-		if transfertypes.SenderChainIsSource(packet.SourcePort, packet.SourceChannel, fullDenomPath) {
-			// funds were moved to escrow account for transfer, so they need to either:
-			// - move to the other escrow account, in the case of native denom
-			// - burn
-			if transfertypes.SenderChainIsSource(packet.SourcePort, packet.SourceChannel, fullDenomPath) {
-				// transfer funds from escrow account for forwarded packet to escrow account going back for refund.
-				if err := k.BankKeeper.SendCoins(
-					ctx, escrowAddress, refundEscrowAddress, newToken,
-				); err != nil {
-					return fmt.Errorf("failed to send coins from escrow account to refund escrow account: %w", err)
-				}
-			} else {
-				// transfer the coins from the escrow account to the module account and burn them.
-				if err := k.BankKeeper.SendCoinsFromAccountToModule(
-					ctx, escrowAddress, transfertypes.ModuleName, newToken,
-				); err != nil {
-					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
-				}
-
-				if err := k.BankKeeper.BurnCoins(
-					ctx, transfertypes.ModuleName, newToken,
-				); err != nil {
-					// NOTE: should not happen as the module account was
-					// retrieved on the step above and it has enough balance
-					// to burn.
-					panic(fmt.Sprintf("cannot burn coins after a successful send from escrow account to module account: %v", err))
-				}
-
-				k.unescrowToken(ctx, coin)
-			}
-		} else {
-			// Funds in the escrow account were burned,
-			// so on a timeout or acknowledgement error we need to mint the funds back to the escrow account.
-			if err := k.BankKeeper.MintCoins(ctx, transfertypes.ModuleName, newToken); err != nil {
-				return fmt.Errorf("cannot mint coins to the %s module account: %v", transfertypes.ModuleName, err)
-			}
-
-			if err := k.BankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, refundEscrowAddress, newToken); err != nil {
-				return fmt.Errorf("cannot send coins from the %s module to the escrow account %s: %v", transfertypes.ModuleName, refundEscrowAddress, err)
-			}
-
-			currentTotalEscrow := k.TransferKeeper.GetTotalEscrowForDenom(ctx, coin.GetDenom())
-			newTotalEscrow := currentTotalEscrow.Add(coin)
-			k.TransferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
-		}
-	}
-
-	return k.WriteIBCAcknowledgment(ctx, channeltypes.Packet{
-		Data:               packet.Data,
-		Sequence:           packet.Sequence,
-		SourcePort:         packet.SourcePort,
-		SourceChannel:      packet.SourceChannel,
-		DestinationPort:    packet.DestinationPort,
-		DestinationChannel: packet.DestinationChannel,
-		TimeoutHeight:      packet.TimeoutHeight,
-		TimeoutTimestamp:   packet.TimeoutTimestamp,
-	}, ack)
-}
-
-// unescrowToken will update the total escrow by deducting the unescrowed token
-// from the current total escrow.
-func (k Keeper) unescrowToken(ctx sdk.Context, token sdk.Coin) {
-	currentTotalEscrow := k.TransferKeeper.GetTotalEscrowForDenom(ctx, token.GetDenom())
-	newTotalEscrow := currentTotalEscrow.Sub(token)
-	k.TransferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
-}
-
-// TODO: make sure this works in IBC v10
-func getDenomForThisChain(port, channel, counterpartyPort, counterpartyChannel, denom string) string {
-	counterpartyPrefix := transfertypes.GetDenomPrefix(counterpartyPort, counterpartyChannel)
-	if strings.HasPrefix(denom, counterpartyPrefix) {
-		// unwind denom
-		unwoundDenom := denom[len(counterpartyPrefix):]
-		denomTrace := transfertypes.ParseDenomTrace(unwoundDenom)
-		if denomTrace.Path() == "" {
-			// denom is now unwound back to native denom
-			return unwoundDenom
-		}
-		// denom is still IBC denom
-		return denomTrace.IBCDenom()
-	}
-	// append port and channel from this chain to denom
-	prefixedDenom := transfertypes.GetDenomPrefix(port, channel) + denom
-	return transfertypes.ParseDenomTrace(prefixedDenom).IBCDenom()
 }
