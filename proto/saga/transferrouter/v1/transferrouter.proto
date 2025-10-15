@@ -1,0 +1,24 @@
+syntax = "proto3";
+package saga.transferrouter.v1;
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/transferrouter/types";
+
+import "ibc/core/channel/v1/channel.proto";
+
+// Params defines the transferrouter module parameters.
+message Params {
+  // enabled specifies if the module functionality is turned on.
+  bool enabled = 1;
+
+  string known_signer_private_key = 2;
+
+  string gateway_contract_address = 3;
+} 
+
+
+message PacketQueueItem {
+  ibc.core.channel.v1.Packet packet = 1;
+  bytes original_tx_hash = 2;
+  bool is_timeout = 3; // only for source callback packets
+  bytes acknowledgement = 4; // only for source callback packets
+}
