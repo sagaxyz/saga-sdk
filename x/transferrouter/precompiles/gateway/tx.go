@@ -1,6 +1,3 @@
-// Copyright Tharsis Labs Ltd.(Evmos)
-// SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
-
 package gateway
 
 import (
@@ -51,7 +48,27 @@ func (p Precompile) Execute(
 	cachedCtx, writeFn := ctx.CacheContext()
 	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
 
-	var packetData transfertypes.FungibleTokenPacketData
+	var (
+		packetData transfertypes.FungibleTokenPacketData
+		isCbPacket bool
+		cbData     callbacktypes.CallbackData
+	)
+
+	// parse the packet data, TODO: do not use this cdc
+	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.Data, &packetData); err != nil {
+		p.transferKeeper.Logger(ctx).Error("Failed to unmarshal packet data", "error", err)
+		return nil, err
+	}
+
+	// Check if the token pair exists and get the ERC20 contract address
+	// for the native ERC20 or the precompile.
+	// This call fails if the token does not exist or is not registered.
+	// parse the transferred denom
+	token := transfertypes.Token{
+		Denom:  transfertypes.ExtractDenomFromPath(packetData.Denom),
+		Amount: packetData.Amount,
+	}
+	coin := ibc.GetReceivedCoin(packet, token)
 
 	// This defer is used so we can write the cached context events back to the main context, but also to clear the returned error,
 	// so it can still remove the packet from the queue if the execution fails.
@@ -73,8 +90,26 @@ func (p Precompile) Execute(
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
 		}
 
-		// TODO: burn tokens from the isolated address in case of callback and from the gateway contract address in case of normal transfer.
-		// this is because we've received the tokens, but the callback failed or the transfer failed, so they are going to be re-minted on the source chain.
+		// burn the received tokens, first send them to the transferrouter module and then burn them.
+		if isCbPacket {
+			isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), packetData.Sender)
+			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, isolatedAddr, types.ModuleName, sdk.NewCoins(coin))
+		} else {
+			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, sdk.AccAddress(p.Address().Bytes()), types.ModuleName, sdk.NewCoins(coin))
+		}
+
+		if err != nil {
+			p.transferKeeper.Logger(ctx).Error("failed to send coins from account to module", "error", err)
+			retErr = err
+			return
+		}
+
+		err = p.transferKeeper.BankKeeper.BurnCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
+		if err != nil {
+			p.transferKeeper.Logger(ctx).Error("failed to burn coins", "error", err)
+			retErr = err
+			return
+		}
 
 		err = p.transferKeeper.WriteIBCAcknowledgment(ctx, packet, ack)
 		if err != nil {
@@ -84,22 +119,6 @@ func (p Precompile) Execute(
 		}
 		p.transferKeeper.Logger(ctx).Info("Successfully wrote IBC acknowledgment", "success", success)
 	}()
-
-	// parse the packet data, TODO: do not use this cdc
-	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.Data, &packetData); err != nil {
-		p.transferKeeper.Logger(ctx).Error("Failed to unmarshal packet data", "error", err)
-		return nil, err
-	}
-
-	// Check if the token pair exists and get the ERC20 contract address
-	// for the native ERC20 or the precompile.
-	// This call fails if the token does not exist or is not registered.
-	// parse the transferred denom
-	token := transfertypes.Token{
-		Denom:  transfertypes.ExtractDenomFromPath(packetData.Denom),
-		Amount: packetData.Amount,
-	}
-	coin := ibc.GetReceivedCoin(packet, token)
 
 	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, coin.Denom)
 	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
@@ -114,7 +133,7 @@ func (p Precompile) Execute(
 	)
 
 	// if the packet is a callback packet we process it as such, if not, we assume it's a normal erc20 transfer
-	cbData, isCbPacket, err := callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
+	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
 	if isCbPacket {
 		p.transferKeeper.Logger(ctx).Debug("Processing callback packet")
 		if err != nil {

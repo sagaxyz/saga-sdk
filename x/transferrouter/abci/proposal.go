@@ -28,15 +28,25 @@ type ProposalHandler struct {
 	txConfig   client.TxConfig
 }
 
-func NewProposalHandler(keeper keeper.Keeper, txSelector baseapp.TxSelector, signer ethtypes.Signer, txVerifier baseapp.ProposalTxVerifier, txConfig client.TxConfig) *ProposalHandler {
+type ProposalHandlerOptions struct {
+	Keeper     keeper.Keeper
+	TxSelector baseapp.TxSelector
+	Signer     ethtypes.Signer
+	TxVerifier baseapp.ProposalTxVerifier
+	TxConfig   client.TxConfig
+}
+
+func NewProposalHandler(opts ProposalHandlerOptions) *ProposalHandler {
 	return &ProposalHandler{
-		keeper:     keeper,
-		txSelector: txSelector,
-		signer:     signer,
-		txVerifier: txVerifier,
-		txConfig:   txConfig,
+		keeper:     opts.Keeper,
+		txSelector: opts.TxSelector,
+		signer:     opts.Signer,
+		txVerifier: opts.TxVerifier,
+		txConfig:   opts.TxConfig,
 	}
 }
+
+var CallMaxGas = uint64(10000000) // arbitrary value
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
@@ -80,61 +90,17 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
 
 		// Add the source callback queue
-		err = h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
-			// Calldata is a simple call to the gateway executeSrcCallback function
-			calldata, err := precompilesgateway.ABI.Pack("executeSrcCallback")
-			if err != nil {
-				return true, err
-			}
-
-			cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
-			if err != nil {
-				return true, err
-			}
-
-			if h.txSelector == nil {
-				return true, errors.New("tx selector is nil")
-			}
-
-			stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
-			if stop {
-				return true, nil
-			}
-
-			nextNonce = nextNonce + 1
-			return false, nil
-		})
+		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
+		if err != nil {
+			logger.Error("Error during src callback queue walk", "error", err)
+			return nil, err
+		}
 
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
 		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
-		err = h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
-			// Calldata is a simple call to the gateway execute function
-			calldata, err := precompilesgateway.ABI.Pack("execute")
-			if err != nil {
-				return true, err
-			}
-
-			cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
-			if err != nil {
-				return true, err
-			}
-
-			if h.txSelector == nil {
-				return true, errors.New("tx selector is nil")
-			}
-
-			stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
-			// If the transaction is not added, we stop the walk, because we don't want to execute queued calls out of order
-			if stop {
-				return true, nil
-			}
-
-			nextNonce = nextNonce + 1
-			return false, nil
-		})
-
+		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
 		if err != nil {
-			logger.Error("Error during call queue walk", "error", err)
+			logger.Error("Error during packet queue walk", "error", err)
 			return nil, err
 		}
 
@@ -143,35 +109,13 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("tx verifier is nil")
 		}
 
-		for _, txBz := range req.Txs {
-			if txBz == nil {
-				continue
-			}
-
-			tx, err := h.txVerifier.TxDecode(txBz)
-			if err != nil {
-				return nil, err
-			}
-
-			if tx == nil {
-				continue
-			}
-
-			stop := h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, tx, txBz)
-			if stop {
-				break
-			}
-		}
-
-		if h.txSelector == nil {
-			return nil, errors.New("tx selector is nil")
+		err = h.AddIncomingTxs(ctx, req, maxBlockGas)
+		if err != nil {
+			logger.Error("Error while adding incoming txs", "error", err)
+			return nil, err
 		}
 
 		selectedTxs := h.txSelector.SelectedTxs(ctx)
-
-		if selectedTxs == nil {
-			selectedTxs = [][]byte{} // Return empty slice instead of nil
-		}
 
 		return &abci.ResponsePrepareProposal{
 			Txs: selectedTxs,
@@ -189,10 +133,92 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	}
 }
 
+// AddSrcCallbackTxs adds the source callback transactions to the proposal
+func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
+	// Add the source callback queue
+	err := h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+		// Calldata is a simple call to the gateway executeSrcCallback function
+		calldata, err := precompilesgateway.ABI.Pack("executeSrcCallback")
+		if err != nil {
+			return true, err
+		}
+
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+		if err != nil {
+			return true, err
+		}
+
+		stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
+		if stop {
+			return true, nil
+		}
+
+		nextNonce = nextNonce + 1
+		return false, nil
+	})
+
+	return nextNonce, err
+}
+
+// AddPacketTxs adds the packet transactions to the proposal
+func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+	err := h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+		// Calldata is a simple call to the gateway execute function
+		calldata, err := precompilesgateway.ABI.Pack("execute")
+		if err != nil {
+			return true, err
+		}
+
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+		if err != nil {
+			return true, err
+		}
+
+		if h.txSelector == nil {
+			return true, errors.New("tx selector is nil")
+		}
+
+		stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
+		// If the transaction is not added, we stop the walk, because we don't want to execute queued calls out of order
+		if stop {
+			return true, nil
+		}
+
+		nextNonce = nextNonce + 1
+		return false, nil
+	})
+
+	return err
+}
+
+func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, maxBlockGas uint64) error {
+	for _, txBz := range req.Txs {
+		if txBz == nil {
+			continue
+		}
+
+		tx, err := h.txVerifier.TxDecode(txBz)
+		if err != nil {
+			return err
+		}
+
+		if tx == nil {
+			continue
+		}
+
+		stop := h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, tx, txBz)
+		if stop {
+			break
+		}
+	}
+
+	return nil
+}
+
 func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
 	txArgs := &evmtypes.EvmTxArgs{
 		Nonce:     nonce,
-		GasLimit:  16100000, // TODO: figure out how to set this
+		GasLimit:  CallMaxGas,
 		Input:     calldata,
 		GasFeeCap: big.NewInt(0),
 		GasPrice:  big.NewInt(0),

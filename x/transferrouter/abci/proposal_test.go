@@ -106,13 +106,13 @@ func (s *ProposalHandlerTestSuite) SetupTest() {
 	s.signer = ethtypes.LatestSignerForChainID(big.NewInt(testChainIDNumeric))
 
 	// Create handler
-	s.handler = transferrouter_abci.NewProposalHandler(
-		k,
-		s.mockTxSelector,
-		s.signer,
-		s.mockTxVerifier,
-		s.mockTxConfig,
-	)
+	s.handler = transferrouter_abci.NewProposalHandler(transferrouter_abci.ProposalHandlerOptions{
+		Keeper:     k,
+		TxSelector: s.mockTxSelector,
+		Signer:     s.signer,
+		TxVerifier: s.mockTxVerifier,
+		TxConfig:   s.mockTxConfig,
+	})
 }
 
 func (s *ProposalHandlerTestSuite) TearDownTest() {
@@ -200,7 +200,13 @@ func (s *ProposalHandlerTestSuite) TestPrepareProposal_MissingParams() {
 	mockTxSelector := new(MockTxSelector)
 	mockTxSelector.On("Clear").Return()
 
-	handler := transferrouter_abci.NewProposalHandler(k, mockTxSelector, s.signer, nil, nil)
+	handler := transferrouter_abci.NewProposalHandler(transferrouter_abci.ProposalHandlerOptions{
+		Keeper:     k,
+		TxSelector: mockTxSelector,
+		Signer:     s.signer,
+		TxVerifier: nil,
+		TxConfig:   nil,
+	})
 
 	prepareHandler := handler.PrepareProposalHandler()
 	req := &abci.RequestPrepareProposal{
@@ -388,11 +394,13 @@ func (s *ProposalHandlerTestSuite) TestProcessProposal_AlwaysAccepts() {
 // TestNewProposalHandler tests the constructor
 func (s *ProposalHandlerTestSuite) TestNewProposalHandler() {
 	handler := transferrouter_abci.NewProposalHandler(
-		s.keeper,
-		s.mockTxSelector,
-		s.signer,
-		s.mockTxVerifier,
-		s.mockTxConfig,
+		transferrouter_abci.ProposalHandlerOptions{
+			Keeper:     s.keeper,
+			TxSelector: s.mockTxSelector,
+			Signer:     s.signer,
+			TxVerifier: s.mockTxVerifier,
+			TxConfig:   s.mockTxConfig,
+		},
 	)
 
 	s.Require().NotNil(handler)

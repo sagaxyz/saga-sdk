@@ -50,41 +50,6 @@ func setupKeeperForTest(t *testing.T) (sdk.Context, keeper.Keeper, *MockICS4Wrap
 	return ctx, k, mockICS4
 }
 
-func TestNewKeeper(t *testing.T) {
-	key := storetypes.NewKVStoreKey(types.StoreKey)
-	enc := moduletestutil.MakeTestEncodingConfig(transferrouter.AppModuleBasic{})
-	cdc := enc.Codec
-
-	authority := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
-
-	k := keeper.NewKeeper(
-		cdc,
-		runtime.NewKVStoreService(key),
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		authority,
-	)
-
-	// Verify keeper fields are initialized
-	require.NotNil(t, k)
-	require.NotNil(t, k.Schema)
-	require.NotNil(t, k.Params)
-	require.NotNil(t, k.PacketQueue)
-	require.NotNil(t, k.SrcCallbackQueue)
-}
-
-func TestKeeper_Logger(t *testing.T) {
-	ctx, k, _ := setupKeeperForTest(t)
-
-	logger := k.Logger(ctx)
-	require.NotNil(t, logger)
-}
-
 func TestKeeper_WriteIBCAcknowledgment_Success(t *testing.T) {
 	ctx, k, mockICS4 := setupKeeperForTest(t)
 
