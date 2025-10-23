@@ -111,7 +111,7 @@ func buildMiddleware(t *testing.T) (sdk.Context, IBCMiddleware, keeper.Keeper) {
 
 	// Compose the app that satisfies IBCModuleWithUnmarshaler
 	app := mockApp{}
-	mw := NewIBCMiddleware(app, k)
+	mw := NewIBCMiddleware(app, app, 1000000, k)
 	return ctx, mw, k
 }
 

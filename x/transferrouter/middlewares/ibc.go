@@ -21,25 +21,18 @@ import (
 var _ porttypes.IBCModule = IBCMiddleware{}
 
 type IBCMiddleware struct {
-	app            IBCModuleWithUnmarshaler
-	k              keeper.Keeper
-	maxCallbackGas uint64
+	app                   porttypes.IBCModule
+	k                     keeper.Keeper
+	maxCallbackGas        uint64
+	packetDataUnmarshaler porttypes.PacketDataUnmarshaler
 }
 
-type IBCModuleWithUnmarshaler interface {
-	porttypes.IBCModule
-	porttypes.PacketDataUnmarshaler
-}
-
-func NewIBCMiddleware(app porttypes.IBCModule, k keeper.Keeper) IBCMiddleware {
-	// check if app implements IBCModuleWithUnmarshaler
-	if _, ok := app.(IBCModuleWithUnmarshaler); !ok {
-		panic("app does not implement IBCModuleWithUnmarshaler")
-	}
-
+func NewIBCMiddleware(app porttypes.IBCModule, packetDataUnmarshaler porttypes.PacketDataUnmarshaler, maxCallbackGas uint64, k keeper.Keeper) IBCMiddleware {
 	return IBCMiddleware{
-		app: app.(IBCModuleWithUnmarshaler),
-		k:   k,
+		app:                   app,
+		k:                     k,
+		packetDataUnmarshaler: packetDataUnmarshaler,
+		maxCallbackGas:        maxCallbackGas,
 	}
 }
 
@@ -105,7 +98,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
 	cbData, isCbPacket, err := callbacktypes.GetDestCallbackData(
-		ctx, i.app, packet, i.maxCallbackGas,
+		ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas,
 	)
 	// OnRecvPacket is not blocked if the packet does not opt-in to callbacks
 	if !isCbPacket {
@@ -223,7 +216,7 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 	}
 
 	// get callback data
-	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.app, packet, i.maxCallbackGas)
+	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
