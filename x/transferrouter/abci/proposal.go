@@ -50,6 +50,8 @@ var CallMaxGas = uint64(10000000) // arbitrary value
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+		h.keeper.Logger(ctx).Info("Preparing proposal!!!!!!")
+		// 1. Add the source callback queue
 		chainId, err := utils.ParseChainID(ctx.ChainID())
 		if err != nil {
 			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
