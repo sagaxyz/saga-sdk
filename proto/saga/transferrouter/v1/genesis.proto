@@ -1,0 +1,13 @@
+syntax = "proto3";
+package saga.transferrouter.v1;
+
+import "saga/transferrouter/v1/transferrouter.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/transferrouter/types";
+
+// GenesisState defines the transferrouter module's genesis state.
+message GenesisState {
+  // params defines all the parameters of the transferrouter module.
+  Params params = 1 [(gogoproto.nullable) = false];
+} 
