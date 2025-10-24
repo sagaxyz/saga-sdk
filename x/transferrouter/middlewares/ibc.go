@@ -70,12 +70,15 @@ func (i IBCMiddleware) OnTimeoutPacket(
 func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, relayer sdk.AccAddress) exported.Acknowledgement {
 	logger := i.k.Logger(ctx)
 
+	logger.Info("transferrouter OnRecvPacket", "packet", packet)
+
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		logger.Debug(fmt.Sprintf("OnRecvPacket payload is not a FungibleTokenPacketData: %s", err.Error()))
 		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
 
+	logger.Info("transferrouter OnRecvPacket data", "data", data)
 	// If it's a PFM packet meant to be forwarded, we return early as we won't handle it here
 	d := make(map[string]interface{})
 	err := json.Unmarshal([]byte(data.Memo), &d)
@@ -91,8 +94,11 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 		return newErrorAcknowledgement(err)
 	}
 
+	logger.Info("transferrouter OnRecvPacket params", "params", params)
+
 	// Override the receiver address to the gateway contract address
 	gatewayAddr := common.HexToAddress(params.GatewayContractAddress)
+	logger.Info("transferrouter OnRecvPacket gatewayAddr", "gatewayAddr", gatewayAddr)
 	overrideReceiver := sdk.AccAddress(gatewayAddr.Bytes())
 
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
@@ -100,6 +106,8 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	cbData, isCbPacket, err := callbacktypes.GetDestCallbackData(
 		ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas,
 	)
+	logger.Info("transferrouter OnRecvPacket cbData", "cbData", cbData)
+	logger.Info("transferrouter OnRecvPacket isCbPacket", "isCbPacket", isCbPacket)
 	// OnRecvPacket is not blocked if the packet does not opt-in to callbacks
 	if !isCbPacket {
 		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
@@ -108,6 +116,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	// if the packet does opt-in to callbacks but the callback data is malformed,
 	// then the packet receive is rejected.
 	if err != nil {
+		logger.Error("transferrouter OnRecvPacket err", "err", err)
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
 
@@ -146,6 +155,8 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 			return newErrorAcknowledgement(fmt.Errorf("provided contract address is not a contract: %s", contractAddr))
 		}
 	}
+
+	logger.Info("transferrouter OnRecvPacket before store packet in call queue")
 
 	// 1. Store the packet in the call queue
 	txHash := tmhash.Sum(ctx.TxBytes())
