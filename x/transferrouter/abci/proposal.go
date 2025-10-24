@@ -60,6 +60,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("failed to parse chain id")
 		}
 
+		h.keeper.Logger(ctx).Info("chain id", "chain id", chainId)
 		logger := h.keeper.Logger(ctx)
 
 		var maxBlockGas uint64
@@ -77,18 +78,23 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("failed to get params")
 		}
 
+		h.keeper.Logger(ctx).Info("params", "params", params)
+
 		// Parse the configured private key (in hex format) and derive the corresponding
 		// Ethereum address of the known signer.
 		if params.KnownSignerPrivateKey == "" {
 			fmt.Println("known signer private key is empty")
+			h.keeper.Logger(ctx).Error("known signer private key is empty")
 			return nil, errors.New("known signer private key is empty")
 		}
+		h.keeper.Logger(ctx).Info("known signer private key", "known signer private key", params.KnownSignerPrivateKey)
 		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
 		if err != nil {
 			fmt.Println("failed to parse private key", err)
 			return nil, errors.New("failed to parse private key")
 		}
 
+		h.keeper.Logger(ctx).Info("priv key", "priv key", privKey)
 		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
 		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(knownSignerBz))
 		if err != nil {
@@ -146,6 +152,7 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 
 // AddSrcCallbackTxs adds the source callback transactions to the proposal
 func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
+	h.keeper.Logger(ctx).Info("adding src callback txs")
 	// Add the source callback queue
 	err := h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		fmt.Println("adding src callback txs")
@@ -179,6 +186,7 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 
 // AddPacketTxs adds the packet transactions to the proposal
 func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+	h.keeper.Logger(ctx).Info("adding packet txs111")
 	err := h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		fmt.Println("adding packet txs")
 		// Calldata is a simple call to the gateway execute function
