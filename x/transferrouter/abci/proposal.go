@@ -251,7 +251,7 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		Nonce:     nonce,
 		GasLimit:  CallMaxGas,
 		Input:     calldata,
-		GasFeeCap: big.NewInt(100000),
+		GasFeeCap: big.NewInt(5000000),
 		GasPrice:  big.NewInt(0),
 		ChainID:   chainID,
 		Amount:    big.NewInt(0), // No value transfer for contract calls
