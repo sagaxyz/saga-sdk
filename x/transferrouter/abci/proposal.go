@@ -144,6 +144,8 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 // can't be manipulated by the proposer, as the actual calldata is get during execution.
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+
+		// reject any block that contains repeated txs from the known signer // TODO: implement this
 		return &abci.ResponseProcessProposal{
 			Status: abci.ResponseProcessProposal_ACCEPT,
 		}, nil
@@ -247,6 +249,7 @@ func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepa
 }
 
 func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
+	h.keeper.Logger(ctx).Info("calldata to signed tx", "gascapfee", big.NewInt(5000000))
 	txArgs := &evmtypes.EvmTxArgs{
 		Nonce:     nonce,
 		GasLimit:  CallMaxGas,
@@ -280,6 +283,8 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		fmt.Println("sign tx failed", err)
 		return nil, nil, err
 	}
+
+	h.keeper.Logger(ctx).Info("signed tx", "gas fee cap", signedTx.GasFeeCap())
 
 	tx = &evmtypes.MsgEthereumTx{}
 	err = tx.FromSignedEthereumTx(signedTx, h.signer)
