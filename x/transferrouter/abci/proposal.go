@@ -272,6 +272,7 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 
 	// ethtx := tx.AsTransaction()
 	ethtx.ChainId().Set(chainID)
+	ethtx.GasFeeCap().SetUint64(5000000)
 
 	if ethtx == nil {
 		fmt.Println("as transaction returned nil")
@@ -284,7 +285,6 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		return nil, nil, err
 	}
 
-	signedTx.GasFeeCap().SetUint64(5000000)
 	h.keeper.Logger(ctx).Info("signed tx", "gas fee cap", signedTx.GasFeeCap())
 
 	tx := &evmtypes.MsgEthereumTx{}
