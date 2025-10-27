@@ -23,6 +23,11 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) []ab
 	knownSignerAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 	k.AccountKeeper.NewAccountWithAddress(ctx, sdk.AccAddress(knownSignerAddr.Bytes()))
 
+	account := k.AccountKeeper.GetAccount(ctx, sdk.AccAddress(knownSignerAddr.Bytes()))
+	if account == nil {
+		panic(errorsmod.Wrap(err, "could not get known signer account"))
+	}
+
 	return []abci.ValidatorUpdate{}
 }
 
