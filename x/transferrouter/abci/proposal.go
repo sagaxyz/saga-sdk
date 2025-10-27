@@ -282,7 +282,11 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 	}
 
 	tx = &evmtypes.MsgEthereumTx{}
-	tx.FromEthereumTx(signedTx)
+	err = tx.FromSignedEthereumTx(signedTx, h.signer)
+	if err != nil {
+		fmt.Println("from signed ethereum tx failed", err)
+		return nil, nil, err
+	}
 
 	if err := tx.ValidateBasic(); err != nil {
 		fmt.Println("validate basic failed", err)
