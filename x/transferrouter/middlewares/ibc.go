@@ -109,14 +109,14 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	logger.Info("transferrouter OnRecvPacket cbData", "cbData", cbData)
 	logger.Info("transferrouter OnRecvPacket isCbPacket", "isCbPacket", isCbPacket)
 
-	// if the packet does opt-in to callbacks but the callback data is malformed,
-	// then the packet receive is rejected.
-	if err != nil {
-		logger.Error("transferrouter OnRecvPacket err", "err", err)
-		return channeltypes.NewErrorAcknowledgement(err)
-	}
-
 	if isCbPacket {
+		// if the packet does opt-in to callbacks but the callback data is malformed,
+		// then the packet receive is rejected.
+		if err != nil {
+			logger.Error("transferrouter OnRecvPacket err", "err", err)
+			return channeltypes.NewErrorAcknowledgement(err)
+		}
+
 		// if it's a callback packet, we need to receive tokens in the expected address
 		receiver, err := sdk.AccAddressFromBech32(data.Receiver)
 		if err != nil {
