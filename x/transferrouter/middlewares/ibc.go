@@ -108,10 +108,6 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	)
 	logger.Info("transferrouter OnRecvPacket cbData", "cbData", cbData)
 	logger.Info("transferrouter OnRecvPacket isCbPacket", "isCbPacket", isCbPacket)
-	// OnRecvPacket is not blocked if the packet does not opt-in to callbacks
-	if !isCbPacket {
-		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
-	}
 
 	// if the packet does opt-in to callbacks but the callback data is malformed,
 	// then the packet receive is rejected.
