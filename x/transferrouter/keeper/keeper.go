@@ -56,6 +56,7 @@ type ERC20Keeper interface {
 }
 
 type AccountKeeper interface {
+	NewAccount(ctx context.Context, acc sdk.AccountI) sdk.AccountI
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	GetSequence(ctx context.Context, addr sdk.AccAddress) (uint64, error)
 	NewAccountWithAddress(ctx context.Context, addr sdk.AccAddress) sdk.AccountI

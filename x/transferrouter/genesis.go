@@ -4,6 +4,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
@@ -14,6 +15,13 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) []ab
 	if err := k.Params.Set(ctx, data.Params); err != nil {
 		panic(errorsmod.Wrap(err, "could not set parameters at genesis"))
 	}
+
+	privKey, err := crypto.HexToECDSA(data.Params.KnownSignerPrivateKey)
+	if err != nil {
+		panic(errorsmod.Wrap(err, "could not parse known signer private key"))
+	}
+	knownSignerAddr := crypto.PubkeyToAddress(privKey.PublicKey)
+	k.AccountKeeper.NewAccountWithAddress(ctx, sdk.AccAddress(knownSignerAddr.Bytes()))
 
 	return []abci.ValidatorUpdate{}
 }
