@@ -285,6 +285,7 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		return nil, nil, err
 	}
 
+	signedTx.GasFeeCap().SetUint64(5000000)
 	h.keeper.Logger(ctx).Info("signed tx", "gas fee cap", signedTx.GasFeeCap())
 
 	tx := &evmtypes.MsgEthereumTx{}
@@ -293,6 +294,8 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		fmt.Println("from signed ethereum tx failed", err)
 		return nil, nil, err
 	}
+	tx.Raw.GasFeeCap().SetUint64(5000000)
+	h.keeper.Logger(ctx).Info("tx", "gas fee cap", tx.Raw.GasFeeCap())
 
 	if err := tx.ValidateBasic(); err != nil {
 		fmt.Println("validate basic failed", err)
