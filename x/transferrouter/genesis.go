@@ -4,6 +4,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
@@ -24,6 +25,15 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) []ab
 	knownSignerAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 	acc := k.AccountKeeper.NewAccountWithAddress(ctx, sdk.AccAddress(knownSignerAddr.Bytes()))
 	k.AccountKeeper.SetAccount(ctx, acc)
+
+	// TMP: add gateway contract address to active static precompiles
+	err = k.EVMKeeper.EnableStaticPrecompiles(
+		ctx,
+		common.HexToAddress(data.Params.GatewayContractAddress),
+	)
+	if err != nil {
+		panic(errorsmod.Wrap(err, "could not enable static precompile"))
+	}
 
 	return []abci.ValidatorUpdate{}
 }
