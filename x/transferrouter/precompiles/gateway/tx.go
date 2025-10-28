@@ -38,15 +38,29 @@ func (p Precompile) Execute(
 	method *abi.Method,
 	args []interface{},
 ) (retBz []byte, retErr error) {
+	p.transferKeeper.Logger(ctx).Info("Gateway Execute function started",
+		"origin", origin.Hex(),
+		"contract", contract.Address().Hex(),
+		"method", method.Name)
+
 	packetQueueItem, err := p.popNextPacket(ctx)
 	if err != nil {
+		p.transferKeeper.Logger(ctx).Error("Failed to pop next packet from queue", "error", err)
 		return nil, err
 	}
 
 	packet := *packetQueueItem.Packet
+	p.transferKeeper.Logger(ctx).Info("Retrieved packet from queue",
+		"sequence", packet.Sequence,
+		"sourceChannel", packet.SourceChannel,
+		"destChannel", packet.DestinationChannel,
+		"sourcePort", packet.SourcePort,
+		"destPort", packet.DestinationPort,
+		"originalTxHash", common.BytesToHash(packetQueueItem.OriginalTxHash).Hex())
 
 	cachedCtx, writeFn := ctx.CacheContext()
 	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
+	p.transferKeeper.Logger(ctx).Info("Created cached context for execution")
 
 	var (
 		packetData transfertypes.FungibleTokenPacketData
@@ -60,6 +74,13 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
+	p.transferKeeper.Logger(ctx).Info("Successfully parsed packet data",
+		"denom", packetData.Denom,
+		"amount", packetData.Amount,
+		"sender", packetData.Sender,
+		"receiver", packetData.Receiver,
+		"memo", packetData.Memo)
+
 	// Check if the token pair exists and get the ERC20 contract address
 	// for the native ERC20 or the precompile.
 	// This call fails if the token does not exist or is not registered.
@@ -70,12 +91,20 @@ func (p Precompile) Execute(
 	}
 	coin := ibc.GetReceivedCoin(packet, token)
 
+	p.transferKeeper.Logger(ctx).Info("Processed token information",
+		"extractedDenom", token.Denom,
+		"coinDenom", coin.Denom,
+		"coinAmount", coin.Amount.String())
+
 	// This defer is used so we can write the cached context events back to the main context, but also to clear the returned error,
 	// so it can still remove the packet from the queue if the execution fails.
 	defer func() {
 		success := retErr == nil
+		p.transferKeeper.Logger(ctx).Info("Starting defer cleanup", "executionSuccess", success)
+
 		if retErr == nil {
 			// Write cachedCtx events back to ctx only if the execution is successful
+			p.transferKeeper.Logger(ctx).Info("Writing cached context events back to main context")
 			writeFn()
 		}
 
@@ -86,15 +115,24 @@ func (p Precompile) Execute(
 		var ack channeltypes.Acknowledgement
 		if success {
 			ack = channeltypes.NewResultAcknowledgement([]byte{1})
+			p.transferKeeper.Logger(ctx).Info("Created success acknowledgement")
 		} else {
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
+			p.transferKeeper.Logger(ctx).Info("Created error acknowledgement")
 		}
 
 		// burn the received tokens, first send them to the transferrouter module and then burn them.
+		p.transferKeeper.Logger(ctx).Info("Starting token burn process", "isCallbackPacket", isCbPacket)
 		if isCbPacket {
 			isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), packetData.Sender)
+			p.transferKeeper.Logger(ctx).Info("Sending coins from isolated address to module",
+				"isolatedAddr", isolatedAddr.String(),
+				"coin", coin.String())
 			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, isolatedAddr, types.ModuleName, sdk.NewCoins(coin))
 		} else {
+			p.transferKeeper.Logger(ctx).Info("Sending coins from gateway address to module",
+				"gatewayAddr", p.Address().Hex(),
+				"coin", coin.String())
 			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, sdk.AccAddress(p.Address().Bytes()), types.ModuleName, sdk.NewCoins(coin))
 		}
 
@@ -104,6 +142,7 @@ func (p Precompile) Execute(
 			return
 		}
 
+		p.transferKeeper.Logger(ctx).Info("Successfully sent coins to module, now burning coins", "coin", coin.String())
 		err = p.transferKeeper.BankKeeper.BurnCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to burn coins", "error", err)
@@ -111,6 +150,7 @@ func (p Precompile) Execute(
 			return
 		}
 
+		p.transferKeeper.Logger(ctx).Info("Successfully burned coins, writing IBC acknowledgment")
 		err = p.transferKeeper.WriteIBCAcknowledgment(ctx, packet, ack)
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)
@@ -121,11 +161,18 @@ func (p Precompile) Execute(
 	}()
 
 	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, coin.Denom)
+	p.transferKeeper.Logger(ctx).Info("Looking up token pair", "denom", coin.Denom, "tokenPairID", tokenPairID)
+
 	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
 	if !found {
 		p.transferKeeper.Logger(ctx).Error("Token pair not found", "denom", packetData.Denom, "tokenPairID", tokenPairID)
 		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
 	}
+
+	p.transferKeeper.Logger(ctx).Info("Found token pair",
+		"erc20Contract", tokenPair.GetERC20Contract().Hex(),
+		"denom", tokenPair.Denom,
+		"enabled", tokenPair.Enabled)
 
 	var (
 		resp *evmtypes.MsgEthereumTxResponse
@@ -133,25 +180,38 @@ func (p Precompile) Execute(
 	)
 
 	// if the packet is a callback packet we process it as such, if not, we assume it's a normal erc20 transfer
+	p.transferKeeper.Logger(ctx).Info("Checking if packet is a callback packet")
 	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
 	if isCbPacket {
-		p.transferKeeper.Logger(ctx).Debug("Processing callback packet")
+		p.transferKeeper.Logger(ctx).Info("Processing callback packet")
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to get callback data", "error", err)
 			retErr = err
 			return
 		}
-		p.transferKeeper.Logger(ctx).Info("Successfully retrieved callback data", "callbackAddress", cbData.CallbackAddress, "senderAddress", packetData.Sender, "commitGasLimit", cbData.CommitGasLimit)
+		p.transferKeeper.Logger(ctx).Info("Successfully retrieved callback data",
+			"callbackAddress", cbData.CallbackAddress,
+			"senderAddress", packetData.Sender,
+			"commitGasLimit", cbData.CommitGasLimit,
+			"calldataLength", len(cbData.Calldata))
 
+		p.transferKeeper.Logger(ctx).Info("Executing destination callback")
 		resp, logs, err = p.executeDestinationCallback(ctx, cachedCtx, packet, packetData, cbData, tokenPair)
 		retErr = err
 	} else {
+		p.transferKeeper.Logger(ctx).Info("Processing normal ERC20 transfer")
 		resp, logs, err = p.executeERC20Transfer(ctx, cachedCtx, stateDB, packet, packetData, tokenPair)
 		retErr = err
 	}
 
 	// Emit event for the packet, regardless of success or failure, as we want to show the result in the block explorer.
 	// Note that we are doing it on the original context, we must not use the cached context here.
+	p.transferKeeper.Logger(ctx).Info("Emitting gateway execute event",
+		"packetSequence", packet.Sequence,
+		"executionSuccess", retErr == nil,
+		"isCallbackPacket", isCbPacket,
+		"responseLength", len(resp.Ret))
+
 	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packet.Sequence, retErr == nil, packetQueueItem.OriginalTxHash, isCbPacket, false, resp.Ret); err != nil {
 		p.transferKeeper.Logger(ctx).Error("failed to emit gateway execute event", "error", err)
 		return nil, err
@@ -162,10 +222,14 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
+	p.transferKeeper.Logger(ctx).Info("Adding EVM logs to stateDB", "logCount", len(logs))
 	for _, log := range logs {
 		stateDB.AddLog(log)
 	}
 
+	p.transferKeeper.Logger(ctx).Info("Gateway Execute function completed successfully",
+		"responseLength", len(resp.Ret),
+		"logCount", len(logs))
 	return resp.Ret, nil
 }
 
@@ -174,20 +238,34 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 	var packet types.PacketQueueItem
 	logger := p.transferKeeper.Logger(ctx)
 
+	logger.Info("Starting to walk packet queue")
 	if err := p.transferKeeper.PacketQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Debug("Processing packet from queue", "key", key, "value", value)
+		logger.Info("Found packet in queue",
+			"key", key,
+			"sequence", value.Packet.Sequence,
+			"sourceChannel", value.Packet.SourceChannel,
+			"destChannel", value.Packet.DestinationChannel)
 		packet = value
 		return true, nil // stop after first
 	}); err != nil {
+		logger.Error("Failed to walk packet queue", "error", err)
 		return types.PacketQueueItem{}, err
 	}
 
+	if packet.Packet == nil {
+		logger.Error("No packets found in queue")
+		return types.PacketQueueItem{}, errors.New("no packets in queue")
+	}
+
+	logger.Info("Removing packet from queue", "sequence", packet.Packet.Sequence)
 	// remove the packet from the queue
 	err := p.transferKeeper.PacketQueue.Remove(ctx, packet.Packet.Sequence)
 	if err != nil {
+		logger.Error("Failed to remove packet from queue", "sequence", packet.Packet.Sequence, "error", err)
 		return types.PacketQueueItem{}, err
 	}
 
+	logger.Info("Successfully removed packet from queue", "sequence", packet.Packet.Sequence)
 	return packet, nil
 }
 
