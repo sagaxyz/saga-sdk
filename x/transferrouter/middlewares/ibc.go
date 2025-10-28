@@ -173,6 +173,11 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 		return newErrorAcknowledgement(err)
 	}
 
+	// print current balance of the override receiver
+	balances := i.k.BankKeeper.GetAllBalances(ctx, overrideReceiver)
+
+	i.k.Logger(ctx).Info("transferrouter OnRecvPacket balance", "overrideReceiver", overrideReceiver, "balance", balances)
+
 	return nil
 }
 
@@ -262,6 +267,7 @@ func (i IBCMiddleware) receiveFunds(
 		// Memo explicitly zeroed
 	}
 	overrideDataBz := transfertypes.ModuleCdc.MustMarshalJSON(&overrideData)
+	i.k.Logger(ctx).Info("transferrouter receiveFunds overrideDataBz", "overrideDataBz", string(overrideDataBz))
 	overridePacket := channeltypes.Packet{
 		Sequence:           packet.Sequence,
 		SourcePort:         packet.SourcePort,
@@ -272,6 +278,8 @@ func (i IBCMiddleware) receiveFunds(
 		TimeoutHeight:      packet.TimeoutHeight,
 		TimeoutTimestamp:   packet.TimeoutTimestamp,
 	}
+
+	i.k.Logger(ctx).Info("transferrouter OnRecvPacket overridePacket", "overrideReceiver", overrideReceiver)
 
 	ack := i.app.OnRecvPacket(ctx, channelVersion, overridePacket, relayer)
 
