@@ -261,6 +261,9 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 	tx := &evmtypes.MsgEthereumTx{}
 	tx.FromEthereumTx(ethtx)
 
+	// Set the from address to the known signer address
+	tx.From = types.KnownSignerAddress.Bytes()
+
 	if err := tx.ValidateBasic(); err != nil {
 		fmt.Println("validate basic failed", err)
 		return nil, nil, err
