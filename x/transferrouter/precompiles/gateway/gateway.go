@@ -111,8 +111,14 @@ func (p Precompile) RequiredGas(input []byte) uint64 {
 func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz []byte, err error) {
 	ctx, stateDB, method, initialGas, args, err := p.RunSetup(evm, contract, readOnly, p.IsTransaction)
 	if err != nil {
+		fmt.Println("=========  error!!111", err)
 		return nil, err
 	}
+	p.transferKeeper.Logger(ctx).Info("Gateway Run function started",
+		"origin", evm.Origin.Hex(),
+		"contract", contract.Address().Hex(),
+		"readOnly", readOnly,
+		"method", method.Name)
 
 	// This handles any out of gas errors that may occur during the execution of a precompile tx or query.
 	// It avoids panics and returns the out of gas error so the EVM can continue gracefully.
