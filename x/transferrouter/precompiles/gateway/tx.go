@@ -119,44 +119,41 @@ func (p Precompile) Execute(
 		} else {
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
 			p.transferKeeper.Logger(ctx).Info("Created error acknowledgement")
+
+			// burn the received tokens, first send them to the transferrouter module and then burn them.
+			p.transferKeeper.Logger(ctx).Info("Starting token burn process", "isCallbackPacket", isCbPacket)
+			if isCbPacket {
+				isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), packetData.Sender)
+				p.transferKeeper.Logger(ctx).Info("Sending coins from isolated address to module",
+					"isolatedAddr", isolatedAddr.String(),
+					"coin", coin.String())
+				err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, isolatedAddr, types.ModuleName, sdk.NewCoins(coin))
+			} else {
+				p.transferKeeper.Logger(ctx).Info("Sending coins from gateway address to module",
+					"gatewayAddr", p.Address().Hex(),
+					"gatewayAddrBytes", sdk.AccAddress(p.Address().Bytes()).String(),
+					"coin", coin.String())
+
+				err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, sdk.AccAddress(p.Address().Bytes()), types.ModuleName, sdk.NewCoins(coin))
+			}
+
+			if err != nil {
+				p.transferKeeper.Logger(ctx).Error("failed to send coins from account to module", "error", err)
+				retErr = err
+				return
+			}
+
+			p.transferKeeper.Logger(ctx).Info("Successfully sent coins to module, now burning coins", "coin", coin.String())
+			err = p.transferKeeper.BankKeeper.BurnCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
+			if err != nil {
+				p.transferKeeper.Logger(ctx).Error("failed to burn coins", "error", err)
+				retErr = err
+				return
+			}
 		}
 
-		// burn the received tokens, first send them to the transferrouter module and then burn them.
-		p.transferKeeper.Logger(ctx).Info("Starting token burn process", "isCallbackPacket", isCbPacket)
-		if isCbPacket {
-			isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), packetData.Sender)
-			p.transferKeeper.Logger(ctx).Info("Sending coins from isolated address to module",
-				"isolatedAddr", isolatedAddr.String(),
-				"coin", coin.String())
-			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, isolatedAddr, types.ModuleName, sdk.NewCoins(coin))
-		} else {
-			p.transferKeeper.Logger(ctx).Info("Sending coins from gateway address to module",
-				"gatewayAddr", p.Address().Hex(),
-				"gatewayAddrBytes", sdk.AccAddress(p.Address().Bytes()).String(),
-				"coin", coin.String())
+		p.transferKeeper.Logger(ctx).Info("Writing IBC acknowledgment")
 
-			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, sdk.AccAddress(p.Address().Bytes()), types.ModuleName, sdk.NewCoins(coin))
-
-			// get all balances of the gateway address
-			balances := p.transferKeeper.BankKeeper.GetAllBalances(ctx, sdk.AccAddress(p.Address().Bytes()))
-			p.transferKeeper.Logger(ctx).Info("transferrouter gateway address balances", "balances", balances)
-		}
-
-		if err != nil {
-			p.transferKeeper.Logger(ctx).Error("failed to send coins from account to module", "error", err)
-			retErr = err
-			return
-		}
-
-		p.transferKeeper.Logger(ctx).Info("Successfully sent coins to module, now burning coins", "coin", coin.String())
-		err = p.transferKeeper.BankKeeper.BurnCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
-		if err != nil {
-			p.transferKeeper.Logger(ctx).Error("failed to burn coins", "error", err)
-			retErr = err
-			return
-		}
-
-		p.transferKeeper.Logger(ctx).Info("Successfully burned coins, writing IBC acknowledgment")
 		err = p.transferKeeper.WriteIBCAcknowledgment(ctx, packet, ack)
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)

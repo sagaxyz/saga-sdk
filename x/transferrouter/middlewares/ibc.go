@@ -63,6 +63,7 @@ func (i IBCMiddleware) OnTimeoutPacket(
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 	}
+	// let the underlying module handle the timeout packet
 	return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
 }
 
