@@ -1,9 +1,5 @@
 package types
 
-import "github.com/ethereum/go-ethereum/common"
-
-var KnownSignerAddress = common.HexToAddress("0x5a6a5a6a5a6a5a6a5a6a5a6a5a6a5a6a5a6a")
-
 // DefaultGenesisState returns the default genesis state for the module.
 func DefaultGenesisState() *GenesisState {
 	return &GenesisState{

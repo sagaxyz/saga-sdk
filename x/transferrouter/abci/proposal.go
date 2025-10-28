@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,7 +12,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/ethereum/go-ethereum/common"
+	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	precompilesgateway "github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
@@ -79,15 +82,28 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 
 		// Parse the configured private key (in hex format) and derive the corresponding
 		// Ethereum address of the known signer.
+		if params.KnownSignerPrivateKey == "" {
+			fmt.Println("known signer private key is empty")
+			h.keeper.Logger(ctx).Error("known signer private key is empty")
+			return nil, errors.New("known signer private key is empty")
+		}
+		h.keeper.Logger(ctx).Info("known signer private key", "known signer private key", params.KnownSignerPrivateKey)
+		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
+		if err != nil {
+			fmt.Println("failed to parse private key", err)
+			return nil, errors.New("failed to parse private key")
+		}
 
-		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(types.KnownSignerAddress.Bytes()))
+		h.keeper.Logger(ctx).Info("priv key", "priv key", privKey)
+		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
+		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(knownSignerBz))
 		if err != nil {
 			nextNonce = 0
 		}
 		gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
 
 		// Add the source callback queue
-		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gatewayAddress, maxBlockGas)
+		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during src callback queue walk", "error", err)
 			fmt.Println("error during src callback queue walk", err)
@@ -96,7 +112,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 
 		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
 		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
-		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gatewayAddress, maxBlockGas)
+		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during packet queue walk", "error", err)
 			fmt.Println("error during packet queue walk", err)
@@ -137,7 +153,7 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 }
 
 // AddSrcCallbackTxs adds the source callback transactions to the proposal
-func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, maxBlockGas uint64) (uint64, error) {
+func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
 	h.keeper.Logger(ctx).Info("adding src callback txs")
 	// Add the source callback queue
 	err := h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
@@ -149,7 +165,7 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 			return true, err
 		}
 
-		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress)
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
 		if err != nil {
 			fmt.Println("failed to convert calldata to signed tx", err)
 			return true, err
@@ -171,8 +187,10 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 }
 
 // AddPacketTxs adds the packet transactions to the proposal
-func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, maxBlockGas uint64) error {
+func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+	h.keeper.Logger(ctx).Info("adding packet txs111")
 	err := h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+		fmt.Println("adding packet txs")
 		// Calldata is a simple call to the gateway execute function
 		calldata, err := precompilesgateway.ABI.Pack("execute")
 		if err != nil {
@@ -180,7 +198,7 @@ func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepare
 			return true, err
 		}
 
-		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress)
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
 		if err != nil {
 			fmt.Println("failed to convert calldata to signed tx", err)
 			return true, err
@@ -230,7 +248,7 @@ func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepa
 	return nil
 }
 
-func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address) (sdk.Tx, []byte, error) {
+func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
 	txArgs := &evmtypes.EvmTxArgs{
 		Nonce:     nonce,
 		GasLimit:  CallMaxGas,
@@ -251,18 +269,32 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		return nil, nil, errors.New("signer is nil")
 	}
 
+	// ethtx := tx.AsTransaction()
 	ethtx.ChainId().Set(chainID)
+	ethtx.GasFeeCap().SetUint64(5000000)
 
 	if ethtx == nil {
 		fmt.Println("as transaction returned nil")
 		return nil, nil, errors.New("as transaction returned nil")
 	}
 
-	tx := &evmtypes.MsgEthereumTx{}
-	tx.FromEthereumTx(ethtx)
+	signedTx, err := ethcoretypes.SignTx(ethtx, h.signer, privKey)
+	if err != nil {
+		fmt.Println("sign tx failed", err)
+		return nil, nil, err
+	}
 
-	// Set the from address to the known signer address
-	tx.From = types.KnownSignerAddress.Bytes()
+	signedTx.GasFeeCap().SetUint64(5000000)
+	h.keeper.Logger(ctx).Info("signed tx", "gas fee cap", signedTx.GasFeeCap())
+
+	tx := &evmtypes.MsgEthereumTx{}
+	err = tx.FromSignedEthereumTx(signedTx, h.signer)
+	if err != nil {
+		fmt.Println("from signed ethereum tx failed", err)
+		return nil, nil, err
+	}
+	tx.Raw.GasFeeCap().SetUint64(5000000)
+	h.keeper.Logger(ctx).Info("tx", "gas fee cap", tx.Raw.GasFeeCap())
 
 	if err := tx.ValidateBasic(); err != nil {
 		fmt.Println("validate basic failed", err)
