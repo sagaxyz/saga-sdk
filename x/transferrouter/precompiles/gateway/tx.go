@@ -132,8 +132,14 @@ func (p Precompile) Execute(
 		} else {
 			p.transferKeeper.Logger(ctx).Info("Sending coins from gateway address to module",
 				"gatewayAddr", p.Address().Hex(),
+				"gatewayAddrBytes", sdk.AccAddress(p.Address().Bytes()).String(),
 				"coin", coin.String())
+
 			err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, sdk.AccAddress(p.Address().Bytes()), types.ModuleName, sdk.NewCoins(coin))
+
+			// get all balances of the gateway address
+			balances := p.transferKeeper.BankKeeper.GetAllBalances(ctx, sdk.AccAddress(p.Address().Bytes()))
+			p.transferKeeper.Logger(ctx).Info("transferrouter gateway address balances", "balances", balances)
 		}
 
 		if err != nil {
