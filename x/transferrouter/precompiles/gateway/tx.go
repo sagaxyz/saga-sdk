@@ -204,6 +204,7 @@ func (p Precompile) Execute(
 	} else {
 		p.transferKeeper.Logger(ctx).Info("Processing normal ERC20 transfer")
 		resp, logs, err = p.executeERC20Transfer(ctx, cachedCtx, stateDB, packet, packetData, tokenPair)
+		p.transferKeeper.Logger(ctx).Info("Executed ERC20 transfer", "response", resp, "logs", logs, "error", err)
 		retErr = err
 	}
 
@@ -291,6 +292,8 @@ func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB *st
 		p.transferKeeper.Logger(ctx).Error("EVM message call failed", "error", err)
 		return nil, nil, err
 	}
+
+	p.transferKeeper.Logger(ctx).Info("EVM message call successful", "result", result, "error", err)
 
 	logs := evmtypes.LogsToEthereum(result.Logs)
 
@@ -393,7 +396,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	contract *vm.Contract,
 	stateDB *statedb.StateDB,
 	method *abi.Method,
-	args []interface{},
+	args any,
 ) (retBz []byte, retErr error) {
 
 	packetQueueItem, err := p.popNextSrcCallback(ctx)
