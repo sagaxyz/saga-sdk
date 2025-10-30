@@ -210,13 +210,10 @@ func (p Precompile) Execute(
 
 	// Emit event for the packet, regardless of success or failure, as we want to show the result in the block explorer.
 	// Note that we are doing it on the original context, we must not use the cached context here.
-	p.transferKeeper.Logger(ctx).Info("Emitting gateway execute event",
-		"packetSequence", packet.Sequence,
-		"executionSuccess", retErr == nil,
-		"isCallbackPacket", isCbPacket,
-		"responseLength", len(resp.Ret))
-
-	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packet.Sequence, retErr == nil, packetQueueItem.OriginalTxHash, isCbPacket, false, resp.Ret); err != nil {
+	if resp != nil {
+		retBz = resp.Ret
+	}
+	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packet.Sequence, retErr == nil, packetQueueItem.OriginalTxHash, isCbPacket, false, retBz); err != nil {
 		p.transferKeeper.Logger(ctx).Error("failed to emit gateway execute event", "error", err)
 		return nil, err
 	}
@@ -231,10 +228,7 @@ func (p Precompile) Execute(
 		stateDB.AddLog(log)
 	}
 
-	p.transferKeeper.Logger(ctx).Info("Gateway Execute function completed successfully",
-		"responseLength", len(resp.Ret),
-		"logCount", len(logs))
-	return resp.Ret, nil
+	return retBz, nil
 }
 
 // popNextPacket gets the next packet from the queue and removes it

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.20;
 
+// This contract should only be used to assemble calldata and the events in tests
 
 contract CallbackTest {
     event PacketAcknowledgement(
