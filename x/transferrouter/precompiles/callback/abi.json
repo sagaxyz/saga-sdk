@@ -4,6 +4,74 @@
     "sourceName": "solidity/precompiles/callbacks/ICallbacks.sol",
     "abi": [
       {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "channelId",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint64",
+            "name": "sequence",
+            "type": "uint64"
+          },
+          {
+            "indexed": false,
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "indexed": false,
+            "internalType": "bytes",
+            "name": "acknowledgement",
+            "type": "bytes"
+          }
+        ],
+        "name": "PacketAcknowledgement",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "channelId",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint64",
+            "name": "sequence",
+            "type": "uint64"
+          },
+          {
+            "indexed": false,
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          }
+        ],
+        "name": "PacketTimeout",
+        "type": "event"
+      },
+      {
         "inputs": [
           {
             "internalType": "string",
