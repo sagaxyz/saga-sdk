@@ -44,10 +44,32 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 	acknowledgement []byte,
 	relayer sdk.AccAddress,
 ) error {
-	err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
+	isCb, data, err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 	}
+
+	var ack channeltypes.Acknowledgement
+	if err := channeltypes.SubModuleCdc.UnmarshalJSON(acknowledgement, &ack); err != nil {
+		// handle unmarshal error
+		return err
+	}
+
+	if !isCb && data != nil && !ack.Success() {
+		// if it's not a success, we must send the tokens back to the sender, either from the escrow address or by minting them
+		err = i.k.ErrorOrTimeoutQueue.Set(ctx, packet.Sequence, types.PacketQueueItem{
+			Packet:          &packet,
+			OriginalTxHash:  tmhash.Sum(ctx.TxBytes()),
+			IsTimeout:       false,
+			Acknowledgement: acknowledgement,
+		})
+		if err != nil {
+			i.k.Logger(ctx).Error("failed to set error or timeout queue", "error", err)
+		}
+		return err
+	}
+
+	// if it's not for an IBC transfer packet, we let the underlying module handle the acknowledgement packet
 
 	return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
 }
@@ -59,10 +81,24 @@ func (i IBCMiddleware) OnTimeoutPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) error {
-	err := i.addSrcCallbackToQueue(ctx, packet, nil, true)
+	isCb, data, err := i.addSrcCallbackToQueue(ctx, packet, nil, true)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 	}
+
+	if !isCb && data != nil {
+		err = i.k.ErrorOrTimeoutQueue.Set(ctx, packet.Sequence, types.PacketQueueItem{
+			Packet:          &packet,
+			OriginalTxHash:  tmhash.Sum(ctx.TxBytes()),
+			IsTimeout:       true,
+			Acknowledgement: nil,
+		})
+		if err != nil {
+			i.k.Logger(ctx).Error("failed to set error or timeout queue", "error", err)
+		}
+		return err
+	}
+
 	// let the underlying module handle the timeout packet
 	return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
 }
@@ -214,7 +250,7 @@ func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, 
 
 // helper functions
 
-func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
+func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) (bool, *transfertypes.FungibleTokenPacketData, error) {
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		i.k.Logger(ctx).Error("transferrouter error parsing packet data from ack packet",
@@ -225,7 +261,7 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 		)
 
 		// do not return an error, just log it
-		return nil
+		return false, nil, nil
 	}
 
 	// get callback data
@@ -245,9 +281,9 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to set callback queue", "error", err)
 		}
-		return nil
+		return true, &data, nil
 	}
-	return nil
+	return false, &data, nil
 }
 
 // receiveFunds receives funds from the packet into the override receiver

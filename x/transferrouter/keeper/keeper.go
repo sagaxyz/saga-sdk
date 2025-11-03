@@ -70,10 +70,11 @@ type Keeper struct {
 	storeService corecompat.KVStoreService
 	authority    string
 
-	Schema           collections.Schema
-	Params           collections.Item[types.Params]
-	PacketQueue      collections.Map[uint64, types.PacketQueueItem]
-	SrcCallbackQueue collections.Map[uint64, types.PacketQueueItem]
+	Schema              collections.Schema
+	Params              collections.Item[types.Params]
+	PacketQueue         collections.Map[uint64, types.PacketQueueItem]
+	SrcCallbackQueue    collections.Map[uint64, types.PacketQueueItem]
+	ErrorOrTimeoutQueue collections.Map[uint64, types.PacketQueueItem]
 
 	Erc20Keeper    ERC20Keeper
 	ChannelKeeper  ChannelKeeper

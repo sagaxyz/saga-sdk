@@ -454,6 +454,69 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	return nil, nil
 }
 
+// HandleErrorOrTimeout handles an error or timeout for an IBC transfer packet, by sending the tokens back to the sender or by minting them if they were burnt.
+func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
+	origin common.Address,
+	contract *vm.Contract,
+	stateDB *statedb.StateDB,
+	method *abi.Method,
+	args any,
+) (retBz []byte, retErr error) {
+	packetQueueItem, err := p.popNextErrorOrTimeout(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	packetData := transfertypes.FungibleTokenPacketData{}
+	if err := transfertypes.ModuleCdc.UnmarshalJSON(packetQueueItem.Packet.Data, &packetData); err != nil {
+		return nil, err
+	}
+
+	// we need to transfer the tokens back to the sender either from the escrow address or by minting them
+
+	// check if the tokens are native to this chain or not
+	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Denom)
+	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
+	if !found {
+		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
+	}
+
+	// tokenPair.Denom
+	//check if the denom is an ibc token
+	ibcDenom := transfertypes.ParseDenomTrace(tokenPair.Denom)
+	amount, ok := math.NewIntFromString(packetData.Amount)
+	if !ok {
+		return nil, errors.New("invalid amount")
+	}
+	if ibcDenom.IBCDenom() != "" {
+		// it's an ibc token, we need to transfer the tokens back to the sender from the escrow address (ibc)
+		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
+		err = p.transferKeeper.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, escrowAddress, sdk.NewCoins(sdk.NewCoin(packetData.Denom, amount)))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// it's a native token, we need to mint the tokens back to the sender
+		err = p.transferKeeper.BankKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(sdk.NewCoin(packetData.Denom, amount)))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// emit the event
+	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
+		return nil, err
+	}
+
+	// delete
+	err = p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, packetQueueItem.Packet.Sequence)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func getSourceCallbackData(
 	ctx sdk.Context,
 	packetQueueItem types.PacketQueueItem,
@@ -493,6 +556,30 @@ func (p Precompile) popNextSrcCallback(ctx sdk.Context) (types.PacketQueueItem, 
 
 	// remove the packet from the queue
 	err := p.transferKeeper.SrcCallbackQueue.Remove(ctx, sequence)
+	if err != nil {
+		return types.PacketQueueItem{}, err
+	}
+	return packet, nil
+}
+
+func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (types.PacketQueueItem, error) {
+	var (
+		packet   types.PacketQueueItem
+		sequence uint64
+	)
+	logger := p.transferKeeper.Logger(ctx)
+
+	if err := p.transferKeeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
+		logger.Info("Processing packet from queue", "key", key, "value", value)
+		sequence = key
+		packet = value
+		return true, nil // stop after first
+	}); err != nil {
+		return types.PacketQueueItem{}, err
+	}
+
+	// remove the packet from the queue
+	err := p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, sequence)
 	if err != nil {
 		return types.PacketQueueItem{}, err
 	}

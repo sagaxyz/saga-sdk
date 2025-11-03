@@ -51,7 +51,6 @@ var CallMaxGas = uint64(10000000) // arbitrary value
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
-		h.keeper.Logger(ctx).Info("Preparing proposal!!!!!!")
 		// 1. Add the source callback queue
 		chainId, err := utils.ParseChainID(ctx.ChainID())
 		if err != nil {
@@ -116,6 +115,13 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		if err != nil {
 			logger.Error("Error during packet queue walk", "error", err)
 			fmt.Println("error during packet queue walk", err)
+			return nil, err
+		}
+
+		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
+		if err != nil {
+			logger.Error("Error during error or timeout queue walk", "error", err)
+			fmt.Println("error during error or timeout queue walk", err)
 			return nil, err
 		}
 
@@ -184,6 +190,35 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 	})
 
 	return nextNonce, err
+}
+
+// AddErrorOrTimeoutTxs adds the error or timeout transactions to the proposal
+func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+	h.keeper.Logger(ctx).Info("adding error or timeout txs")
+	return h.keeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+		fmt.Println("adding error or timeout txs")
+		// Calldata is a simple call to the gateway handleErrorOrTimeout function
+		calldata, err := precompilesgateway.ABI.Pack("handleErrorOrTimeout")
+		if err != nil {
+			fmt.Println("failed to pack calldata", err)
+			return true, err
+		}
+
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+		if err != nil {
+			fmt.Println("failed to convert calldata to signed tx", err)
+			return true, err
+		}
+
+		stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
+		if stop {
+			fmt.Println("tx selector stopped")
+			return true, nil
+		}
+
+		nextNonce = nextNonce + 1
+		return false, nil
+	})
 }
 
 // AddPacketTxs adds the packet transactions to the proposal

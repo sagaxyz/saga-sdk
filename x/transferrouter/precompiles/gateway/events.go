@@ -58,3 +58,39 @@ func (p Precompile) emitGatewayExecuteEvent(
 
 	return nil
 }
+
+// emitErrorOrTimeoutHandledEvent creates a new ErrorOrTimeoutHandled event emitted on an HandleErrorOrTimeout transaction.
+/*
+   event ErrorOrTimeoutHandled(
+       uint256 sequence,
+       bytes txhash,
+       bytes data
+   );
+*/
+func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB *statedb.StateDB, precompileAddr common.Address, sequence uint64, txhash []byte, data []byte) error {
+	event := p.ABI.Events["ErrorOrTimeoutHandled"]
+
+	// Prepare the event topics
+	topics := make([]common.Hash, 1)
+
+	// The first topic is always the signature of the event.
+	topics[0] = event.ID
+
+	// Prepare the event data: sequence, txhash, data
+	// All parameters are non-indexed, so they go in the data field
+	arguments := abi.Arguments{event.Inputs[0], event.Inputs[1], event.Inputs[2]}
+	seqBig := new(big.Int).SetUint64(sequence)
+	packed, err := arguments.Pack(seqBig, txhash, data)
+	if err != nil {
+		return err
+	}
+
+	stateDB.AddLog(&ethtypes.Log{
+		Address:     precompileAddr,
+		Topics:      topics,
+		Data:        packed,
+		BlockNumber: uint64(ctx.BlockHeight()), //nolint:gosec // G115
+	})
+
+	return nil
+}

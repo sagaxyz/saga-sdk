@@ -111,7 +111,6 @@ func (p Precompile) RequiredGas(input []byte) uint64 {
 func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz []byte, err error) {
 	ctx, stateDB, method, initialGas, args, err := p.RunSetup(evm, contract, readOnly, p.IsTransaction)
 	if err != nil {
-		fmt.Println("=========  error!!111", err)
 		return nil, err
 	}
 	p.transferKeeper.Logger(ctx).Info("Gateway Run function started",
@@ -129,6 +128,8 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 		bz, err = p.Execute(ctx, evm.Origin, contract, stateDB, method, args)
 	case ExecuteSrcCallbackMethod:
 		bz, err = p.ExecuteSrcCallback(ctx, evm.Origin, contract, stateDB, method, args)
+	case HandleErrorOrTimeoutMethod:
+		bz, err = p.HandleErrorOrTimeout(ctx, evm.Origin, contract, stateDB, method, args)
 	default:
 		return nil, fmt.Errorf(cmn.ErrUnknownMethod, method.Name)
 	}
@@ -158,7 +159,8 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 func (Precompile) IsTransaction(method *abi.Method) bool {
 	switch method.Name {
 	case ExecuteMethod,
-		ExecuteSrcCallbackMethod:
+		ExecuteSrcCallbackMethod,
+		HandleErrorOrTimeoutMethod:
 		return true
 	default:
 		return false
