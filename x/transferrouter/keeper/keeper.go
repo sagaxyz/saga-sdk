@@ -22,10 +22,11 @@ import (
 )
 
 var (
-	ParamsPrefix           = collections.NewPrefix(0) // Stores params
-	PacketQueuePrefix      = collections.NewPrefix(2) // Stores the packets
-	PacketResultPrefix     = collections.NewPrefix(3) // Stores the packet results
-	SrcCallbackQueuePrefix = collections.NewPrefix(4) // Stores the src callback queue
+	ParamsPrefix              = collections.NewPrefix(0) // Stores params
+	PacketQueuePrefix         = collections.NewPrefix(2) // Stores the packets
+	PacketResultPrefix        = collections.NewPrefix(3) // Stores the packet results
+	SrcCallbackQueuePrefix    = collections.NewPrefix(4) // Stores the src callback queue
+	ErrorOrTimeoutQueuePrefix = collections.NewPrefix(5) // Stores the error or timeout queue
 )
 
 type ChannelKeeper interface {
@@ -127,6 +128,13 @@ func NewKeeper(cdc codec.BinaryCodec,
 			sb,
 			SrcCallbackQueuePrefix,
 			"src_callback_queue",
+			collections.Uint64Key,
+			codec.CollValue[types.PacketQueueItem](cdc),
+		),
+		ErrorOrTimeoutQueue: collections.NewMap(
+			sb,
+			ErrorOrTimeoutQueuePrefix,
+			"error_or_timeout_queue",
 			collections.Uint64Key,
 			codec.CollValue[types.PacketQueueItem](cdc),
 		),
