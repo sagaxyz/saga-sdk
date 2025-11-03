@@ -503,6 +503,11 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		}
 	}
 
+	// emit erc20 transfer event
+	if err := p.emitErc20TransferEvent(ctx, stateDB, p.Address(), sender, receiver, amount, denom); err != nil {
+		return nil, err
+	}
+
 	// emit the event
 	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
 		return nil, err

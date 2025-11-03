@@ -135,7 +135,7 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 	}
 
 	if err != nil {
-		p.transferKeeper.Logger(ctx).Error("error!!222", "error", err)
+		p.transferKeeper.Logger(ctx).Error("error!!222", "error", err, "method", method.Name)
 		return nil, err
 	}
 
