@@ -467,38 +467,43 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		return nil, err
 	}
 
-	packetData := transfertypes.FungibleTokenPacketData{}
-	if err := transfertypes.ModuleCdc.UnmarshalJSON(packetQueueItem.Packet.Data, &packetData); err != nil {
-		return nil, err
-	}
+	// packetData := transfertypes.FungibleTokenPacketData{}
+	// if err := transfertypes.ModuleCdc.UnmarshalJSON(packetQueueItem.Packet.Data, &packetData); err != nil {
+	// 	return nil, err
+	// }
 
 	// we need to transfer the tokens back to the sender either from the escrow address or by minting them
 
-	// check if the tokens are native to this chain or not
-	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Denom)
-	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
-	if !found {
-		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
+	packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
+	if err != nil {
+		return nil, err
 	}
 
-	// tokenPair.Denom
-	//check if the denom is an ibc token
-	ibcDenom := transfertypes.ParseDenomTrace(tokenPair.Denom)
-	amount, ok := math.NewIntFromString(packetData.Amount)
-	if !ok {
-		return nil, errors.New("invalid amount")
+	// // check if the tokens are native to this chain or not
+	// tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
+	// tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
+	// if !found {
+	// 	return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
+	// }
+
+	sender, err := sdk.AccAddressFromBech32(packetData.Sender)
+	if err != nil {
+		return nil, err
 	}
-	if ibcDenom.IBCDenom() != "" {
-		// it's an ibc token, we need to transfer the tokens back to the sender from the escrow address (ibc)
-		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
-		err = p.transferKeeper.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, escrowAddress, sdk.NewCoins(sdk.NewCoin(packetData.Denom, amount)))
+
+	coin, err := packetData.Token.ToCoin()
+	if err != nil {
+		return nil, err
+	}
+
+	if packetData.Token.Denom.HasPrefix(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel) {
+		err = p.transferKeeper.BankKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		// it's a native token, we need to mint the tokens back to the sender
-		err = p.transferKeeper.BankKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(sdk.NewCoin(packetData.Denom, amount)))
-		if err != nil {
+		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
+		if err := p.transferKeeper.TransferKeeper.UnescrowCoin(ctx, escrowAddress, sender, coin); err != nil {
 			return nil, err
 		}
 	}

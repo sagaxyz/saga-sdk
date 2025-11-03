@@ -36,9 +36,7 @@ type ChannelKeeper interface {
 }
 
 type TransferKeeper interface {
-	DenomPathFromHash(ctx sdk.Context, denomHash string) (string, error)
-	GetTotalEscrowForDenom(ctx sdk.Context, denom string) sdk.Coin
-	SetTotalEscrowForDenom(sdk.Context, sdk.Coin)
+	UnescrowCoin(ctx sdk.Context, escrowAddress sdk.AccAddress, sender sdk.AccAddress, coin sdk.Coin) error
 }
 
 type BankKeeper interface {
