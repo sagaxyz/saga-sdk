@@ -483,7 +483,7 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
 	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
 	if !found {
-		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
+		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Token.Denom.String())
 	}
 
 	sender, err := sdk.AccAddressFromBech32(packetData.Sender)
