@@ -480,11 +480,11 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	}
 
 	// // check if the tokens are native to this chain or not
-	// tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
-	// tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
-	// if !found {
-	// 	return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
-	// }
+	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
+	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
+	if !found {
+		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Denom)
+	}
 
 	sender, err := sdk.AccAddressFromBech32(packetData.Sender)
 	if err != nil {
@@ -496,22 +496,24 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		return nil, err
 	}
 
+	var refundSender common.Address
+
 	if packetData.Token.Denom.HasPrefix(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel) {
+		// this is a 0x0 address
+		refundSender = common.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		err = p.transferKeeper.BankKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
+		refundSender = common.Address(escrowAddress.Bytes())
 		if err := p.transferKeeper.TransferKeeper.UnescrowCoin(ctx, escrowAddress, sender, coin); err != nil {
 			return nil, err
 		}
 	}
 
-	// emit erc20 transfer event, the sender will be either the
-	// if err := p.emitErc20TransferEvent(ctx, stateDB, p.Address(), sender, receiver, amount, denom); err != nil {
-	// 	return nil, err
-	// }
+	p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt())
 
 	// emit the event
 	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
