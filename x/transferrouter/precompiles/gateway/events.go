@@ -6,10 +6,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/evm/contracts"
 	evmcmn "github.com/cosmos/evm/precompiles/common"
-	"github.com/cosmos/evm/x/vm/statedb"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 // emitGatewayExecuteEvent creates a new Gateway execute event emitted on an Execute transaction.
@@ -25,7 +25,7 @@ import (
 */
 func (p Precompile) emitGatewayExecuteEvent(
 	ctx sdk.Context,
-	stateDB *statedb.StateDB,
+	stateDB vm.StateDB,
 	precompileAddr common.Address,
 	sequence uint64,
 	success bool,
@@ -69,7 +69,7 @@ func (p Precompile) emitGatewayExecuteEvent(
        bytes data
    );
 */
-func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB *statedb.StateDB, precompileAddr common.Address, sequence uint64, txhash []byte, data []byte) error {
+func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB vm.StateDB, precompileAddr common.Address, sequence uint64, txhash []byte, data []byte) error {
 	event := p.ABI.Events["ErrorOrTimeoutHandled"]
 
 	// Prepare the event topics
@@ -98,7 +98,7 @@ func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB *sta
 }
 
 // EmitTransferEvent creates a new Transfer event emitted (ERC20). In order to show the IBC transfer in the block explorer.
-func (p Precompile) EmitTransferEvent(ctx sdk.Context, stateDB *statedb.StateDB, precompileAddr, from, to common.Address, value *big.Int) error {
+func (p Precompile) EmitTransferEvent(ctx sdk.Context, stateDB vm.StateDB, precompileAddr, from, to common.Address, value *big.Int) error {
 	// Prepare the event topics
 	topics := make([]common.Hash, 3)
 

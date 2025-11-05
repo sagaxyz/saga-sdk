@@ -56,6 +56,7 @@ var _ vm.PrecompiledContract = &Precompile{}
 
 type Precompile struct {
 	cmn.Precompile
+	ABI                   abi.ABI
 	transferKeeper        transferrouterkeeper.Keeper
 	evmKeeper             EVMKeeper
 	packetDataUnmarshaler porttypes.PacketDataUnmarshaler
@@ -73,10 +74,10 @@ func NewPrecompile(
 ) (*Precompile, error) {
 	p := &Precompile{
 		Precompile: cmn.Precompile{
-			ABI:                  ABI,
 			KvGasConfig:          storetypes.KVGasConfig(),
 			TransientKVGasConfig: storetypes.TransientGasConfig(),
 		},
+		ABI:                   ABI,
 		transferKeeper:        transferKeeper,
 		evmKeeper:             evmKeeper,
 		packetDataUnmarshaler: packetDataUnmarshaler,
@@ -98,7 +99,7 @@ func (p Precompile) RequiredGas(input []byte) uint64 {
 
 	methodID := input[:4]
 
-	method, err := p.MethodById(methodID)
+	method, err := p.ABI.MethodById(methodID)
 	if err != nil {
 		// This should never happen since this method is going to fail during Run
 		return 0
@@ -109,43 +110,33 @@ func (p Precompile) RequiredGas(input []byte) uint64 {
 
 // Run executes the precompiled contract Gateway methods defined in the ABI.
 func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz []byte, err error) {
-	ctx, stateDB, method, initialGas, args, err := p.RunSetup(evm, contract, readOnly, p.IsTransaction)
-	if err != nil {
-		return nil, err
-	}
-	p.transferKeeper.Logger(ctx).Info("Gateway Run function started",
-		"origin", evm.Origin.Hex(),
-		"contract", contract.Address().Hex(),
-		"readOnly", readOnly,
-		"method", method.Name)
+	return p.RunNativeAction(evm, contract, func(ctx sdk.Context) ([]byte, error) {
+		method, args, err := cmn.SetupABI(p.ABI, contract, readOnly, p.IsTransaction)
+		if err != nil {
+			return nil, err
+		}
 
-	// This handles any out of gas errors that may occur during the execution of a precompile tx or query.
-	// It avoids panics and returns the out of gas error so the EVM can continue gracefully.
-	defer cmn.HandleGasError(ctx, contract, initialGas, &err)()
-	switch method.Name {
-	// Gateway transactions
-	case ExecuteMethod:
-		bz, err = p.Execute(ctx, evm.Origin, contract, stateDB, method, args)
-	case ExecuteSrcCallbackMethod:
-		bz, err = p.ExecuteSrcCallback(ctx, evm.Origin, contract, stateDB, method, args)
-	case HandleErrorOrTimeoutMethod:
-		bz, err = p.HandleErrorOrTimeout(ctx, evm.Origin, contract, stateDB, method, args)
-	default:
-		return nil, fmt.Errorf(cmn.ErrUnknownMethod, method.Name)
-	}
+		// This handles any out of gas errors that may occur during the execution of a precompile tx or query.
+		// It avoids panics and returns the out of gas error so the EVM can continue gracefully.
+		switch method.Name {
+		// Gateway transactions
+		case ExecuteMethod:
+			bz, err = p.Execute(ctx, evm.Origin, contract, evm.StateDB, method, args)
+		case ExecuteSrcCallbackMethod:
+			bz, err = p.ExecuteSrcCallback(ctx, evm.Origin, contract, evm.StateDB, method, args)
+		case HandleErrorOrTimeoutMethod:
+			bz, err = p.HandleErrorOrTimeout(ctx, evm.Origin, contract, evm.StateDB, method, args)
+		default:
+			return nil, fmt.Errorf(cmn.ErrUnknownMethod, method.Name)
+		}
 
-	if err != nil {
-		p.transferKeeper.Logger(ctx).Error("error!!222", "error", err, "method", method.Name)
-		return nil, err
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	cost := ctx.GasMeter().GasConsumed() - initialGas
+		return bz, nil
 
-	if !contract.UseGas(cost, nil, tracing.GasChangeCallPrecompiledContract) {
-		return nil, vm.ErrOutOfGas
-	}
-
-	return bz, nil
+	})
 
 }
 

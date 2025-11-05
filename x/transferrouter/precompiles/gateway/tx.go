@@ -11,10 +11,8 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/evm/contracts"
 	"github.com/cosmos/evm/ibc"
-	evmostypes "github.com/cosmos/evm/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	evmante "github.com/cosmos/evm/x/vm/ante"
-	"github.com/cosmos/evm/x/vm/statedb"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	callbacktypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
@@ -34,7 +32,7 @@ func (p Precompile) Execute(
 	ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB *statedb.StateDB,
+	stateDB vm.StateDB,
 	method *abi.Method,
 	args []interface{},
 ) (retBz []byte, retErr error) {
@@ -267,7 +265,7 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 	return packet, nil
 }
 
-func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB *statedb.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
+func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB vm.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
 	callData, err := CreateERC20TransferExecuteCallDataFromPacket(ctx, p.transferKeeper, packet, packetData)
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("Failed to create gateway execute call data", "error", err)
@@ -309,7 +307,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	p.transferKeeper.Logger(ctx).Debug("Generating isolated address", "senderAddress", packetData.Sender, "destChannel", packet.GetDestChannel())
 	isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), packetData.Sender)
 
-	ctx = ctx.WithGasMeter(evmostypes.NewInfiniteGasMeterWithLimit(cbData.CommitGasLimit))
+	ctx = ctx.WithGasMeter(evmtypes.NewInfiniteGasMeterWithLimit(cbData.CommitGasLimit))
 
 	amountInt, ok := math.NewIntFromString(packetData.Amount)
 	if !ok {
@@ -388,7 +386,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB *statedb.StateDB,
+	stateDB vm.StateDB,
 	method *abi.Method,
 	args any,
 ) (retBz []byte, retErr error) {
@@ -458,7 +456,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	origin common.Address,
 	contract *vm.Contract,
-	stateDB *statedb.StateDB,
+	stateDB vm.StateDB,
 	method *abi.Method,
 	args any,
 ) (retBz []byte, retErr error) {
