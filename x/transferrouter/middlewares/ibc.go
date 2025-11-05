@@ -179,17 +179,14 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 		}
 
 		contractAddr := common.HexToAddress(cbData.CallbackAddress)
-		contractAccount := i.k.EVMKeeper.GetAccountOrEmpty(ctx, contractAddr)
 
 		// Check if the contract address contains code.
 		// This check is required because if there is no code, the call will still pass on the EVM side,
 		// but it will ignore the calldata and funds may get stuck.
-		if !contractAccount.IsContract() {
+		if !i.k.EVMKeeper.IsContract(ctx, contractAddr) {
 			return newErrorAcknowledgement(fmt.Errorf("provided contract address is not a contract: %s", contractAddr))
 		}
 	}
-
-	logger.Info("transferrouter OnRecvPacket before store packet in call queue")
 
 	// 1. Store the packet in the call queue
 	txHash := tmhash.Sum(ctx.TxBytes())
