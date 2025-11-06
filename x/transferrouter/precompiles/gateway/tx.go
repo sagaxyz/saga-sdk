@@ -184,13 +184,12 @@ func (p Precompile) Execute(
 	p.transferKeeper.Logger(ctx).Info("Checking if packet is a callback packet")
 	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
 	if isCbPacket {
-		p.transferKeeper.Logger(ctx).Info("Processing callback packet")
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to get callback data", "error", err)
 			retErr = err
 			return
 		}
-		p.transferKeeper.Logger(ctx).Info("Successfully retrieved callback data",
+		p.transferKeeper.Logger(ctx).Debug("Successfully retrieved callback data",
 			"callbackAddress", cbData.CallbackAddress,
 			"senderAddress", packetData.Sender,
 			"commitGasLimit", cbData.CommitGasLimit,
@@ -201,8 +200,7 @@ func (p Precompile) Execute(
 		retErr = err
 	} else {
 		p.transferKeeper.Logger(ctx).Info("Processing normal ERC20 transfer")
-		resp, logs, err = p.executeERC20Transfer(ctx, cachedCtx, stateDB, packet, packetData, tokenPair)
-		p.transferKeeper.Logger(ctx).Info("Executed ERC20 transfer", "response", resp, "logs", logs, "error", err)
+		resp, logs, err = p.executeERC20Transfer(ctx, cachedCtx, packet, packetData, tokenPair)
 		retErr = err
 	}
 
@@ -265,7 +263,7 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 	return packet, nil
 }
 
-func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, stateDB vm.StateDB, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
+func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
 	callData, err := CreateERC20TransferExecuteCallDataFromPacket(ctx, p.transferKeeper, packet, packetData)
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("Failed to create gateway execute call data", "error", err)
