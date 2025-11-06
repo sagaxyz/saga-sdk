@@ -53,11 +53,6 @@ type MockTransferKeeper struct {
 	mock.Mock
 }
 
-func (m *MockTransferKeeper) DenomPathFromHash(ctx sdk.Context, denomHash string) (string, error) {
-	args := m.Called(ctx, denomHash)
-	return args.String(0), args.Error(1)
-}
-
 func (m *MockTransferKeeper) GetTotalEscrowForDenom(ctx sdk.Context, denom string) sdk.Coin {
 	args := m.Called(ctx, denom)
 	return args.Get(0).(sdk.Coin)
@@ -65,6 +60,11 @@ func (m *MockTransferKeeper) GetTotalEscrowForDenom(ctx sdk.Context, denom strin
 
 func (m *MockTransferKeeper) SetTotalEscrowForDenom(ctx sdk.Context, coin sdk.Coin) {
 	m.Called(ctx, coin)
+}
+
+func (m *MockTransferKeeper) UnescrowCoin(ctx sdk.Context, escrowAddress sdk.AccAddress, sender sdk.AccAddress, coin sdk.Coin) error {
+	args := m.Called(ctx, escrowAddress, sender, coin)
+	return args.Error(0)
 }
 
 // MockBankKeeper is a mock implementation of BankKeeper
@@ -95,6 +95,14 @@ func (m *MockBankKeeper) MintCoins(ctx context.Context, moduleName string, amt s
 func (m *MockBankKeeper) SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error {
 	args := m.Called(ctx, senderModule, recipientAddr, amt)
 	return args.Error(0)
+}
+
+func (m *MockBankKeeper) GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins {
+	args := m.Called(ctx, addr)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(sdk.Coins)
 }
 
 // MockERC20Keeper is a mock implementation of ERC20Keeper

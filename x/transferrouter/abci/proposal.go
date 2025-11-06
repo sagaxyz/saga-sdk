@@ -3,7 +3,6 @@ package abci
 import (
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"math/big"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -51,16 +50,14 @@ var CallMaxGas = uint64(10000000) // arbitrary value
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+		logger := h.keeper.Logger(ctx)
+
 		// 1. Add the source callback queue
 		chainId, err := utils.ParseChainID(ctx.ChainID())
 		if err != nil {
-			h.keeper.Logger(ctx).Error("failed to parse chain id", "error", err)
-			fmt.Println("failed to parse chain id", err)
+			logger.Error("failed to parse chain id", "error", err)
 			return nil, errors.New("failed to parse chain id")
 		}
-
-		h.keeper.Logger(ctx).Info("chain id", "chain id", chainId)
-		logger := h.keeper.Logger(ctx)
 
 		var maxBlockGas uint64
 		consParams := ctx.ConsensusParams()
@@ -68,32 +65,32 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			maxBlockGas = uint64(consParams.Block.MaxGas)
 		}
 
+		if h.txSelector == nil {
+			logger.Error("tx selector is nil")
+			return nil, errors.New("tx selector is nil")
+		}
+
 		defer h.txSelector.Clear()
 
 		params, err := h.keeper.Params.Get(ctx)
 		if err != nil {
 			logger.Error("Failed to get params", "error", err)
-			fmt.Println("failed to get params", err)
 			return nil, errors.New("failed to get params")
 		}
-
-		h.keeper.Logger(ctx).Info("params", "params", params)
 
 		// Parse the configured private key (in hex format) and derive the corresponding
 		// Ethereum address of the known signer.
 		if params.KnownSignerPrivateKey == "" {
-			fmt.Println("known signer private key is empty")
-			h.keeper.Logger(ctx).Error("known signer private key is empty")
+			logger.Error("known signer private key is empty")
 			return nil, errors.New("known signer private key is empty")
 		}
-		h.keeper.Logger(ctx).Info("known signer private key", "known signer private key", params.KnownSignerPrivateKey)
+		logger.Info("known signer private key", "known signer private key", params.KnownSignerPrivateKey)
 		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
 		if err != nil {
-			fmt.Println("failed to parse private key", err)
+			logger.Error("failed to parse private key", "error", err)
 			return nil, errors.New("failed to parse private key")
 		}
 
-		h.keeper.Logger(ctx).Info("priv key", "priv key", privKey)
 		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
 		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(knownSignerBz))
 		if err != nil {
@@ -101,40 +98,34 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		}
 		gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
 
-		// Add the source callback queue
+		// Add all the transactions in our internal queues
 		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during src callback queue walk", "error", err)
-			fmt.Println("error during src callback queue walk", err)
 			return nil, err
 		}
 
-		// TODO: possible issue here, if there are many IBC txs being sent in, they might block
-		// other normal txs. We should add a % limit of space IBC txs can take in the proposal.
 		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during packet queue walk", "error", err)
-			fmt.Println("error during packet queue walk", err)
 			return nil, err
 		}
 
 		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during error or timeout queue walk", "error", err)
-			fmt.Println("error during error or timeout queue walk", err)
 			return nil, err
 		}
 
 		// 2. Add the rest of the transactions in the incoming request
 		if h.txVerifier == nil {
-			fmt.Println("tx verifier is nil")
+			logger.Error("tx verifier is nil")
 			return nil, errors.New("tx verifier is nil")
 		}
 
 		err = h.AddIncomingTxs(ctx, req, maxBlockGas)
 		if err != nil {
 			logger.Error("Error while adding incoming txs", "error", err)
-			fmt.Println("error while adding incoming txs", err)
 			return nil, err
 		}
 
@@ -160,32 +151,29 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 
 // AddSrcCallbackTxs adds the source callback transactions to the proposal
 func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
-	h.keeper.Logger(ctx).Info("adding src callback txs")
+	logger := h.keeper.Logger(ctx)
 	// Add the source callback queue
 	err := h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
-		fmt.Println("adding src callback txs")
 		// Calldata is a simple call to the gateway executeSrcCallback function
 		calldata, err := precompilesgateway.ABI.Pack("executeSrcCallback")
 		if err != nil {
-			fmt.Println("failed to pack calldata", err)
+			logger.Error("failed to pack calldata", "error", err)
 			return true, err
 		}
 
 		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
 		if err != nil {
-			fmt.Println("failed to convert calldata to signed tx", err)
+			logger.Error("failed to convert calldata to signed tx", "error", err)
 			return true, err
 		}
 
-		fmt.Println("selecting tx for proposal")
 		stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
 		if stop {
-			fmt.Println("tx selector stopped")
+			logger.Error("tx selector stopped")
 			return true, nil
 		}
 
 		nextNonce = nextNonce + 1
-		fmt.Println("next nonce", nextNonce)
 		return false, nil
 	})
 
@@ -194,25 +182,23 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 
 // AddErrorOrTimeoutTxs adds the error or timeout transactions to the proposal
 func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
-	h.keeper.Logger(ctx).Info("adding error or timeout txs")
+	logger := h.keeper.Logger(ctx)
 	return h.keeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
-		fmt.Println("adding error or timeout txs")
 		// Calldata is a simple call to the gateway handleErrorOrTimeout function
 		calldata, err := precompilesgateway.ABI.Pack("handleErrorOrTimeout")
 		if err != nil {
-			fmt.Println("failed to pack calldata", err)
+			logger.Error("failed to pack calldata", "error", err)
 			return true, err
 		}
 
 		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
 		if err != nil {
-			fmt.Println("failed to convert calldata to signed tx", err)
+			logger.Error("failed to convert calldata to signed tx", "error", err)
 			return true, err
 		}
 
 		stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
 		if stop {
-			fmt.Println("tx selector stopped")
 			return true, nil
 		}
 
@@ -223,36 +209,28 @@ func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.Reques
 
 // AddPacketTxs adds the packet transactions to the proposal
 func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
-	h.keeper.Logger(ctx).Info("adding packet txs111")
+	logger := h.keeper.Logger(ctx)
 	err := h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
-		fmt.Println("adding packet txs")
 		// Calldata is a simple call to the gateway execute function
 		calldata, err := precompilesgateway.ABI.Pack("execute")
 		if err != nil {
-			fmt.Println("failed to pack calldata", err)
+			logger.Error("failed to pack calldata", "error", err)
 			return true, err
 		}
 
 		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
 		if err != nil {
-			fmt.Println("failed to convert calldata to signed tx", err)
+			logger.Error("failed to convert calldata to signed tx", "error", err)
 			return true, err
-		}
-
-		if h.txSelector == nil {
-			fmt.Println("tx selector is nil")
-			return true, errors.New("tx selector is nil")
 		}
 
 		stop = h.txSelector.SelectTxForProposal(ctx, uint64(req.MaxTxBytes), maxBlockGas, cosmosTx, txBytes)
 		// If the transaction is not added, we stop the walk, because we don't want to execute queued calls out of order
 		if stop {
-			fmt.Println("tx selector stopped")
 			return true, nil
 		}
 
 		nextNonce = nextNonce + 1
-		fmt.Println("next nonce", nextNonce)
 		return false, nil
 	})
 
@@ -284,6 +262,7 @@ func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepa
 }
 
 func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
+	logger := h.keeper.Logger(ctx)
 	txArgs := &evmtypes.EvmTxArgs{
 		Nonce:     nonce,
 		GasLimit:  CallMaxGas,
@@ -300,52 +279,45 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 	ethtx := txArgs.ToTx()
 
 	if h.signer == nil {
-		fmt.Println("signer is nil")
+		logger.Error("signer is nil")
 		return nil, nil, errors.New("signer is nil")
 	}
 
-	// ethtx := tx.AsTransaction()
 	ethtx.ChainId().Set(chainID)
-	ethtx.GasFeeCap().SetUint64(5000000)
 
 	if ethtx == nil {
-		fmt.Println("as transaction returned nil")
+		logger.Error("as transaction returned nil")
 		return nil, nil, errors.New("as transaction returned nil")
 	}
 
 	signedTx, err := ethcoretypes.SignTx(ethtx, h.signer, privKey)
 	if err != nil {
-		fmt.Println("sign tx failed", err)
+		logger.Error("sign tx failed", "error", err)
 		return nil, nil, err
 	}
-
-	signedTx.GasFeeCap().SetUint64(5000000)
-	h.keeper.Logger(ctx).Info("signed tx", "gas fee cap", signedTx.GasFeeCap())
 
 	tx := &evmtypes.MsgEthereumTx{}
 	err = tx.FromSignedEthereumTx(signedTx, h.signer)
 	if err != nil {
-		fmt.Println("from signed ethereum tx failed", err)
+		logger.Error("from signed ethereum tx failed", "error", err)
 		return nil, nil, err
 	}
-	tx.Raw.GasFeeCap().SetUint64(5000000)
-	h.keeper.Logger(ctx).Info("tx", "gas fee cap", tx.Raw.GasFeeCap())
 
 	if err := tx.ValidateBasic(); err != nil {
-		fmt.Println("validate basic failed", err)
+		logger.Error("validate basic failed", "error", err)
 		return nil, nil, err
 	}
 
 	cosmosTx, err := tx.BuildTx(h.txConfig.NewTxBuilder(), "saga") // TODO: get denom from params
 	if err != nil {
-		fmt.Println("build tx failed", err)
+		logger.Error("build tx failed", "error", err)
 		return nil, nil, err
 	}
 
 	// Encode transaction by default Tx encoder
 	txBytes, err := h.txConfig.TxEncoder()(cosmosTx)
 	if err != nil {
-		fmt.Println("tx encoder failed", err)
+		logger.Error("tx encoder failed", "error", err)
 		return nil, nil, err
 	}
 

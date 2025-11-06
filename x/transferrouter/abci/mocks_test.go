@@ -247,3 +247,11 @@ func (m *MockAccountKeeper) GetModuleAccountAndPermissions(ctx context.Context, 
 	}
 	return mod, args.Get(1).([]string)
 }
+
+func (m *MockAccountKeeper) NewAccount(ctx context.Context, acc sdk.AccountI) sdk.AccountI {
+	args := m.Called(ctx, acc)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(sdk.AccountI)
+}

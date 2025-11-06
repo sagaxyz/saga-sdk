@@ -465,11 +465,6 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		return nil, err
 	}
 
-	// packetData := transfertypes.FungibleTokenPacketData{}
-	// if err := transfertypes.ModuleCdc.UnmarshalJSON(packetQueueItem.Packet.Data, &packetData); err != nil {
-	// 	return nil, err
-	// }
-
 	// we need to transfer the tokens back to the sender either from the escrow address or by minting them
 
 	packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
