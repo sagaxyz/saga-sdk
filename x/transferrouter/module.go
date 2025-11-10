@@ -97,9 +97,6 @@ func NewAppModule(k keeper.Keeper) AppModule {
 	}
 }
 
-// RegisterInvariants registers module invariants (none for now).
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
 // RegisterServices registers module gRPC services (none for now).
 func (am AppModule) RegisterServices(_ module.Configurator) {}
 

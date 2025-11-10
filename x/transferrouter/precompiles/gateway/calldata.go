@@ -35,10 +35,8 @@ func CreateERC20TransferExecuteCallDataFromPacket(
 	// TODO: remember to handle denoms differently if this chain was the sender
 	// see ReceiverChainIsSource in transfer keeper relay.go
 	// since SendPacket did not prefix the denomination, we must prefix denomination here
-	sourcePrefix := transfertypes.GetDenomPrefix(packet.GetSourcePort(), packet.GetSourceChannel())
-	// NOTE: sourcePrefix contains the trailing "/"
-	prefixedDenom := sourcePrefix + data.Denom
-	denomTrace := transfertypes.ParseDenomTrace(prefixedDenom)
+	hop := transfertypes.NewHop(packet.GetSourcePort(), packet.GetSourceChannel())
+	prefixedDenom := transfertypes.NewDenom(data.Denom, hop)
 
 	// Create memo with transaction hash
 	txHash := tmhash.Sum(ctx.TxBytes())
@@ -52,7 +50,7 @@ func CreateERC20TransferExecuteCallDataFromPacket(
 	}
 
 	// Call the main function with extracted data
-	return createERC20TransferCallData(ctx, k, denomTrace.IBCDenom(), data.Amount, data.Receiver, memo)
+	return createERC20TransferCallData(ctx, k, prefixedDenom.IBCDenom(), data.Amount, data.Receiver, memo)
 }
 
 // createERC20TransferCallData creates call data for the gateway execute function

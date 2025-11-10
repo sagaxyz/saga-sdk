@@ -504,7 +504,9 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		}
 	}
 
-	p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt())
+	if err := p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt()); err != nil {
+		return nil, err
+	}
 
 	// emit the event
 	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
