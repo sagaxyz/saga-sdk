@@ -109,6 +109,8 @@ func (AppModule) Name() string {
 
 // RegisterInvariants interface for registering invariants. Performs a no-op
 // as the filter module doesn't expose invariants.
+//
+//nolint:staticcheck
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // RegisterServices registers the GRPC query service and migrator service to respond to the
@@ -161,5 +163,5 @@ func (am AppModule) WeightedOperations(_ module.SimulationState) []simtypes.Weig
 	return nil
 }
 
-func (am AppModule) IsAppModule() {}
+func (am AppModule) IsAppModule()        {}
 func (am AppModule) IsOnePerModuleType() {}

@@ -112,6 +112,8 @@ func (AppModule) Name() string {
 
 // RegisterInvariants interface for registering invariants. Performs a no-op
 // as the feedistribution module doesn't expose invariants.
+//
+//nolint:staticcheck
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // RegisterServices registers the GRPC query service and migrator service to respond to the

@@ -123,6 +123,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 }
 
 // RegisterInvariants registers the admin module's invariants.
+//nolint:staticcheck
 func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {
 }
 
