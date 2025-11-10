@@ -17,7 +17,6 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 
 	erc20types "github.com/cosmos/evm/x/erc20/types"
-	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
@@ -46,6 +45,10 @@ type BankKeeper interface {
 	SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	BurnCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 	MintCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
+}
+
+type EVMKeeper interface {
+	EnableStaticPrecompiles(ctx sdk.Context, addresses ...common.Address) error
 }
 
 type ERC20Keeper interface {
@@ -80,7 +83,7 @@ type Keeper struct {
 	TransferKeeper TransferKeeper
 	BankKeeper     BankKeeper
 	AccountKeeper  AccountKeeper
-	EVMKeeper      *evmkeeper.Keeper
+	EVMKeeper      EVMKeeper
 
 	ics4Wrapper porttypes.ICS4Wrapper
 }
@@ -94,7 +97,7 @@ func NewKeeper(cdc codec.BinaryCodec,
 	transferKeeper TransferKeeper,
 	bankKeeper BankKeeper,
 	accountKeeper AccountKeeper,
-	evmKeeper *evmkeeper.Keeper,
+	evmKeeper EVMKeeper,
 	authority string) Keeper {
 
 	sb := collections.NewSchemaBuilder(storeSvc)

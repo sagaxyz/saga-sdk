@@ -10,12 +10,25 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/sagaxyz/saga-sdk/x/transferrouter"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/stretchr/testify/require"
 )
+
+// MockEVMKeeper provides a minimal EVMKeeper implementation for testing
+type MockEVMKeeper struct {
+	mock.Mock
+}
+
+func (m *MockEVMKeeper) EnableStaticPrecompiles(ctx sdk.Context, addresses ...common.Address) error {
+	args := m.Called(ctx, addresses)
+	return args.Error(0)
+}
 
 // buildKeeper composes a minimal keeper instance backed by an in-memory KVStoreService and no external deps used by Init/Export.
 func buildKeeper(t *testing.T) (sdk.Context, keeper.Keeper) {
@@ -34,6 +47,16 @@ func buildKeeper(t *testing.T) (sdk.Context, keeper.Keeper) {
 	enc := moduletestutil.MakeTestEncodingConfig(transferrouter.AppModuleBasic{})
 	cdc := enc.Codec
 
+	// Setup mock account keeper
+	mockAccountKeeper := &MockAccountKeeper{}
+	mockAccountKeeper.On("NewAccount", mock.Anything, mock.Anything).Return(sdk.AccountI(nil))
+	mockAccountKeeper.On("NewAccountWithAddress", mock.Anything, mock.Anything).Return(authtypes.NewBaseAccount(sdk.AccAddress([]byte{1, 2, 3}), nil, 0, 0))
+	mockAccountKeeper.On("SetAccount", mock.Anything, mock.Anything).Return()
+
+	// Setup mock EVM keeper
+	mockEVMKeeper := &MockEVMKeeper{}
+	mockEVMKeeper.On("EnableStaticPrecompiles", mock.Anything, mock.Anything).Return(nil)
+
 	// Minimal keeper with only store service and codec required for params collections.
 	k := keeper.NewKeeper(
 		cdc,
@@ -43,8 +66,8 @@ func buildKeeper(t *testing.T) (sdk.Context, keeper.Keeper) {
 		nil, // channel keeper
 		nil, // transfer keeper
 		nil, // bank keeper
-		nil, // account keeper
-		nil, // evm keeper
+		mockAccountKeeper,
+		mockEVMKeeper, // evm keeper (mock)
 		"",
 	)
 

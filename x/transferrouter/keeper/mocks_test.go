@@ -154,6 +154,11 @@ func (m *MockAccountKeeper) GetSequence(ctx context.Context, addr sdk.AccAddress
 	return args.Get(0).(uint64), args.Error(1)
 }
 
+func (m *MockAccountKeeper) NewAccount(ctx context.Context, acc sdk.AccountI) sdk.AccountI {
+	args := m.Called(ctx, acc)
+	return args.Get(0).(sdk.AccountI)
+}
+
 func (m *MockAccountKeeper) NewAccountWithAddress(ctx context.Context, addr sdk.AccAddress) sdk.AccountI {
 	args := m.Called(ctx, addr)
 	return args.Get(0).(sdk.AccountI)
@@ -171,6 +176,7 @@ func (m *MockAccountKeeper) GetModuleAccountAndPermissions(ctx context.Context, 
 	}
 	return modAcc, args.Get(1).([]string)
 }
+
 
 // MockICS4Wrapper is a mock implementation of ICS4Wrapper
 type MockICS4Wrapper struct {
