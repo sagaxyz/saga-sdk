@@ -49,6 +49,7 @@ type BankKeeper interface {
 
 type EVMKeeper interface {
 	EnableStaticPrecompiles(ctx sdk.Context, addresses ...common.Address) error
+	IsContract(ctx sdk.Context, address common.Address) bool
 }
 
 type ERC20Keeper interface {
