@@ -30,6 +30,11 @@ func (m *MockEVMKeeper) EnableStaticPrecompiles(ctx sdk.Context, addresses ...co
 	return args.Error(0)
 }
 
+func (m *MockEVMKeeper) IsContract(ctx sdk.Context, address common.Address) bool {
+	args := m.Called(ctx, address)
+	return args.Bool(0)
+}
+
 // buildKeeper composes a minimal keeper instance backed by an in-memory KVStoreService and no external deps used by Init/Export.
 func buildKeeper(t *testing.T) (sdk.Context, keeper.Keeper) {
 	t.Helper()
