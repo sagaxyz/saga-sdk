@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache
 pragma solidity ^0.8.20;
 
 /// @title Gateway Interface
@@ -7,10 +7,10 @@ interface IGateway {
     /// @notice Execute the next packet in the queue, if any.
     function execute() external;
 
-    // @notice Execute the next source callback in the queue, if any.
+    /// @notice Execute the next source callback in the queue, if any.
     function executeSrcCallback() external;
 
-    // @notice Handle an error acknowledgement or timeout for an IBC transfer packet, by sending the tokens back to the sender.
+    /// @notice Handle an error acknowledgement or timeout for an IBC transfer packet, by sending the tokens back to the sender.
     function handleErrorOrTimeout() external;
 
     /// @notice Event emitted when a call is executed
@@ -23,10 +23,10 @@ interface IGateway {
         bytes ret
     );
 
-    // @notice Event emitted when a error or timeout is handled.
+    /// @notice Event emitted when an error or timeout is handled.
     event ErrorOrTimeoutHandled(
         uint256 sequence,
         bytes txhash,
         bytes data
     );
-} 
+}

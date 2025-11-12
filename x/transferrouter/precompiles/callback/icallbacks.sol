@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: Apache
 pragma solidity ^0.8.20;
 
 // This contract should only be used to assemble calldata and the events in tests
@@ -20,9 +20,9 @@ contract CallbackTest {
     );
     /// @dev Callback function to be called on the source chain
     /// after the packet life cycle is completed and acknowledgement is processed
-    /// by source chain. The contract address is passed the packet information and acknowledgmeent
+    /// by source chain. The contract address is passed the packet information and acknowledgement
     /// to execute the callback logic.
-    /// @param channelId the channnel identifier of the packet
+    /// @param channelId the channel identifier of the packet
     /// @param portId the port identifier of the packet
     /// @param sequence the sequence number of the packet
     /// @param data the data of the packet
@@ -41,7 +41,7 @@ contract CallbackTest {
     /// after the packet life cycle is completed and the packet is timed out
     /// by source chain. The contract address is passed the packet information
     /// to execute the callback logic.
-    /// @param channelId the channnel identifier of the packet
+    /// @param channelId the channel identifier of the packet
     /// @param portId the port identifier of the packet
     /// @param sequence the sequence number of the packet
     /// @param data the data of the packet
