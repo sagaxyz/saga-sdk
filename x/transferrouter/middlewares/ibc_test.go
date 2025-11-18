@@ -16,7 +16,6 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
 	"github.com/sagaxyz/saga-sdk/x/transferrouter"
@@ -104,9 +103,8 @@ func buildMiddleware(t *testing.T) (sdk.Context, IBCMiddleware, keeper.Keeper) {
 
 	// set params needed by OnRecvPacket
 	require.NoError(t, k.Params.Set(ctx, types.Params{
-		Enabled:                true,
-		KnownSignerPrivateKey:  "",
-		GatewayContractAddress: common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345").Hex(),
+		Enabled:               true,
+		KnownSignerPrivateKey: "",
 	}))
 
 	// Compose the app that satisfies IBCModuleWithUnmarshaler

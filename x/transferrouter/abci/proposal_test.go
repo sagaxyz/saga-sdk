@@ -25,13 +25,12 @@ import (
 )
 
 const (
-	validPrivateKey     = "f6dba52e479cf5d7ad58bc11177c105ac7b89a02be1d432e77e113fc53377978"
-	validGatewayAddress = "0x5A6A8Ce46E34c2cd998129d013fA0253d3892345"
-	testChainID         = "saga_12345-1"
-	testChainIDNumeric  = int64(12345)
-	testAuthority       = "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
-	defaultMaxTxBytes   = int64(1000000)
-	defaultMaxBlockGas  = int64(10000000)
+	validPrivateKey    = "f6dba52e479cf5d7ad58bc11177c105ac7b89a02be1d432e77e113fc53377978"
+	testChainID        = "saga_12345-1"
+	testChainIDNumeric = int64(12345)
+	testAuthority      = "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
+	defaultMaxTxBytes  = int64(1000000)
+	defaultMaxBlockGas = int64(10000000)
 )
 
 type ProposalHandlerTestSuite struct {
@@ -91,9 +90,8 @@ func (s *ProposalHandlerTestSuite) SetupTest() {
 
 	// Set valid params
 	err := k.Params.Set(ctx, types.Params{
-		Enabled:                true,
-		KnownSignerPrivateKey:  validPrivateKey,
-		GatewayContractAddress: validGatewayAddress,
+		Enabled:               true,
+		KnownSignerPrivateKey: validPrivateKey,
 	})
 	s.Require().NoError(err)
 
@@ -225,9 +223,8 @@ func (s *ProposalHandlerTestSuite) TestPrepareProposal_MissingParams() {
 // TestPrepareProposal_EmptyPrivateKey tests error handling for empty private key
 func (s *ProposalHandlerTestSuite) TestPrepareProposal_EmptyPrivateKey() {
 	err := s.keeper.Params.Set(s.ctx, types.Params{
-		Enabled:                true,
-		KnownSignerPrivateKey:  "",
-		GatewayContractAddress: validGatewayAddress,
+		Enabled:               true,
+		KnownSignerPrivateKey: "",
 	})
 	s.Require().NoError(err)
 
@@ -248,9 +245,8 @@ func (s *ProposalHandlerTestSuite) TestPrepareProposal_EmptyPrivateKey() {
 // TestPrepareProposal_InvalidPrivateKey tests error handling for malformed private key
 func (s *ProposalHandlerTestSuite) TestPrepareProposal_InvalidPrivateKey() {
 	err := s.keeper.Params.Set(s.ctx, types.Params{
-		Enabled:                true,
-		KnownSignerPrivateKey:  "not-a-valid-hex-key",
-		GatewayContractAddress: validGatewayAddress,
+		Enabled:               true,
+		KnownSignerPrivateKey: "not-a-valid-hex-key",
 	})
 	s.Require().NoError(err)
 

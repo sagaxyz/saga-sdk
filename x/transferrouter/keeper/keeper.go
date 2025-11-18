@@ -1,22 +1,15 @@
 package keeper
 
 import (
-	"context"
-	"math/big"
-
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/corecompat"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 
-	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 
-	erc20types "github.com/cosmos/evm/x/erc20/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
@@ -28,46 +21,6 @@ var (
 	ErrorOrTimeoutQueuePrefix = collections.NewPrefix(5) // Stores the error or timeout queue
 	GlobalPacketSequenceKey   = collections.NewPrefix(6) // Stores the global packet sequence
 )
-
-type ChannelKeeper interface {
-	GetChannel(ctx sdk.Context, srcPort, srcChan string) (channel channeltypes.Channel, found bool)
-	GetPacketCommitment(ctx sdk.Context, portID, channelID string, sequence uint64) []byte
-	GetNextSequenceSend(ctx sdk.Context, portID, channelID string) (uint64, bool)
-}
-
-type TransferKeeper interface {
-	UnescrowCoin(ctx sdk.Context, escrowAddress sdk.AccAddress, sender sdk.AccAddress, coin sdk.Coin) error
-}
-
-type BankKeeper interface {
-	GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins
-	SendCoins(ctx context.Context, fromAddr, toAddr sdk.AccAddress, amt sdk.Coins) error
-	SendCoinsFromAccountToModule(ctx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
-	SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
-	BurnCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
-	MintCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
-}
-
-type EVMKeeper interface {
-	EnableStaticPrecompiles(ctx sdk.Context, addresses ...common.Address) error
-	IsContract(ctx sdk.Context, address common.Address) bool
-}
-
-type ERC20Keeper interface {
-	GetCoinAddress(ctx sdk.Context, denom string) (common.Address, error)
-	GetTokenPairID(ctx sdk.Context, token string) []byte
-	GetTokenPair(ctx sdk.Context, id []byte) (erc20types.TokenPair, bool)
-	BalanceOf(ctx sdk.Context, abi abi.ABI, contract, account common.Address) *big.Int
-}
-
-type AccountKeeper interface {
-	NewAccount(ctx context.Context, acc sdk.AccountI) sdk.AccountI
-	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
-	GetSequence(ctx context.Context, addr sdk.AccAddress) (uint64, error)
-	NewAccountWithAddress(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
-	SetAccount(ctx context.Context, account sdk.AccountI)
-	GetModuleAccountAndPermissions(ctx context.Context, moduleName string) (sdk.ModuleAccountI, []string)
-}
 
 type Keeper struct {
 	cdc          codec.BinaryCodec
@@ -81,12 +34,12 @@ type Keeper struct {
 	SrcCallbackQueue     collections.Map[uint64, types.PacketQueueItem]
 	ErrorOrTimeoutQueue  collections.Map[uint64, types.PacketQueueItem]
 
-	Erc20Keeper    ERC20Keeper
-	ChannelKeeper  ChannelKeeper
-	TransferKeeper TransferKeeper
-	BankKeeper     BankKeeper
-	AccountKeeper  AccountKeeper
-	EVMKeeper      EVMKeeper
+	Erc20Keeper    types.ERC20Keeper
+	ChannelKeeper  types.ChannelKeeper
+	TransferKeeper types.TransferKeeper
+	BankKeeper     types.BankKeeper
+	AccountKeeper  types.AccountKeeper
+	EVMKeeper      types.EVMKeeper
 
 	ics4Wrapper porttypes.ICS4Wrapper
 }
@@ -94,13 +47,13 @@ type Keeper struct {
 // New returns a new Keeper instance.
 func NewKeeper(cdc codec.BinaryCodec,
 	storeSvc corecompat.KVStoreService,
-	erc20Keeper ERC20Keeper,
+	erc20Keeper types.ERC20Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
-	channelKeeper ChannelKeeper,
-	transferKeeper TransferKeeper,
-	bankKeeper BankKeeper,
-	accountKeeper AccountKeeper,
-	evmKeeper EVMKeeper,
+	channelKeeper types.ChannelKeeper,
+	transferKeeper types.TransferKeeper,
+	bankKeeper types.BankKeeper,
+	accountKeeper types.AccountKeeper,
+	evmKeeper types.EVMKeeper,
 	authority string) Keeper {
 
 	sb := collections.NewSchemaBuilder(storeSvc)

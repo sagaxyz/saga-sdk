@@ -107,12 +107,6 @@ func (AppModule) Name() string {
 	return types.ModuleName
 }
 
-// RegisterInvariants interface for registering invariants. Performs a no-op
-// as the filter module doesn't expose invariants.
-//
-//nolint:staticcheck
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
 // RegisterServices registers the GRPC query service and migrator service to respond to the
 // module-specific GRPC queries and handle the upgrade store migration for the module.
 func (am AppModule) RegisterServices(cfg module.Configurator) {

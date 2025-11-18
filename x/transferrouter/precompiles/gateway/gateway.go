@@ -20,7 +20,7 @@ import (
 )
 
 // PrecompileAddress of the Gateway EVM extension in hex format.
-const PrecompileAddress = "0x5A6A8Ce46E34c2cd998129d013fA0253d3892345"
+var PrecompileAddress = common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345")
 
 var _ vm.PrecompiledContract = &Precompile{}
 
@@ -85,7 +85,7 @@ func NewPrecompile(
 	}
 
 	// SetAddress defines the address of the Gateway compile contract.
-	p.SetAddress(common.HexToAddress(PrecompileAddress))
+	p.SetAddress(PrecompileAddress)
 
 	return p, nil
 }

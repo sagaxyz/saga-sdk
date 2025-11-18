@@ -4,10 +4,10 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
 
@@ -29,7 +29,7 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, data types.GenesisState) []ab
 	// TMP: add gateway contract address to active static precompiles
 	err = k.EVMKeeper.EnableStaticPrecompiles(
 		ctx,
-		common.HexToAddress(data.Params.GatewayContractAddress),
+		gateway.PrecompileAddress,
 	)
 	if err != nil {
 		panic(errorsmod.Wrap(err, "could not enable static precompile"))

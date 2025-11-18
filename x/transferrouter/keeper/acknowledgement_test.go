@@ -55,9 +55,8 @@ func setupKeeperWithMocks(t *testing.T) (sdk.Context, keeper.Keeper, *MockTransf
 
 	// Set default params
 	err := k.Params.Set(ctx, types.Params{
-		Enabled:                true,
-		KnownSignerPrivateKey:  "f6dba52e479cf5d7ad58bc11177c105ac7b89a02be1d432e77e113fc53377978",
-		GatewayContractAddress: "0x5A6A8Ce46E34c2cd998129d013fA0253d3892345",
+		Enabled:               true,
+		KnownSignerPrivateKey: "f6dba52e479cf5d7ad58bc11177c105ac7b89a02be1d432e77e113fc53377978",
 	})
 	require.NoError(t, err)
 

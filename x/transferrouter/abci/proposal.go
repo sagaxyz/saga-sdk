@@ -15,6 +15,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	precompilesgateway "github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
@@ -95,22 +96,21 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		if err != nil {
 			nextNonce = 0
 		}
-		gatewayAddress := common.HexToAddress(params.GatewayContractAddress)
 
 		// Add all the transactions in our internal queues
-		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
+		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gateway.PrecompileAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during src callback queue walk", "error", err)
 			return nil, err
 		}
 
-		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
+		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gateway.PrecompileAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during packet queue walk", "error", err)
 			return nil, err
 		}
 
-		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, gatewayAddress, privKey, maxBlockGas)
+		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, gateway.PrecompileAddress, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during error or timeout queue walk", "error", err)
 			return nil, err

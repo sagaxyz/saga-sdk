@@ -122,12 +122,6 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 }
 
-// RegisterInvariants registers the admin module's invariants.
-//
-//nolint:staticcheck
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {
-}
-
 // InitGenesis performs the admin module's genesis initialization It returns
 // no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.RawMessage) []abci.ValidatorUpdate {

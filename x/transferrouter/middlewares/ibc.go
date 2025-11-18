@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
 )
@@ -141,15 +142,8 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
 
-	params, err := i.k.Params.Get(ctx)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return newErrorAcknowledgement(err)
-	}
-
 	// Override the receiver address to the gateway contract address
-	gatewayAddr := common.HexToAddress(params.GatewayContractAddress)
-	overrideReceiver := sdk.AccAddress(gatewayAddr.Bytes())
+	overrideReceiver := sdk.AccAddress(gateway.PrecompileAddress.Bytes())
 
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds

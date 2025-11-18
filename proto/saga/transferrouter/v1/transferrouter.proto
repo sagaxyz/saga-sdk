@@ -11,8 +11,6 @@ message Params {
   bool enabled = 1;
 
   string known_signer_private_key = 2;
-
-  string gateway_contract_address = 3;
 } 
 
 

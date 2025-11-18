@@ -19,7 +19,6 @@ func TestQuerier_Params_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.True(t, resp.Params.Enabled)
-	require.Equal(t, "0x5A6A8Ce46E34c2cd998129d013fA0253d3892345", resp.Params.GatewayContractAddress)
 }
 
 func TestQuerier_Params_NotFound(t *testing.T) {
