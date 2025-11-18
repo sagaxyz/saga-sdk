@@ -107,3 +107,11 @@ No additional security considerations are needed, as the calls can't be external
 ### Packet Forward Middleware
 
 This package should not interfere with x/PFM as it will let those transactions pass through with no modifications. These transactions won't be shown on the EVM block explorer.
+
+## Queries
+
+### Params
+
+```
+query transferrouter params
+```
