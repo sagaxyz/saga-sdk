@@ -428,7 +428,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	}
 
 	// emit the event
-	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, retErr == nil, packetQueueItem.OriginalTxHash, true, true, returnBz); err != nil {
+	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.Packet.SourceChannel, packetQueueItem.Packet.SourcePort, retErr == nil, packetQueueItem.OriginalTxHash, true, true, returnBz); err != nil {
 		return nil, err
 	}
 
@@ -503,7 +503,7 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	}
 
 	// emit the event
-	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
+	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.Packet.SourceChannel, packetQueueItem.Packet.SourcePort, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
 		return nil, err
 	}
 

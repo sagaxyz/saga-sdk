@@ -14,6 +14,18 @@
         },
         {
           "indexed": false,
+          "internalType": "string",
+          "name": "channelId",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "portId",
+          "type": "string"
+        },
+        {
+          "indexed": false,
           "internalType": "bytes",
           "name": "txhash",
           "type": "bytes"
@@ -36,6 +48,18 @@
           "internalType": "uint256",
           "name": "sequence",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "channelId",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "portId",
+          "type": "string"
         },
         {
           "indexed": false,
