@@ -203,7 +203,7 @@ func (p Precompile) Execute(
 	if resp != nil {
 		retBz = resp.Ret
 	}
-	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packet.Sequence, retErr == nil, packetQueueItem.OriginalTxHash, isCbPacket, false, retBz); err != nil {
+	if err := p.emitGatewayExecuteEvent(ctx, stateDB, p.Address(), packet.Sequence, packet.SourceChannel, packet.SourcePort, retErr == nil, packetQueueItem.OriginalTxHash, isCbPacket, false, retBz); err != nil {
 		p.transferKeeper.Logger(ctx).Error("failed to emit gateway execute event", "error", err)
 		return nil, err
 	}
