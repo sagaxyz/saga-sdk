@@ -26,6 +26,7 @@ var (
 	PacketResultPrefix        = collections.NewPrefix(3) // Stores the packet results
 	SrcCallbackQueuePrefix    = collections.NewPrefix(4) // Stores the src callback queue
 	ErrorOrTimeoutQueuePrefix = collections.NewPrefix(5) // Stores the error or timeout queue
+	GlobalPacketSequenceKey   = collections.NewPrefix(6) // Stores the global packet sequence
 )
 
 type ChannelKeeper interface {
@@ -140,6 +141,11 @@ func NewKeeper(cdc codec.BinaryCodec,
 			"error_or_timeout_queue",
 			collections.Uint64Key,
 			codec.CollValue[types.PacketQueueItem](cdc),
+		),
+		GlobalPacketSequence: collections.NewSequence(
+			sb,
+			GlobalPacketSequenceKey,
+			"global_packet_sequence",
 		),
 	}
 
