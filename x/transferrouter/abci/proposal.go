@@ -46,7 +46,7 @@ func NewProposalHandler(opts ProposalHandlerOptions) *ProposalHandler {
 	}
 }
 
-var CallMaxGas = uint64(10000000) // arbitrary value
+var CallMaxGas = uint64(1000000) // arbitrary value
 
 func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
@@ -84,7 +84,6 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			logger.Error("known signer private key is empty")
 			return nil, errors.New("known signer private key is empty")
 		}
-		logger.Info("known signer private key", "known signer private key", params.KnownSignerPrivateKey)
 		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
 		if err != nil {
 			logger.Error("failed to parse private key", "error", err)
@@ -183,7 +182,7 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 // AddErrorOrTimeoutTxs adds the error or timeout transactions to the proposal
 func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
 	logger := h.keeper.Logger(ctx)
-	return h.keeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+	return h.keeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(_ uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		// Calldata is a simple call to the gateway handleErrorOrTimeout function
 		calldata, err := precompilesgateway.ABI.Pack("handleErrorOrTimeout")
 		if err != nil {
@@ -210,7 +209,7 @@ func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.Reques
 // AddPacketTxs adds the packet transactions to the proposal
 func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
 	logger := h.keeper.Logger(ctx)
-	err := h.keeper.PacketQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
+	err := h.keeper.PacketQueue.Walk(ctx, nil, func(_ uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		// Calldata is a simple call to the gateway execute function
 		calldata, err := precompilesgateway.ABI.Pack("execute")
 		if err != nil {

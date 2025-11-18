@@ -1,5 +1,7 @@
 package types
 
+import "errors"
+
 // DefaultGenesisState returns the default genesis state for the module.
 func DefaultGenesisState() *GenesisState {
 	return &GenesisState{
@@ -18,5 +20,13 @@ func NewGenesisState(params Params) *GenesisState {
 
 // Validate performs basic genesis state validation.
 func (gs GenesisState) Validate() error {
+	if gs.Params.GatewayContractAddress == "" {
+		return errors.New("gateway contract address is empty")
+	}
+
+	if gs.Params.KnownSignerPrivateKey == "" {
+		return errors.New("known signer private key is empty")
+	}
+
 	return nil
 }

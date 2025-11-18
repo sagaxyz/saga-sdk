@@ -18,6 +18,7 @@ import (
 
 	// No CLI commands yet
 
+	"github.com/sagaxyz/saga-sdk/x/transferrouter/cli"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 )
@@ -69,8 +70,10 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(_ client.Context, _ *runtime.Ser
 // GetTxCmd returns nil since the module does not support tx commands yet.
 func (AppModuleBasic) GetTxCmd() *cobra.Command { return nil }
 
-// GetQueryCmd returns nil since the module does not expose queries yet.
-func (AppModuleBasic) GetQueryCmd() *cobra.Command { return nil }
+// GetQueryCmd returns the query commands for the module.
+func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return cli.GetQueryCmd()
+}
 
 // RegisterInterfaces registers protobuf interfaces.
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {
@@ -98,7 +101,9 @@ func NewAppModule(k keeper.Keeper) AppModule {
 }
 
 // RegisterServices registers module gRPC services (none for now).
-func (am AppModule) RegisterServices(_ module.Configurator) {}
+func (am AppModule) RegisterServices(cfg module.Configurator) {
+	types.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerier(am.keeper))
+}
 
 // InitGenesis initializes module state from genesis data.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {

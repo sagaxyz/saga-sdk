@@ -44,20 +44,26 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 	acknowledgement []byte,
 	relayer sdk.AccAddress,
 ) error {
-	isCb, data, err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
+	var data transfertypes.FungibleTokenPacketData
+	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
+		// not a transfer packet, let the underlying module handle the acknowledgement packet
+		return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
 	}
 
 	var ack channeltypes.Acknowledgement
 	if err := channeltypes.SubModuleCdc.UnmarshalJSON(acknowledgement, &ack); err != nil {
-		// handle unmarshal error
 		return err
 	}
 
-	if !isCb && data != nil && !ack.Success() {
+	if !ack.Success() {
+		globalPacketSequence, err := i.k.GlobalPacketSequence.Next(ctx)
+		if err != nil {
+			i.k.Logger(ctx).Error("failed to get next packet sequence", "error", err)
+			return err
+		}
+
 		// if it's not a success, we must send the tokens back to the sender, either from the escrow address or by minting them
-		err = i.k.ErrorOrTimeoutQueue.Set(ctx, packet.Sequence, types.PacketQueueItem{
+		err = i.k.ErrorOrTimeoutQueue.Set(ctx, globalPacketSequence, types.PacketQueueItem{
 			Packet:          &packet,
 			OriginalTxHash:  tmhash.Sum(ctx.TxBytes()),
 			IsTimeout:       false,
@@ -65,13 +71,17 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 		})
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to set error or timeout queue", "error", err)
+			return err
 		}
+	}
+
+	_, err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 		return err
 	}
 
-	// if it's not for an IBC transfer packet, we let the underlying module handle the acknowledgement packet
-
-	return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
+	return nil
 }
 
 // OnTimeoutPacket implements types.IBCModule.
@@ -81,26 +91,36 @@ func (i IBCMiddleware) OnTimeoutPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) error {
-	isCb, data, err := i.addSrcCallbackToQueue(ctx, packet, nil, true)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
+	var data transfertypes.FungibleTokenPacketData
+	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
+		// not a transfer packet, let the underlying module handle the timeout
+		return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
 	}
 
-	if !isCb && data != nil {
-		err = i.k.ErrorOrTimeoutQueue.Set(ctx, packet.Sequence, types.PacketQueueItem{
-			Packet:          &packet,
-			OriginalTxHash:  tmhash.Sum(ctx.TxBytes()),
-			IsTimeout:       true,
-			Acknowledgement: nil,
-		})
-		if err != nil {
-			i.k.Logger(ctx).Error("failed to set error or timeout queue", "error", err)
-		}
+	globalPacketSequence, err := i.k.GlobalPacketSequence.Next(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get next packet sequence", "error", err)
 		return err
 	}
 
-	// let the underlying module handle the timeout packet
-	return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
+	err = i.k.ErrorOrTimeoutQueue.Set(ctx, globalPacketSequence, types.PacketQueueItem{
+		Packet:          &packet,
+		OriginalTxHash:  tmhash.Sum(ctx.TxBytes()),
+		IsTimeout:       true,
+		Acknowledgement: nil,
+	})
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to set error or timeout queue", "error", err)
+		return err
+	}
+
+	_, err = i.addSrcCallbackToQueue(ctx, packet, nil, true)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 // OnRecvPacket implements types.IBCModule.
@@ -185,7 +205,15 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 		Packet:         &packet,
 		OriginalTxHash: txHash,
 	}
-	err = i.k.PacketQueue.Set(ctx, packet.Sequence, packetQueueItem)
+
+	// get a uniquely identifiable packet sequence, to retain order among multiple channels
+	globalPacketSequence, err := i.k.GlobalPacketSequence.Next(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get next packet sequence", "error", err)
+		return newErrorAcknowledgement(err)
+	}
+
+	err = i.k.PacketQueue.Set(ctx, globalPacketSequence, packetQueueItem)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to set packet in call queue", "error", err)
 		return newErrorAcknowledgement(err)
@@ -233,20 +261,7 @@ func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, 
 
 // helper functions
 
-func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) (bool, *transfertypes.FungibleTokenPacketData, error) {
-	var data transfertypes.FungibleTokenPacketData
-	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
-		i.k.Logger(ctx).Error("transferrouter error parsing packet data from ack packet",
-			"sequence", packet.Sequence,
-			"src-channel", packet.SourceChannel, "src-port", packet.SourcePort,
-			"dst-channel", packet.DestinationChannel, "dst-port", packet.DestinationPort,
-			"error", err,
-		)
-
-		// do not return an error, just log it
-		return false, nil, nil
-	}
-
+func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) (bool, error) {
 	// get callback data
 	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas)
 	if isCbPacket {
@@ -254,8 +269,15 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
 		}
 
+		// get a uniquely identifiable packet sequence, to retain order among multiple channels
+		globalPacketSequence, err := i.k.GlobalPacketSequence.Next(ctx)
+		if err != nil {
+			i.k.Logger(ctx).Error("failed to get next packet sequence", "error", err)
+			return false, err
+		}
+
 		// add the callback data to the callback queue
-		err = i.k.SrcCallbackQueue.Set(ctx, packet.Sequence, types.PacketQueueItem{
+		err = i.k.SrcCallbackQueue.Set(ctx, globalPacketSequence, types.PacketQueueItem{
 			Packet:          &packet,
 			OriginalTxHash:  tmhash.Sum(ctx.TxBytes()),
 			IsTimeout:       isTimeout,
@@ -264,9 +286,9 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to set callback queue", "error", err)
 		}
-		return true, &data, nil
+		return true, nil
 	}
-	return false, &data, nil
+	return false, nil
 }
 
 // receiveFunds receives funds from the packet into the override receiver

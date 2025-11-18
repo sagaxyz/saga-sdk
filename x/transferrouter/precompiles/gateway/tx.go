@@ -72,7 +72,7 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
-	p.transferKeeper.Logger(ctx).Info("Successfully parsed packet data",
+	p.transferKeeper.Logger(ctx).Debug("Successfully parsed packet data",
 		"denom", packetData.Denom,
 		"amount", packetData.Amount,
 		"sender", packetData.Sender,
@@ -89,7 +89,7 @@ func (p Precompile) Execute(
 	}
 	coin := ibc.GetReceivedCoin(packet, token)
 
-	p.transferKeeper.Logger(ctx).Info("Processed token information",
+	p.transferKeeper.Logger(ctx).Debug("Processed token information",
 		"extractedDenom", token.Denom,
 		"coinDenom", coin.Denom,
 		"coinAmount", coin.Amount.String())
@@ -98,11 +98,10 @@ func (p Precompile) Execute(
 	// so it can still remove the packet from the queue if the execution fails.
 	defer func() {
 		success := retErr == nil
-		p.transferKeeper.Logger(ctx).Info("Starting defer cleanup", "executionSuccess", success)
+		p.transferKeeper.Logger(ctx).Debug("Starting defer cleanup", "executionSuccess", success)
 
 		if retErr == nil {
 			// Write cachedCtx events back to ctx only if the execution is successful
-			p.transferKeeper.Logger(ctx).Info("Writing cached context events back to main context")
 			writeFn()
 		}
 
@@ -113,21 +112,18 @@ func (p Precompile) Execute(
 		var ack channeltypes.Acknowledgement
 		if success {
 			ack = channeltypes.NewResultAcknowledgement([]byte{1})
-			p.transferKeeper.Logger(ctx).Info("Created success acknowledgement")
 		} else {
 			ack = channeltypes.NewErrorAcknowledgement(errors.New("failed to execute call"))
-			p.transferKeeper.Logger(ctx).Info("Created error acknowledgement")
 
 			// burn the received tokens, first send them to the transferrouter module and then burn them.
-			p.transferKeeper.Logger(ctx).Info("Starting token burn process", "isCallbackPacket", isCbPacket)
 			if isCbPacket {
 				isolatedAddr := utils.GenerateIsolatedAddress(packet.GetDestChannel(), packetData.Sender)
-				p.transferKeeper.Logger(ctx).Info("Sending coins from isolated address to module",
+				p.transferKeeper.Logger(ctx).Debug("Sending coins from isolated address to module",
 					"isolatedAddr", isolatedAddr.String(),
 					"coin", coin.String())
 				err = p.transferKeeper.BankKeeper.SendCoinsFromAccountToModule(ctx, isolatedAddr, types.ModuleName, sdk.NewCoins(coin))
 			} else {
-				p.transferKeeper.Logger(ctx).Info("Sending coins from gateway address to module",
+				p.transferKeeper.Logger(ctx).Debug("Sending coins from gateway address to module",
 					"gatewayAddr", p.Address().Hex(),
 					"gatewayAddrBytes", sdk.AccAddress(p.Address().Bytes()).String(),
 					"coin", coin.String())
@@ -141,7 +137,7 @@ func (p Precompile) Execute(
 				return
 			}
 
-			p.transferKeeper.Logger(ctx).Info("Successfully sent coins to module, now burning coins", "coin", coin.String())
+			p.transferKeeper.Logger(ctx).Debug("Successfully sent coins to module, now burning coins", "coin", coin.String())
 			err = p.transferKeeper.BankKeeper.BurnCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
 			if err != nil {
 				p.transferKeeper.Logger(ctx).Error("failed to burn coins", "error", err)
@@ -150,15 +146,13 @@ func (p Precompile) Execute(
 			}
 		}
 
-		p.transferKeeper.Logger(ctx).Info("Writing IBC acknowledgment")
-
 		err = p.transferKeeper.WriteIBCAcknowledgment(ctx, packet, ack)
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to write IBC acknowledgment", "error", err)
 			retErr = err
 			return
 		}
-		p.transferKeeper.Logger(ctx).Info("Successfully wrote IBC acknowledgment", "success", success)
+		p.transferKeeper.Logger(ctx).Debug("Successfully wrote IBC acknowledgment", "success", success)
 	}()
 
 	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, coin.Denom)
@@ -230,16 +224,17 @@ func (p Precompile) Execute(
 // popNextPacket gets the next packet from the queue and removes it
 func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error) {
 	var packet types.PacketQueueItem
+	var globalPacketSequence uint64
 	logger := p.transferKeeper.Logger(ctx)
 
-	logger.Info("Starting to walk packet queue")
 	if err := p.transferKeeper.PacketQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Info("Found packet in queue",
+		logger.Debug("Found packet in queue",
 			"key", key,
 			"sequence", value.Packet.Sequence,
 			"sourceChannel", value.Packet.SourceChannel,
 			"destChannel", value.Packet.DestinationChannel)
 		packet = value
+		globalPacketSequence = key
 		return true, nil // stop after first
 	}); err != nil {
 		logger.Error("Failed to walk packet queue", "error", err)
@@ -251,15 +246,14 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 		return types.PacketQueueItem{}, errors.New("no packets in queue")
 	}
 
-	logger.Info("Removing packet from queue", "sequence", packet.Packet.Sequence)
+	logger.Debug("Removing packet from queue", "sequence", packet.Packet.Sequence)
 	// remove the packet from the queue
-	err := p.transferKeeper.PacketQueue.Remove(ctx, packet.Packet.Sequence)
+	err := p.transferKeeper.PacketQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
 		logger.Error("Failed to remove packet from queue", "sequence", packet.Packet.Sequence, "error", err)
 		return types.PacketQueueItem{}, err
 	}
 
-	logger.Info("Successfully removed packet from queue", "sequence", packet.Packet.Sequence)
 	return packet, nil
 }
 
@@ -513,12 +507,6 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		return nil, err
 	}
 
-	// delete
-	err = p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, packetQueueItem.Packet.Sequence)
-	if err != nil {
-		return nil, err
-	}
-
 	return nil, nil
 }
 
@@ -545,14 +533,14 @@ func getSourceCallbackData(
 
 func (p Precompile) popNextSrcCallback(ctx sdk.Context) (types.PacketQueueItem, error) {
 	var (
-		packet   types.PacketQueueItem
-		sequence uint64
+		packet               types.PacketQueueItem
+		globalPacketSequence uint64
 	)
 	logger := p.transferKeeper.Logger(ctx)
 
 	if err := p.transferKeeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
 		logger.Info("Processing packet from queue", "key", key, "value", value)
-		sequence = key
+		globalPacketSequence = key
 		packet = value
 		return true, nil // stop after first
 	}); err != nil {
@@ -560,7 +548,7 @@ func (p Precompile) popNextSrcCallback(ctx sdk.Context) (types.PacketQueueItem, 
 	}
 
 	// remove the packet from the queue
-	err := p.transferKeeper.SrcCallbackQueue.Remove(ctx, sequence)
+	err := p.transferKeeper.SrcCallbackQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
 		return types.PacketQueueItem{}, err
 	}
@@ -569,14 +557,14 @@ func (p Precompile) popNextSrcCallback(ctx sdk.Context) (types.PacketQueueItem, 
 
 func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (types.PacketQueueItem, error) {
 	var (
-		packet   types.PacketQueueItem
-		sequence uint64
+		packet               types.PacketQueueItem
+		globalPacketSequence uint64
 	)
 	logger := p.transferKeeper.Logger(ctx)
 
 	if err := p.transferKeeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
 		logger.Info("Processing packet from queue", "key", key, "value", value)
-		sequence = key
+		globalPacketSequence = key
 		packet = value
 		return true, nil // stop after first
 	}); err != nil {
@@ -584,7 +572,7 @@ func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (types.PacketQueueIte
 	}
 
 	// remove the packet from the queue
-	err := p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, sequence)
+	err := p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
 		return types.PacketQueueItem{}, err
 	}
