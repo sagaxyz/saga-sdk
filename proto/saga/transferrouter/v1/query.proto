@@ -1,0 +1,25 @@
+syntax = "proto3";
+package saga.transferrouter.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "saga/transferrouter/v1/transferrouter.proto";
+
+option go_package = "github.com/sagaxyz/saga-sdk/x/transferrouter/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Params queries the parameters of x/transferrouter module.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/saga/transferrouter/v1/params";
+  }
+}
+
+// QueryParamsRequest defines the request type for querying x/transferrouter parameters.
+message QueryParamsRequest {}
+
+// QueryParamsResponse defines the response type for querying x/transferrouter parameters.
+message QueryParamsResponse {
+  // params define the module parameters.
+  Params params = 1 [(gogoproto.nullable) = false];
+} 

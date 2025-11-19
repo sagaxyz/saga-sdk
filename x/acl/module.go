@@ -108,7 +108,7 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 }
 
 func (am AppModule) IsOnePerModuleType() {}
-func (am AppModule) IsAppModule() {}
+func (am AppModule) IsAppModule()        {}
 
 // Name returns the acl module's name.
 func (am AppModule) Name() string {
@@ -120,10 +120,6 @@ func (am AppModule) Name() string {
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), am.keeper)
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
-}
-
-// RegisterInvariants registers the acl module's invariants.
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {
 }
 
 // InitGenesis performs the acl module's genesis initialization It returns
