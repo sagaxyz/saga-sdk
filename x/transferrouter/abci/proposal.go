@@ -10,12 +10,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	"github.com/ethereum/go-ethereum/common"
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
-	"github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	precompilesgateway "github.com/sagaxyz/saga-sdk/x/transferrouter/precompiles/gateway"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/types"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/utils"
@@ -98,19 +96,19 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		}
 
 		// Add all the transactions in our internal queues
-		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, gateway.PrecompileAddress, privKey, maxBlockGas)
+		nextNonce, err = h.AddSrcCallbackTxs(ctx, req, nextNonce, chainId, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during src callback queue walk", "error", err)
 			return nil, err
 		}
 
-		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, gateway.PrecompileAddress, privKey, maxBlockGas)
+		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during packet queue walk", "error", err)
 			return nil, err
 		}
 
-		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, gateway.PrecompileAddress, privKey, maxBlockGas)
+		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during error or timeout queue walk", "error", err)
 			return nil, err
@@ -149,7 +147,7 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 }
 
 // AddSrcCallbackTxs adds the source callback transactions to the proposal
-func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
+func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
 	logger := h.keeper.Logger(ctx)
 	// Add the source callback queue
 	err := h.keeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, _ types.PacketQueueItem) (stop bool, err error) {
@@ -160,7 +158,7 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 			return true, err
 		}
 
-		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, privKey)
 		if err != nil {
 			logger.Error("failed to convert calldata to signed tx", "error", err)
 			return true, err
@@ -180,7 +178,7 @@ func (h *ProposalHandler) AddSrcCallbackTxs(ctx sdk.Context, req *abci.RequestPr
 }
 
 // AddErrorOrTimeoutTxs adds the error or timeout transactions to the proposal
-func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
 	logger := h.keeper.Logger(ctx)
 	return h.keeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(_ uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		// Calldata is a simple call to the gateway handleErrorOrTimeout function
@@ -190,7 +188,7 @@ func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.Reques
 			return true, err
 		}
 
-		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, privKey)
 		if err != nil {
 			logger.Error("failed to convert calldata to signed tx", "error", err)
 			return true, err
@@ -207,7 +205,7 @@ func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.Reques
 }
 
 // AddPacketTxs adds the packet transactions to the proposal
-func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, gatewayAddress common.Address, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
 	logger := h.keeper.Logger(ctx)
 	err := h.keeper.PacketQueue.Walk(ctx, nil, func(_ uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		// Calldata is a simple call to the gateway execute function
@@ -217,7 +215,7 @@ func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepare
 			return true, err
 		}
 
-		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, &gatewayAddress, privKey)
+		cosmosTx, txBytes, err := h.calldataToSignedTx(ctx, calldata, nextNonce, chainId, privKey)
 		if err != nil {
 			logger.Error("failed to convert calldata to signed tx", "error", err)
 			return true, err
@@ -260,7 +258,7 @@ func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepa
 	return nil
 }
 
-func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, contract *common.Address, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
+func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, nonce uint64, chainID *big.Int, privKey *ecdsa.PrivateKey) (sdk.Tx, []byte, error) {
 	logger := h.keeper.Logger(ctx)
 	txArgs := &evmtypes.EvmTxArgs{
 		Nonce:     nonce,
@@ -271,7 +269,7 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		ChainID:   chainID,
 		Amount:    big.NewInt(0), // No value transfer for contract calls
 		GasTipCap: big.NewInt(0),
-		To:        contract,
+		To:        &precompilesgateway.PrecompileAddress,
 		Accesses:  nil, // No access list for now
 	}
 

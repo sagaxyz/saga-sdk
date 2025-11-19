@@ -4,7 +4,7 @@ This directory contains the Gateway precompile for the `transferrouter` module. 
 
 ## Address
 
-- **Precompile address**: `0x5A6A8Ce46E34c2cd998129d013fA0253d3892345`
+- **Precompile address**: `0x0000000000000000000000000000000000005A6A`
 
 ## What it does
 

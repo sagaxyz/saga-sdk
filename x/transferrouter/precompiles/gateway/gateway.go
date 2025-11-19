@@ -20,7 +20,7 @@ import (
 )
 
 // PrecompileAddress of the Gateway EVM extension in hex format.
-var PrecompileAddress = common.HexToAddress("0x5A6A8Ce46E34c2cd998129d013fA0253d3892345")
+var PrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000005A6A")
 
 var _ vm.PrecompiledContract = &Precompile{}
 
