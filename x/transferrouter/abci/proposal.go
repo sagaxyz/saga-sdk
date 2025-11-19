@@ -94,7 +94,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
 		nextNonce, err := h.keeper.AccountKeeper.GetSequence(ctx, sdk.AccAddress(knownSignerBz))
 		if err != nil {
-			nextNonce = 0
+			return nil, err
 		}
 
 		// Add all the transactions in our internal queues
