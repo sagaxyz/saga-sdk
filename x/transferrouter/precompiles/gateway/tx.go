@@ -401,6 +401,10 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	// the from address is the IBC module address, this is only so the contracts can verify the caller
 	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, types.ModuleName)
 
+	if acc == nil {
+		return nil, errors.New("module account not found")
+	}
+
 	cbData, err := getSourceCallbackData(ctx, *packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
 	if err != nil {
 		return nil, err
