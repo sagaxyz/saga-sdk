@@ -44,6 +44,8 @@ interface IGateway {
     /// @notice Event emitted when a call is executed
     event Executed(
         uint256 sequence,
+        string channelId,
+        string portId,
         bool success,
         bytes txhash,
         bool isCallback,
@@ -54,6 +56,8 @@ interface IGateway {
     /// @notice Event emitted when an error or timeout is handled.
     event ErrorOrTimeoutHandled(
         uint256 sequence,
+        string channelId,
+        string portId,
         bytes txhash,
         bytes data
     );
