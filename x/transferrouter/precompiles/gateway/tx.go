@@ -506,6 +506,12 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		if err != nil {
 			return nil, err
 		}
+
+		// transfer to sender
+		err = p.transferKeeper.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, sender, sdk.NewCoins(coin))
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
 		refundSender = common.Address(escrowAddress.Bytes())
