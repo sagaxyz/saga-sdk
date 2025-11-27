@@ -136,12 +136,57 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	}
 }
 
-// ProcessProposalHandler has no checks, it just accepts the block. This is due to the fact that the injected message
+// ProcessProposalHandler has minimal checks. This is due to the fact that the injected message
 // can't be manipulated by the proposer, as the actual calldata is get during execution.
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+		params, err := h.keeper.Params.Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if params.KnownSignerPrivateKey == "" {
+			return nil, errors.New("known signer private key is empty")
+		}
+		privKey, err := crypto.HexToECDSA(params.KnownSignerPrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		knownSignerBz := crypto.PubkeyToAddress(privKey.PublicKey).Bytes()
 
-		// reject any block that contains repeated txs from the known signer // TODO: implement this
+		// check if any of the txs are from the known signer, and if they are, make sure they are using the correct target and calldata
+		for _, tx := range req.Txs {
+			tx, err := h.txVerifier.TxDecode(tx)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, msg := range tx.GetMsgs() {
+				ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
+				if !ok {
+					continue
+				}
+				from := common.BytesToAddress(ethTx.From)
+				if bytes.Equal(from.Bytes(), knownSignerBz) {
+					// get the method id of the call
+					methodID := ethTx.Raw.Data()[:4]
+					allowedMethod := false
+					for _, method := range precompilesgateway.ABI.Methods {
+						if bytes.Equal(methodID, method.ID) {
+							allowedMethod = true
+							break
+						}
+					}
+
+					if !allowedMethod {
+						h.keeper.Logger(ctx).Error("proposal contains txs from the known signer with an invalid method", "method", methodID)
+						return &abci.ResponseProcessProposal{
+							Status: abci.ResponseProcessProposal_REJECT,
+						}, nil
+					}
+				}
+
+			}
+		}
 		return &abci.ResponseProcessProposal{
 			Status: abci.ResponseProcessProposal_ACCEPT,
 		}, nil
@@ -326,7 +371,7 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 		return nil, nil, err
 	}
 
-	cosmosTx, err := tx.BuildTx(h.txConfig.NewTxBuilder(), "saga") // TODO: get denom from params
+	cosmosTx, err := tx.BuildTx(h.txConfig.NewTxBuilder(), evmtypes.GetEVMCoinDenom())
 	if err != nil {
 		logger.Error("build tx failed", "error", err)
 		return nil, nil, err
