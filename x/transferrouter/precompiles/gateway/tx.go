@@ -369,7 +369,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	if receiverTokenBalance.Cmp(big.NewInt(0)) != 0 {
 		p.transferKeeper.Logger(ctx).Error("Receiver still has tokens after callback", "balance", receiverTokenBalance.String())
 		return nil, nil, errorsmod.Wrapf(erc20types.ErrEVMCall,
-			"receiver has %d unrecoverable tokens after callback", receiverTokenBalance)
+			"receiver has %s unrecoverable tokens after callback", receiverTokenBalance.String())
 	}
 	p.transferKeeper.Logger(ctx).Debug("Callback processing completed successfully")
 
