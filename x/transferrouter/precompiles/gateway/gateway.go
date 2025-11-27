@@ -22,8 +22,6 @@ import (
 // PrecompileAddress of the Gateway EVM extension in hex format.
 var PrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000005A6A")
 
-var _ vm.PrecompiledContract = &Precompile{}
-
 // Embed abi json file to the executable binary. Needed when importing as dependency.
 //
 //go:embed abi.json
