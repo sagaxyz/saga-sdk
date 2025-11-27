@@ -340,19 +340,17 @@ func (h *ProposalHandler) calldataToSignedTx(ctx sdk.Context, calldata []byte, n
 	}
 
 	ethtx := txArgs.ToTx()
-
-	if h.signer == nil {
-		logger.Error("signer is nil")
-		return nil, nil, errors.New("signer is nil")
-	}
-
-	ethtx.ChainId().Set(chainID)
-
 	if ethtx == nil {
 		logger.Error("as transaction returned nil")
 		return nil, nil, errors.New("as transaction returned nil")
 	}
 
+	ethtx.ChainId().Set(chainID)
+
+	if h.signer == nil {
+		logger.Error("signer is nil")
+		return nil, nil, errors.New("signer is nil")
+	}
 	signedTx, err := ethcoretypes.SignTx(ethtx, h.signer, privKey)
 	if err != nil {
 		logger.Error("sign tx failed", "error", err)
