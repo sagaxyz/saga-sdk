@@ -104,12 +104,13 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, err
 		}
 
-		err = h.AddPacketTxs(ctx, req, nextNonce, chainId, privKey, maxBlockGas)
+		nextNonce, err = h.AddPacketTxs(ctx, req, nextNonce, chainId, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during packet queue walk", "error", err)
 			return nil, err
 		}
 
+		// we don't need the next nonce after this call
 		err = h.AddErrorOrTimeoutTxs(ctx, req, nextNonce, chainId, privKey, maxBlockGas)
 		if err != nil {
 			logger.Error("Error during error or timeout queue walk", "error", err)
@@ -258,7 +259,7 @@ func (h *ProposalHandler) AddErrorOrTimeoutTxs(ctx sdk.Context, req *abci.Reques
 }
 
 // AddPacketTxs adds the packet transactions to the proposal
-func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, privKey *ecdsa.PrivateKey, maxBlockGas uint64) error {
+func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, nextNonce uint64, chainId *big.Int, privKey *ecdsa.PrivateKey, maxBlockGas uint64) (uint64, error) {
 	logger := h.keeper.Logger(ctx)
 	err := h.keeper.PacketQueue.Walk(ctx, nil, func(_ uint64, _ types.PacketQueueItem) (stop bool, err error) {
 		// Calldata is a simple call to the gateway execute function
@@ -284,7 +285,7 @@ func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepare
 		return false, nil
 	})
 
-	return err
+	return nextNonce, err
 }
 
 func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, maxBlockGas uint64, knownSignerBz []byte) error {
