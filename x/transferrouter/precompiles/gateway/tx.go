@@ -399,7 +399,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
 
 	// the from address is the IBC module address, this is only so the contracts can verify the caller
-	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, "txrouter")
+	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, types.ModuleName)
 
 	cbData, err := getSourceCallbackData(ctx, *packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
 	if err != nil {
@@ -424,13 +424,13 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 
 	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
 
-	res, resErr := p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(acc.GetAddress().Bytes()), &target, calldata, true, remainingGas)
+	res, retErr := p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(acc.GetAddress().Bytes()), &target, calldata, true, remainingGas)
 
 	var returnBz []byte
-	if resErr == nil {
+	if retErr == nil {
 		returnBz = res.Ret
 	} else {
-		returnBz = []byte(resErr.Error())
+		returnBz = []byte(retErr.Error())
 	}
 
 	// emit the event
@@ -439,7 +439,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	}
 
 	// only add logs if the call was successful
-	if resErr == nil && !res.Failed() {
+	if retErr == nil && !res.Failed() {
 		logs := evmtypes.LogsToEthereum(res.Logs)
 		for _, log := range logs {
 			stateDB.AddLog(log)
