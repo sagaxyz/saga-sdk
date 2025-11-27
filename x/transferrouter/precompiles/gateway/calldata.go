@@ -1,59 +1,16 @@
 package gateway
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/big"
 
-	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/evm/contracts"
-	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
-	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sagaxyz/saga-sdk/x/transferrouter/keeper"
 )
 
-// CreateGatewayERC20TransferExecuteCallDataFromPacket creates call data for the gateway execute function from IBC packet data
-// This is a convenience function that extracts data from packet and calls CreateGatewayExecuteCallData
-// Parameters:
-//   - ctx: SDK context
-//   - k: keeper instance
-//   - packet: IBC packet containing transfer data
-//   - data: transfer data from the packet
-//
-// Returns:
-//   - []byte: encoded call data for gateway.execute function
-//   - error: any error that occurred during call data creation
-func CreateERC20TransferExecuteCallDataFromPacket(
-	ctx sdk.Context,
-	k keeper.Keeper,
-	packet channeltypes.Packet,
-	data transfertypes.FungibleTokenPacketData,
-) ([]byte, error) {
-	// TODO: remember to handle denoms differently if this chain was the sender
-	// see ReceiverChainIsSource in transfer keeper relay.go
-	// since SendPacket did not prefix the denomination, we must prefix denomination here
-	hop := transfertypes.NewHop(packet.GetSourcePort(), packet.GetSourceChannel())
-	prefixedDenom := transfertypes.NewDenom(data.Denom, hop)
-
-	// Create memo with transaction hash
-	txHash := tmhash.Sum(ctx.TxBytes())
-	txHashHex := hex.EncodeToString(txHash)
-	memo, err := json.Marshal(map[string]interface{}{
-		"txHash": txHashHex,
-	})
-	if err != nil {
-		k.Logger(ctx).Error("failed to marshal memo", "error", err)
-		return nil, fmt.Errorf("failed to marshal memo: %w", err)
-	}
-
-	// Call the main function with extracted data
-	return createERC20TransferCallData(ctx, k, prefixedDenom.IBCDenom(), data.Amount, data.Receiver, memo)
-}
-
-// createERC20TransferCallData creates call data for the gateway execute function
+// CreateERC20TransferCallData creates call data for the gateway execute function
 // This function assembles the call data needed to execute an ERC20 transfer through the gateway
 // Parameters:
 //   - ctx: SDK context
@@ -66,13 +23,11 @@ func CreateERC20TransferExecuteCallDataFromPacket(
 // Returns:
 //   - []byte: encoded call data for gateway.execute function
 //   - error: any error that occurred during call data creation
-func createERC20TransferCallData(
+func CreateERC20TransferCallData(
 	ctx sdk.Context,
 	k keeper.Keeper,
-	denom string,
 	amount string,
 	recipient string,
-	memo []byte,
 ) ([]byte, error) {
 	// Parse the recipient address
 	receiverAccAddr, err := sdk.AccAddressFromBech32(recipient)

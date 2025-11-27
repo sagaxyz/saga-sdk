@@ -13,8 +13,6 @@ import (
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/cosmos/evm/contracts"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
-	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
@@ -53,17 +51,6 @@ func setupKeeperForCalldataTest(t *testing.T) (sdk.Context, keeper.Keeper) {
 func TestCreateERC20TransferExecuteCallDataFromPacket_NativeDenom(t *testing.T) {
 	ctx, k := setupKeeperForCalldataTest(t)
 
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    "usaga",
 		Amount:   "1000",
@@ -71,7 +58,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_NativeDenom(t *testing.T) 
 		Receiver: "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.NoError(t, err)
 	require.NotNil(t, calldata)
 
@@ -102,17 +89,6 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_IBCDenom(t *testing.T) {
 
 	ibcDenom := "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
 
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    ibcDenom,
 		Amount:   "5000",
@@ -120,7 +96,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_IBCDenom(t *testing.T) {
 		Receiver: "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.NoError(t, err)
 	require.NotNil(t, calldata)
 
@@ -134,20 +110,6 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_IBCDenom(t *testing.T) {
 func TestCreateERC20TransferExecuteCallDataFromPacket_VerifyMemo(t *testing.T) {
 	ctx, k := setupKeeperForCalldataTest(t)
 
-	txBytes := []byte("my-test-tx-bytes")
-	ctx = ctx.WithTxBytes(txBytes)
-
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    "usaga",
 		Amount:   "1000",
@@ -155,7 +117,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_VerifyMemo(t *testing.T) {
 		Receiver: "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.NoError(t, err)
 	require.NotNil(t, calldata)
 
@@ -166,17 +128,6 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_VerifyMemo(t *testing.T) {
 func TestCreateERC20TransferExecuteCallDataFromPacket_InvalidReceiver(t *testing.T) {
 	ctx, k := setupKeeperForCalldataTest(t)
 
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    "usaga",
 		Amount:   "1000",
@@ -184,7 +135,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_InvalidReceiver(t *testing
 		Receiver: "invalid-address",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.Error(t, err)
 	require.Nil(t, calldata)
 	require.Contains(t, err.Error(), "failed to parse receiver address")
@@ -193,17 +144,6 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_InvalidReceiver(t *testing
 func TestCreateERC20TransferExecuteCallDataFromPacket_InvalidAmount(t *testing.T) {
 	ctx, k := setupKeeperForCalldataTest(t)
 
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    "usaga",
 		Amount:   "not-a-number",
@@ -211,7 +151,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_InvalidAmount(t *testing.T
 		Receiver: "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.Error(t, err)
 	require.Nil(t, calldata)
 	require.Contains(t, err.Error(), "failed to parse amount")
@@ -220,17 +160,6 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_InvalidAmount(t *testing.T
 func TestCreateERC20TransferExecuteCallDataFromPacket_ZeroAmount(t *testing.T) {
 	ctx, k := setupKeeperForCalldataTest(t)
 
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    "usaga",
 		Amount:   "0",
@@ -238,7 +167,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_ZeroAmount(t *testing.T) {
 		Receiver: "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.NoError(t, err)
 	require.NotNil(t, calldata)
 
@@ -257,17 +186,6 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_ZeroAmount(t *testing.T) {
 func TestCreateERC20TransferExecuteCallDataFromPacket_LargeAmount(t *testing.T) {
 	ctx, k := setupKeeperForCalldataTest(t)
 
-	packet := channeltypes.Packet{
-		Sequence:           1,
-		SourcePort:         "transfer",
-		SourceChannel:      "channel-0",
-		DestinationPort:    "transfer",
-		DestinationChannel: "channel-1",
-		TimeoutHeight:      clienttypes.NewHeight(1, 100),
-		TimeoutTimestamp:   0,
-		Data:               []byte("test"),
-	}
-
 	largeAmount := "999999999999999999999999999999"
 	data := transfertypes.FungibleTokenPacketData{
 		Denom:    "usaga",
@@ -276,7 +194,7 @@ func TestCreateERC20TransferExecuteCallDataFromPacket_LargeAmount(t *testing.T) 
 		Receiver: "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a",
 	}
 
-	calldata, err := gateway.CreateERC20TransferExecuteCallDataFromPacket(ctx, k, packet, data)
+	calldata, err := gateway.CreateERC20TransferCallData(ctx, k, data.Amount, data.Receiver)
 	require.NoError(t, err)
 	require.NotNil(t, calldata)
 

@@ -258,7 +258,7 @@ func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error
 }
 
 func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
-	callData, err := CreateERC20TransferExecuteCallDataFromPacket(ctx, p.transferKeeper, packet, packetData)
+	callData, err := CreateERC20TransferCallData(ctx, p.transferKeeper, packetData.Amount, packetData.Receiver)
 	if err != nil {
 		p.transferKeeper.Logger(ctx).Error("Failed to create gateway execute call data", "error", err)
 		return nil, nil, errorsmod.Wrapf(ErrEVMCallFailed, "failed to create gateway execute call data: %v", err)
@@ -266,7 +266,12 @@ func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet chan
 
 	// Execute the call logic here
 	// This is where you would call your keeper methods to perform the actual execution
+
 	fromAddress := common.BytesToAddress(p.Address().Bytes()) // the sender for normal ERC20 transfers is the gateway contract address
+
+	// Note: for outgoing transfers, we show the events correctly, meaning that we either send them to the escrow address or to the 0x000 account.
+	// But here, given that we need to actually handle the tokens, we need to send them from the gateway contract address.
+
 	target := tokenPair.GetERC20Contract()
 
 	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
@@ -458,17 +463,19 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	}
 
 	// we need to transfer the tokens back to the sender either from the escrow address or by minting them
-
 	packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
 	if err != nil {
-		return nil, err
+		// this error would be unrecoverable, so we return nil, nil
+		p.transferKeeper.Logger(ctx).Debug("Failed to unmarshal packet data in handleErrorOrTimeout", "error", err)
+		return nil, nil
 	}
 
 	// // check if the tokens are native to this chain or not
 	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
 	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
 	if !found {
-		return nil, errorsmod.Wrapf(erc20types.ErrTokenPairNotFound, "token pair for denom %s not found", packetData.Token.Denom.String())
+		p.transferKeeper.Logger(ctx).Debug("Token pair not found in handleErrorOrTimeout", "denom", packetData.Token.Denom.String())
+		return nil, nil
 	}
 
 	sender, err := sdk.AccAddressFromBech32(packetData.Sender)
