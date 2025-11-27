@@ -168,6 +168,12 @@ func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 				from := common.BytesToAddress(ethTx.From)
 				if bytes.Equal(from.Bytes(), knownSignerBz) {
 					// get the method id of the call
+					if len(ethTx.Raw.Data()) < 4 {
+						h.keeper.Logger(ctx).Error("proposal contains txs from the known signer with an invalid method", "method", "unknown")
+						return &abci.ResponseProcessProposal{
+							Status: abci.ResponseProcessProposal_REJECT,
+						}, nil
+					}
 					methodID := ethTx.Raw.Data()[:4]
 					allowedMethod := false
 					for _, method := range precompilesgateway.ABI.Methods {
