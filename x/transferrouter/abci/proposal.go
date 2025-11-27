@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
@@ -10,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
+	"github.com/ethereum/go-ethereum/common"
 	ethcoretypes "github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -120,7 +122,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 			return nil, errors.New("tx verifier is nil")
 		}
 
-		err = h.AddIncomingTxs(ctx, req, maxBlockGas)
+		err = h.AddIncomingTxs(ctx, req, maxBlockGas, knownSignerBz)
 		if err != nil {
 			logger.Error("Error while adding incoming txs", "error", err)
 			return nil, err
@@ -234,7 +236,7 @@ func (h *ProposalHandler) AddPacketTxs(ctx sdk.Context, req *abci.RequestPrepare
 	return err
 }
 
-func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, maxBlockGas uint64) error {
+func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepareProposal, maxBlockGas uint64, knownSignerBz []byte) error {
 	for _, txBz := range req.Txs {
 		if txBz == nil {
 			continue
@@ -246,6 +248,25 @@ func (h *ProposalHandler) AddIncomingTxs(ctx sdk.Context, req *abci.RequestPrepa
 		}
 
 		if tx == nil {
+			continue
+		}
+
+		// Reject any txs from the known signer
+		skip := false
+		for _, msg := range tx.GetMsgs() {
+			ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
+			if !ok {
+				continue
+			}
+			from := common.BytesToAddress(ethTx.From)
+
+			if bytes.Equal(from.Bytes(), knownSignerBz) {
+				skip = true
+				break
+			}
+		}
+
+		if skip {
 			continue
 		}
 

@@ -47,8 +47,12 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
+	if packetQueueItem == nil {
+		return nil, nil // no packets in queue, return no error.
+	}
+
 	packet := *packetQueueItem.Packet
-	p.transferKeeper.Logger(ctx).Info("Retrieved packet from queue",
+	p.transferKeeper.Logger(ctx).Debug("Retrieved packet from queue",
 		"sequence", packet.Sequence,
 		"sourceChannel", packet.SourceChannel,
 		"destChannel", packet.DestinationChannel,
@@ -222,39 +226,32 @@ func (p Precompile) Execute(
 }
 
 // popNextPacket gets the next packet from the queue and removes it
-func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error) {
-	var packet types.PacketQueueItem
-	var globalPacketSequence uint64
-	logger := p.transferKeeper.Logger(ctx)
-
+func (p Precompile) popNextPacket(ctx sdk.Context) (*types.PacketQueueItem, error) {
+	var (
+		packet               types.PacketQueueItem
+		globalPacketSequence uint64
+		found                bool
+	)
 	if err := p.transferKeeper.PacketQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Debug("Found packet in queue",
-			"key", key,
-			"sequence", value.Packet.Sequence,
-			"sourceChannel", value.Packet.SourceChannel,
-			"destChannel", value.Packet.DestinationChannel)
 		packet = value
 		globalPacketSequence = key
+		found = true
 		return true, nil // stop after first
 	}); err != nil {
-		logger.Error("Failed to walk packet queue", "error", err)
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
 
-	if packet.Packet == nil {
-		logger.Error("No packets found in queue")
-		return types.PacketQueueItem{}, errors.New("no packets in queue")
+	if !found {
+		return nil, nil
 	}
 
-	logger.Debug("Removing packet from queue", "sequence", packet.Packet.Sequence)
 	// remove the packet from the queue
 	err := p.transferKeeper.PacketQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
-		logger.Error("Failed to remove packet from queue", "sequence", packet.Packet.Sequence, "error", err)
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
 
-	return packet, nil
+	return &packet, nil
 }
 
 func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
@@ -393,6 +390,10 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 		return nil, err
 	}
 
+	if packetQueueItem == nil {
+		return nil, nil // no packets in queue, return no error.
+	}
+
 	// cache ctx
 	cachedCtx, writeFn := ctx.CacheContext()
 	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
@@ -400,7 +401,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	// the from address is the IBC module address, this is only so the contracts can verify the caller
 	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, "txrouter")
 
-	cbData, err := getSourceCallbackData(ctx, packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
+	cbData, err := getSourceCallbackData(ctx, *packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
 	if err != nil {
 		return nil, err
 	}
@@ -458,6 +459,10 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	args any,
 ) (retBz []byte, retErr error) {
 	packetQueueItem, err := p.popNextErrorOrTimeout(ctx)
+	if packetQueueItem == nil {
+		return nil, nil // no packets in queue, return no error.
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -538,50 +543,57 @@ func getSourceCallbackData(
 	return nil, errors.New("packet is not a callback packet")
 }
 
-func (p Precompile) popNextSrcCallback(ctx sdk.Context) (types.PacketQueueItem, error) {
+func (p Precompile) popNextSrcCallback(ctx sdk.Context) (*types.PacketQueueItem, error) {
 	var (
 		packet               types.PacketQueueItem
 		globalPacketSequence uint64
+		found                bool
 	)
-	logger := p.transferKeeper.Logger(ctx)
-
 	if err := p.transferKeeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Info("Processing packet from queue", "key", key, "value", value)
 		globalPacketSequence = key
 		packet = value
+		found = true
 		return true, nil // stop after first
 	}); err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
+	}
+
+	if !found {
+		return nil, nil
 	}
 
 	// remove the packet from the queue
 	err := p.transferKeeper.SrcCallbackQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
-	return packet, nil
+	return &packet, nil
 }
 
-func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (types.PacketQueueItem, error) {
+func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (*types.PacketQueueItem, error) {
 	var (
 		packet               types.PacketQueueItem
 		globalPacketSequence uint64
+		found                bool
 	)
-	logger := p.transferKeeper.Logger(ctx)
 
 	if err := p.transferKeeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Info("Processing packet from queue", "key", key, "value", value)
 		globalPacketSequence = key
 		packet = value
+		found = true
 		return true, nil // stop after first
 	}); err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
+	}
+
+	if !found {
+		return nil, nil
 	}
 
 	// remove the packet from the queue
 	err := p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
-	return packet, nil
+	return &packet, nil
 }
