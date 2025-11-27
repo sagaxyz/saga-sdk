@@ -11,7 +11,7 @@ option go_package = "github.com/sagaxyz/saga-sdk/x/transferrouter/types";
 service Query {
   // Params queries the parameters of x/transferrouter module.
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/saga/transferrouter/v1/params";
+    option (google.api.http).get = "/saga/txrouter/v1/params";
   }
 }
 

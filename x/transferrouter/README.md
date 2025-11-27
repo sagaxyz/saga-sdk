@@ -113,5 +113,5 @@ This package should not interfere with x/PFM as it will let those transactions p
 ### Params
 
 ```
-query transferrouter params
+query txrouter params
 ```
