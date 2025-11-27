@@ -310,7 +310,8 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 
 	erc20 := contracts.ERC20MinterBurnerDecimalsContract
 
-	// TODO: remaining gas not used until we update to Cosmos EVM
+	receiverTokenBalanceBeforeCallback := p.transferKeeper.Erc20Keeper.BalanceOf(cachedCtx, erc20.ABI, tokenPair.GetERC20Contract(), common.Address(isolatedAddr))
+
 	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
 
 	// Call the EVM with the remaining gas as the maximum gas limit.
@@ -364,12 +365,13 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	// for the total amount, or the callback will fail.
 	// This check is here to prevent funds from getting stuck in the isolated address,
 	// since they would become irretrievable.
-	receiverTokenBalance := p.transferKeeper.Erc20Keeper.BalanceOf(cachedCtx, erc20.ABI, tokenPair.GetERC20Contract(), common.Address(isolatedAddr)) // here,
-	// we can use the original ctx and skip manually adding the gas
-	if receiverTokenBalance.Cmp(big.NewInt(0)) != 0 {
-		p.transferKeeper.Logger(ctx).Error("Receiver still has tokens after callback", "balance", receiverTokenBalance.String())
+	receiverTokenBalance := p.transferKeeper.Erc20Keeper.BalanceOf(cachedCtx, erc20.ABI, tokenPair.GetERC20Contract(), common.Address(isolatedAddr))
+
+	// after the callback the receiver should have receiverTokenBalanceBeforeCallback - packetData.Amount
+	if receiverTokenBalance.Cmp(receiverTokenBalanceBeforeCallback.Sub(receiverTokenBalanceBeforeCallback, amountInt.BigInt())) != 0 {
+		p.transferKeeper.Logger(ctx).Error("Receiver has incorrect balance after callback", "balance", receiverTokenBalance.String())
 		return nil, nil, errorsmod.Wrapf(erc20types.ErrEVMCall,
-			"receiver has %s unrecoverable tokens after callback", receiverTokenBalance.String())
+			"receiver has incorrect balance after callback")
 	}
 	p.transferKeeper.Logger(ctx).Debug("Callback processing completed successfully")
 
