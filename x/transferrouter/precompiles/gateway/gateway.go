@@ -141,10 +141,9 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 // IsTransaction checks if the given method name corresponds to a transaction or query.
 //
 // Available gateway transactions are:
-//   - Execute
-//   - EmitNote
-//   - Pause
-//   - Unpause
+//   - execute
+//   - executeSrcCallback
+//   - handleErrorOrTimeout
 func (Precompile) IsTransaction(method *abi.Method) bool {
 	switch method.Name {
 	case ExecuteMethod,
