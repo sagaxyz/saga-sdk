@@ -49,6 +49,11 @@ install: build
 	@echo "Installing $(BINARY_NAME) to $(DESTDIR)"
 	install -m 0755 $(BUILDDIR)/$(BINARY_NAME) $(DESTDIR)/$(BINARY_NAME)
 
+mocks: $(MOCKS_DIR)
+	@go install github.com/golang/mock/mockgen@v1.6.0
+	sh ./scripts/mockgen.sh
+.PHONY: mocks
+
 # run tests
 test:
 	go test -race -cover -coverprofile cp.out -count=1 -timeout=30s ./...
