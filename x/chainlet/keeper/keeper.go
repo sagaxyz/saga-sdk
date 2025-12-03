@@ -5,23 +5,19 @@ import (
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
-	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
 	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
 type Keeper struct {
-	cdc             codec.BinaryCodec
-	storeKey        storetypes.StoreKey
+	cdc      codec.BinaryCodec
+	storeKey storetypes.StoreKey
 
 	// the address capable of executing a MsgUpdateParams message. Typically, this
 	// should be the x/gov module account.
 	authority string
-
-	ibcKeeperFn func() *ibckeeper.Keeper
 
 	upgradeKeeper    types.UpgradeKeeper
 	channelKeeper    types.ChannelKeeper
@@ -30,7 +26,7 @@ type Keeper struct {
 	connectionKeeper types.ConnectionKeeper
 }
 
-func New(cdc codec.BinaryCodec, storeKey storetypes.StoreKey, authority string, ibcKeeperFn func() *ibckeeper.Keeper, uk *upgradekeeper.Keeper, channelKeeper types.ChannelKeeper, consumerKeeper types.ConsumerKeeper, clientKeeper types.ClientKeeper, connectionKeeper types.ConnectionKeeper) Keeper {
+func New(cdc codec.BinaryCodec, storeKey storetypes.StoreKey, upgradeKeeper types.UpgradeKeeper, channelKeeper types.ChannelKeeper, consumerKeeper types.ConsumerKeeper, clientKeeper types.ClientKeeper, connectionKeeper types.ConnectionKeeper, authority string) Keeper {
 	if _, err := sdk.AccAddressFromBech32(authority); err != nil {
 		panic(fmt.Sprintf("invalid authority address: %s", authority))
 	}
@@ -39,8 +35,7 @@ func New(cdc codec.BinaryCodec, storeKey storetypes.StoreKey, authority string, 
 		cdc:              cdc,
 		storeKey:         storeKey,
 		authority:        authority,
-		ibcKeeperFn:      ibcKeeperFn,
-		upgradeKeeper:    uk,
+		upgradeKeeper:    upgradeKeeper,
 		channelKeeper:    channelKeeper,
 		consumerKeeper:   consumerKeeper,
 		clientKeeper:     clientKeeper,

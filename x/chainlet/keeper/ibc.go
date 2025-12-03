@@ -14,6 +14,27 @@ import (
 	"github.com/sagaxyz/saga-sdk/x/chainlet/types"
 )
 
+// Verifies channel matches the client ID of the provider
+func (k Keeper) verifyChannel(ctx sdk.Context, clientID string, channelID string) error {
+	channel, found := k.channelKeeper.GetChannel(ctx, types.PortID, channelID)
+	if !found {
+		return fmt.Errorf("channel %s not found (port: %s)", channelID, types.PortID)
+	}
+	if len(channel.ConnectionHops) == 0 {
+		return fmt.Errorf("no connection hops for channel %s", channelID)
+	}
+	connectionID := channel.ConnectionHops[0]
+	connection, found := k.connectionKeeper.GetConnection(ctx, connectionID)
+	if !found {
+		return fmt.Errorf("connection not found: %s", connectionID)
+	}
+	if connection.ClientId != clientID {
+		return fmt.Errorf("client ID of the provided channel does not match provider client id (%s != %s)", connection.ClientId, clientID)
+	}
+
+	return nil
+}
+
 // TransmitConfirmUpgradePacket transmits the packet over IBC with the specified source port and source channel
 func (k Keeper) TransmitConfirmUpgradePacket(
 	ctx sdk.Context,
@@ -28,7 +49,7 @@ func (k Keeper) TransmitConfirmUpgradePacket(
 		return 0, errorsmod.Wrapf(sdkerrors.ErrJSONMarshal, "cannot marshal the packet: %s", err)
 	}
 
-	return k.ibcKeeperFn().ChannelKeeper.SendPacket(ctx, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, packetBytes)
+	return k.channelKeeper.SendPacket(ctx, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, packetBytes)
 }
 
 // OnAcknowledgementConfirmUpgradePacket responds to the success or failure of a packet
@@ -64,6 +85,16 @@ func (k Keeper) OnRecvCreateUpgradePacket(ctx sdk.Context, packet channeltypes.P
 		return packetAck, err
 	}
 
+	// Verify the channel connects to the provider
+	clientID, err := k.consumerKeeper.GetProviderClientID(ctx)
+	if err != nil {
+		return
+	}
+	err = k.verifyChannel(ctx, clientID, packet.DestinationChannel)
+	if err != nil {
+		return
+	}
+
 	_, err = k.upgradeKeeper.GetUpgradePlan(ctx)
 	if err == nil || !errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) {
 		return packetAck, errors.New("existing upgrade plan found")
@@ -76,11 +107,6 @@ func (k Keeper) OnRecvCreateUpgradePacket(ctx sdk.Context, packet channeltypes.P
 	if err != nil {
 		return packetAck, err
 	}
-	plan, err := k.upgradeKeeper.GetUpgradePlan(ctx)
-	if err != nil {
-		return packetAck, errors.New("upgrade plan not found")
-	}
-	k.Logger(ctx).Debug(fmt.Sprintf("upgrade plan %s created: %+v", plan.Name, plan))
 
 	return packetAck, nil
 }
@@ -90,6 +116,16 @@ func (k Keeper) OnRecvCancelUpgradePacket(ctx sdk.Context, packet channeltypes.P
 	// validate packet data upon receiving
 	if err := data.ValidateBasic(); err != nil {
 		return packetAck, err
+	}
+
+	// Verify the channel connects to the provider
+	clientID, err := k.consumerKeeper.GetProviderClientID(ctx)
+	if err != nil {
+		return
+	}
+	err = k.verifyChannel(ctx, clientID, packet.DestinationChannel)
+	if err != nil {
+		return
 	}
 
 	plan, err := k.upgradeKeeper.GetUpgradePlan(ctx)
