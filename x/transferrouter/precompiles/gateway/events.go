@@ -75,7 +75,7 @@ func (p Precompile) emitGatewayExecuteEvent(
        bytes data
    );
 */
-func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB vm.StateDB, precompileAddr common.Address, sequence uint64, channelId string, portId string, txhash []byte, data []byte) error {
+func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB vm.StateDB, precompileAddr common.Address, sequence uint64, channelId string, portId string, txhash []byte, data []byte, errorMsg string) error {
 	event := p.ABI.Events["ErrorOrTimeoutHandled"]
 
 	// Prepare the event topics

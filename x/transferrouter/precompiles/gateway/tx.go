@@ -473,61 +473,70 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 		return nil, err
 	}
 
-	// we need to transfer the tokens back to the sender either from the escrow address or by minting them
-	packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
-	if err != nil {
-		// this error would be unrecoverable, so we return nil, nil
-		p.transferKeeper.Logger(ctx).Debug("Failed to unmarshal packet data in handleErrorOrTimeout", "error", err)
-		return nil, nil
-	}
+	cachedCtx, writeFn := ctx.CacheContext()
+	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
 
-	// // check if the tokens are native to this chain or not
-	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
-	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
-	if !found {
-		p.transferKeeper.Logger(ctx).Debug("Token pair not found in handleErrorOrTimeout", "denom", packetData.Token.Denom.String())
-		return nil, nil
-	}
-
-	sender, err := sdk.AccAddressFromBech32(packetData.Sender)
-	if err != nil {
-		return nil, err
-	}
-
-	coin, err := packetData.Token.ToCoin()
-	if err != nil {
-		return nil, err
-	}
-
-	var refundSender common.Address
-
-	if packetData.Token.Denom.HasPrefix(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel) {
-		// this is a 0x0 address
-		refundSender = common.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-		err = p.transferKeeper.BankKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
+	err = func() error {
+		// we need to transfer the tokens back to the sender either from the escrow address or by minting them
+		packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
 		if err != nil {
-			return nil, err
+			// this error would be unrecoverable, so we return nil, nil
+			p.transferKeeper.Logger(ctx).Debug("Failed to unmarshal packet data in handleErrorOrTimeout", "error", err)
+			return nil
 		}
 
-		// transfer to sender
-		err = p.transferKeeper.BankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, sender, sdk.NewCoins(coin))
-		if err != nil {
-			return nil, err
+		// // check if the tokens are native to this chain or not
+		tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(cachedCtx, packetData.Token.Denom.IBCDenom())
+		tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(cachedCtx, tokenPairID)
+		if !found {
+			p.transferKeeper.Logger(ctx).Debug("Token pair not found in handleErrorOrTimeout", "denom", packetData.Token.Denom.String())
+			return nil
 		}
+
+		sender, err := sdk.AccAddressFromBech32(packetData.Sender)
+		if err != nil {
+			return err
+		}
+
+		coin, err := packetData.Token.ToCoin()
+		if err != nil {
+			return err
+		}
+
+		var refundSender common.Address
+
+		if packetData.Token.Denom.HasPrefix(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel) {
+			// this is a 0x0 address
+			refundSender = common.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+			err = p.transferKeeper.BankKeeper.MintCoins(cachedCtx, types.ModuleName, sdk.NewCoins(coin))
+			if err != nil {
+				return err
+			}
+
+			// transfer to sender
+			err = p.transferKeeper.BankKeeper.SendCoinsFromModuleToAccount(cachedCtx, types.ModuleName, sender, sdk.NewCoins(coin))
+			if err != nil {
+				return err
+			}
+		} else {
+			escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
+			refundSender = common.Address(escrowAddress.Bytes())
+			if err := p.transferKeeper.TransferKeeper.UnescrowCoin(cachedCtx, escrowAddress, sender, coin); err != nil {
+				return err
+			}
+		}
+
+		return p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt())
+	}()
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
 	} else {
-		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
-		refundSender = common.Address(escrowAddress.Bytes())
-		if err := p.transferKeeper.TransferKeeper.UnescrowCoin(ctx, escrowAddress, sender, coin); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt()); err != nil {
-		return nil, err
+		writeFn() // only write the context if there was no error
 	}
 
 	// emit the event
-	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.Packet.SourceChannel, packetQueueItem.Packet.SourcePort, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
+	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.Packet.SourceChannel, packetQueueItem.Packet.SourcePort, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data, errMsg); err != nil {
 		return nil, err
 	}
 

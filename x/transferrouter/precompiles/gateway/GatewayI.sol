@@ -31,6 +31,7 @@ interface IGateway {
         string channelId,
         string portId,
         bytes txhash,
-        bytes data
+        bytes data,
+        string errorMsg
     );
 }

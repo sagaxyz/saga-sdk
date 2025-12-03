@@ -45,6 +45,8 @@ During these executions, any logs produced by the call will be emitted to the EV
 ```solidity
     event Executed(
         uint256 sequence,
+        string channelId,
+        string portId,
         bool success,
         bytes txhash,
         bool isCallback,
@@ -54,8 +56,11 @@ During these executions, any logs produced by the call will be emitted to the EV
 
     event ErrorOrTimeoutHandled(
         uint256 sequence,
+        string channelId,
+        string portId,
         bytes txhash,
-        bytes data
+        bytes data,
+        string errorMsg
     );
 ```
 
