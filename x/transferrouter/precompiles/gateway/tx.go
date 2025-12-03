@@ -285,10 +285,6 @@ func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet chan
 
 	// consume gas in the original context
 	ctx.GasMeter().ConsumeGas(result.GasUsed, "ERC20 transfer")
-	if ctx.GasMeter().IsOutOfGas() {
-		p.transferKeeper.Logger(ctx).Error("Out of gas after ERC20 transfer", "gasUsed", result.GasUsed)
-		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
-	}
 
 	return result, logs, nil
 }
@@ -330,7 +326,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	ctx.GasMeter().ConsumeGas(res.GasUsed, "callback allowance")
 	remainingGas = remainingGas.Sub(remainingGas, math.NewIntFromUint64(res.GasUsed).BigInt())
 	p.transferKeeper.Logger(ctx).Debug("Consumed gas for approve", "gasUsed", res.GasUsed, "remainingGas", remainingGas.String())
-	if ctx.GasMeter().IsOutOfGas() || remainingGas.Cmp(big.NewInt(0)) < 0 {
+	if remainingGas.Cmp(big.NewInt(0)) < 0 {
 		p.transferKeeper.Logger(ctx).Error("Out of gas after approve", "remainingGas", remainingGas.String())
 		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
 	}
@@ -356,9 +352,6 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 
 	// Consume the actual gas used on the original callback context.
 	ctx.GasMeter().ConsumeGas(res.GasUsed, "callback function")
-	if ctx.GasMeter().IsOutOfGas() {
-		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
-	}
 
 	// Check that the sender no longer has tokens after the callback.
 	// NOTE: contracts must implement an IERC20(token).transferFrom(msg.sender, address(this), amount)
