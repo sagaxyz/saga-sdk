@@ -304,7 +304,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	ctx = ctx.WithGasMeter(evmtypes.NewInfiniteGasMeterWithLimit(cbData.CommitGasLimit))
 
 	amountInt, ok := math.NewIntFromString(packetData.Amount)
-	if !ok {
+	if !ok || amountInt.IsNegative() {
 		return nil, nil, errors.New("invalid amount")
 	}
 
