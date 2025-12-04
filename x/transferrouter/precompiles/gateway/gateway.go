@@ -58,7 +58,6 @@ type Precompile struct {
 	transferKeeper        transferrouterkeeper.Keeper
 	evmKeeper             EVMKeeper
 	packetDataUnmarshaler porttypes.PacketDataUnmarshaler
-	maxCallbackGas        uint64
 }
 
 // NewPrecompile creates a new Gateway Precompile instance as a
@@ -68,7 +67,6 @@ func NewPrecompile(
 	transferKeeper transferrouterkeeper.Keeper,
 	evmKeeper EVMKeeper,
 	packetDataUnmarshaler porttypes.PacketDataUnmarshaler,
-	maxCallbackGas uint64,
 ) (*Precompile, error) {
 	p := &Precompile{
 		Precompile: cmn.Precompile{
@@ -79,7 +77,6 @@ func NewPrecompile(
 		transferKeeper:        transferKeeper,
 		evmKeeper:             evmKeeper,
 		packetDataUnmarshaler: packetDataUnmarshaler,
-		maxCallbackGas:        maxCallbackGas,
 	}
 
 	// SetAddress defines the address of the Gateway compile contract.

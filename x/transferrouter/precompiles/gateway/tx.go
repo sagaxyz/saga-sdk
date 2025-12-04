@@ -180,7 +180,12 @@ func (p Precompile) Execute(
 
 	// if the packet is a callback packet we process it as such, if not, we assume it's a normal erc20 transfer
 	p.transferKeeper.Logger(ctx).Info("Checking if packet is a callback packet")
-	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
+	params, err := p.transferKeeper.Params.Get(ctx)
+	if err != nil {
+		p.transferKeeper.Logger(ctx).Error("failed to get params", "error", err)
+		return nil, err
+	}
+	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, params.MaxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to get callback data", "error", err)
@@ -352,6 +357,11 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 
 	// Consume the actual gas used on the original callback context.
 	ctx.GasMeter().ConsumeGas(res.GasUsed, "callback function")
+	remainingGas = remainingGas.Sub(remainingGas, math.NewIntFromUint64(res.GasUsed).BigInt())
+	if remainingGas.Cmp(big.NewInt(0)) < 0 {
+		p.transferKeeper.Logger(ctx).Error("Out of gas after callback", "remainingGas", remainingGas.String())
+		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
+	}
 
 	// Check that the sender no longer has tokens after the callback.
 	// NOTE: contracts must implement an IERC20(token).transferFrom(msg.sender, address(this), amount)
@@ -400,7 +410,11 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 		return nil, errors.New("module account not found")
 	}
 
-	cbData, err := getSourceCallbackData(ctx, *packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
+	params, err := p.transferKeeper.Params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cbData, err := getSourceCallbackData(ctx, *packetQueueItem, p.packetDataUnmarshaler, params.MaxCallbackGas)
 	if err != nil {
 		return nil, err
 	}

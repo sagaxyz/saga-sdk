@@ -24,16 +24,14 @@ var _ porttypes.IBCModule = IBCMiddleware{}
 type IBCMiddleware struct {
 	app                   porttypes.IBCModule
 	k                     keeper.Keeper
-	maxCallbackGas        uint64
 	packetDataUnmarshaler porttypes.PacketDataUnmarshaler
 }
 
-func NewIBCMiddleware(app porttypes.IBCModule, packetDataUnmarshaler porttypes.PacketDataUnmarshaler, maxCallbackGas uint64, k keeper.Keeper) IBCMiddleware {
+func NewIBCMiddleware(app porttypes.IBCModule, packetDataUnmarshaler porttypes.PacketDataUnmarshaler, k keeper.Keeper) IBCMiddleware {
 	return IBCMiddleware{
 		app:                   app,
 		k:                     k,
 		packetDataUnmarshaler: packetDataUnmarshaler,
-		maxCallbackGas:        maxCallbackGas,
 	}
 }
 
@@ -145,10 +143,16 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	// Override the receiver address to the gateway contract address
 	overrideReceiver := sdk.AccAddress(gateway.PrecompileAddress.Bytes())
 
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params", "error", err)
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
+	}
+
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
 	cbData, isCbPacket, err := callbacktypes.GetDestCallbackData(
-		ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas,
+		ctx, i.packetDataUnmarshaler, packet, params.MaxCallbackGas,
 	)
 
 	if isCbPacket {
@@ -256,8 +260,15 @@ func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, 
 // helper functions
 
 func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
+
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params", "error", err)
+		return err
+	}
+
 	// get callback data
-	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas)
+	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, params.MaxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
