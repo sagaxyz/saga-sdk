@@ -76,7 +76,7 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 		}
 	}
 
-	_, err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
+	err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 		return err
@@ -115,7 +115,7 @@ func (i IBCMiddleware) OnTimeoutPacket(
 		return err
 	}
 
-	_, err = i.addSrcCallbackToQueue(ctx, packet, nil, true)
+	err = i.addSrcCallbackToQueue(ctx, packet, nil, true)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 		return err
@@ -255,19 +255,20 @@ func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, 
 
 // helper functions
 
-func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) (bool, error) {
+func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
 	// get callback data
 	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, i.maxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to get callback data", "error", err)
+			return err
 		}
 
 		// get a uniquely identifiable packet sequence, to retain order among multiple channels
 		globalPacketSequence, err := i.k.GlobalPacketSequence.Next(ctx)
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to get next packet sequence", "error", err)
-			return false, err
+			return err
 		}
 
 		// add the callback data to the callback queue
@@ -280,9 +281,9 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to set callback queue", "error", err)
 		}
-		return true, nil
+		return nil
 	}
-	return false, nil
+	return nil
 }
 
 // receiveFunds receives funds from the packet into the override receiver
