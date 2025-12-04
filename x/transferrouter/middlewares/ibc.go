@@ -281,7 +281,7 @@ func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltype
 		if err != nil {
 			i.k.Logger(ctx).Error("failed to set callback queue", "error", err)
 		}
-		return nil
+		return err
 	}
 	return nil
 }
