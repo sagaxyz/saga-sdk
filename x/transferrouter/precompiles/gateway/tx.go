@@ -47,8 +47,12 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
+	if packetQueueItem == nil {
+		return nil, nil // no packets in queue, return no error.
+	}
+
 	packet := *packetQueueItem.Packet
-	p.transferKeeper.Logger(ctx).Info("Retrieved packet from queue",
+	p.transferKeeper.Logger(ctx).Debug("Retrieved packet from queue",
 		"sequence", packet.Sequence,
 		"sourceChannel", packet.SourceChannel,
 		"destChannel", packet.DestinationChannel,
@@ -176,7 +180,12 @@ func (p Precompile) Execute(
 
 	// if the packet is a callback packet we process it as such, if not, we assume it's a normal erc20 transfer
 	p.transferKeeper.Logger(ctx).Info("Checking if packet is a callback packet")
-	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, p.maxCallbackGas)
+	params, err := p.transferKeeper.Params.Get(ctx)
+	if err != nil {
+		p.transferKeeper.Logger(ctx).Error("failed to get params", "error", err)
+		return nil, err
+	}
+	cbData, isCbPacket, err = callbacktypes.GetDestCallbackData(ctx, p.packetDataUnmarshaler, packet, params.MaxCallbackGas)
 	if isCbPacket {
 		if err != nil {
 			p.transferKeeper.Logger(ctx).Error("failed to get callback data", "error", err)
@@ -222,39 +231,32 @@ func (p Precompile) Execute(
 }
 
 // popNextPacket gets the next packet from the queue and removes it
-func (p Precompile) popNextPacket(ctx sdk.Context) (types.PacketQueueItem, error) {
-	var packet types.PacketQueueItem
-	var globalPacketSequence uint64
-	logger := p.transferKeeper.Logger(ctx)
-
+func (p Precompile) popNextPacket(ctx sdk.Context) (*types.PacketQueueItem, error) {
+	var (
+		packet               types.PacketQueueItem
+		globalPacketSequence uint64
+		found                bool
+	)
 	if err := p.transferKeeper.PacketQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Debug("Found packet in queue",
-			"key", key,
-			"sequence", value.Packet.Sequence,
-			"sourceChannel", value.Packet.SourceChannel,
-			"destChannel", value.Packet.DestinationChannel)
 		packet = value
 		globalPacketSequence = key
+		found = true
 		return true, nil // stop after first
 	}); err != nil {
-		logger.Error("Failed to walk packet queue", "error", err)
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
 
-	if packet.Packet == nil {
-		logger.Error("No packets found in queue")
-		return types.PacketQueueItem{}, errors.New("no packets in queue")
+	if !found {
+		return nil, nil
 	}
 
-	logger.Debug("Removing packet from queue", "sequence", packet.Packet.Sequence)
 	// remove the packet from the queue
 	err := p.transferKeeper.PacketQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
-		logger.Error("Failed to remove packet from queue", "sequence", packet.Packet.Sequence, "error", err)
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
 
-	return packet, nil
+	return &packet, nil
 }
 
 func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet channeltypes.Packet, packetData transfertypes.FungibleTokenPacketData, tokenPair erc20types.TokenPair) (*evmtypes.MsgEthereumTxResponse, []*ethtypes.Log, error) {
@@ -288,10 +290,6 @@ func (p Precompile) executeERC20Transfer(ctx, cachedCtx sdk.Context, packet chan
 
 	// consume gas in the original context
 	ctx.GasMeter().ConsumeGas(result.GasUsed, "ERC20 transfer")
-	if ctx.GasMeter().IsOutOfGas() {
-		p.transferKeeper.Logger(ctx).Error("Out of gas after ERC20 transfer", "gasUsed", result.GasUsed)
-		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
-	}
 
 	return result, logs, nil
 }
@@ -307,13 +305,14 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	ctx = ctx.WithGasMeter(evmtypes.NewInfiniteGasMeterWithLimit(cbData.CommitGasLimit))
 
 	amountInt, ok := math.NewIntFromString(packetData.Amount)
-	if !ok {
+	if !ok || amountInt.IsNegative() {
 		return nil, nil, errors.New("invalid amount")
 	}
 
 	erc20 := contracts.ERC20MinterBurnerDecimalsContract
 
-	// TODO: remaining gas not used until we update to Cosmos EVM
+	receiverTokenBalanceBeforeCallback := p.transferKeeper.Erc20Keeper.BalanceOf(cachedCtx, erc20.ABI, tokenPair.GetERC20Contract(), common.Address(isolatedAddr))
+
 	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
 
 	// Call the EVM with the remaining gas as the maximum gas limit.
@@ -332,7 +331,7 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	ctx.GasMeter().ConsumeGas(res.GasUsed, "callback allowance")
 	remainingGas = remainingGas.Sub(remainingGas, math.NewIntFromUint64(res.GasUsed).BigInt())
 	p.transferKeeper.Logger(ctx).Debug("Consumed gas for approve", "gasUsed", res.GasUsed, "remainingGas", remainingGas.String())
-	if ctx.GasMeter().IsOutOfGas() || remainingGas.Cmp(big.NewInt(0)) < 0 {
+	if remainingGas.Cmp(big.NewInt(0)) < 0 {
 		p.transferKeeper.Logger(ctx).Error("Out of gas after approve", "remainingGas", remainingGas.String())
 		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
 	}
@@ -358,7 +357,9 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 
 	// Consume the actual gas used on the original callback context.
 	ctx.GasMeter().ConsumeGas(res.GasUsed, "callback function")
-	if ctx.GasMeter().IsOutOfGas() {
+	remainingGas = remainingGas.Sub(remainingGas, math.NewIntFromUint64(res.GasUsed).BigInt())
+	if remainingGas.Cmp(big.NewInt(0)) < 0 {
+		p.transferKeeper.Logger(ctx).Error("Out of gas after callback", "remainingGas", remainingGas.String())
 		return nil, nil, errorsmod.Wrapf(errortypes.ErrOutOfGas, "out of gas")
 	}
 
@@ -367,12 +368,13 @@ func (p Precompile) executeDestinationCallback(ctx, cachedCtx sdk.Context, packe
 	// for the total amount, or the callback will fail.
 	// This check is here to prevent funds from getting stuck in the isolated address,
 	// since they would become irretrievable.
-	receiverTokenBalance := p.transferKeeper.Erc20Keeper.BalanceOf(cachedCtx, erc20.ABI, tokenPair.GetERC20Contract(), common.Address(isolatedAddr)) // here,
-	// we can use the original ctx and skip manually adding the gas
-	if receiverTokenBalance.Cmp(big.NewInt(0)) != 0 {
-		p.transferKeeper.Logger(ctx).Error("Receiver still has tokens after callback", "balance", receiverTokenBalance.String())
+	receiverTokenBalance := p.transferKeeper.Erc20Keeper.BalanceOf(cachedCtx, erc20.ABI, tokenPair.GetERC20Contract(), common.Address(isolatedAddr))
+
+	// after the callback the receiver should have receiverTokenBalanceBeforeCallback - packetData.Amount
+	if receiverTokenBalance.Cmp(receiverTokenBalanceBeforeCallback.Sub(receiverTokenBalanceBeforeCallback, amountInt.BigInt())) != 0 {
+		p.transferKeeper.Logger(ctx).Error("Receiver has incorrect balance after callback", "balance", receiverTokenBalance.String())
 		return nil, nil, errorsmod.Wrapf(erc20types.ErrEVMCall,
-			"receiver has %d unrecoverable tokens after callback", receiverTokenBalance)
+			"receiver has incorrect balance after callback")
 	}
 	p.transferKeeper.Logger(ctx).Debug("Callback processing completed successfully")
 
@@ -393,14 +395,26 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 		return nil, err
 	}
 
+	if packetQueueItem == nil {
+		return nil, nil // no packets in queue, return no error.
+	}
+
 	// cache ctx
 	cachedCtx, writeFn := ctx.CacheContext()
 	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
 
 	// the from address is the IBC module address, this is only so the contracts can verify the caller
-	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, "txrouter")
+	acc, _ := p.transferKeeper.AccountKeeper.GetModuleAccountAndPermissions(ctx, types.ModuleName)
 
-	cbData, err := getSourceCallbackData(ctx, packetQueueItem, p.packetDataUnmarshaler, p.maxCallbackGas)
+	if acc == nil {
+		return nil, errors.New("module account not found")
+	}
+
+	params, err := p.transferKeeper.Params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cbData, err := getSourceCallbackData(ctx, *packetQueueItem, p.packetDataUnmarshaler, params.MaxCallbackGas)
 	if err != nil {
 		return nil, err
 	}
@@ -423,13 +437,13 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 
 	remainingGas := math.NewIntFromUint64(cachedCtx.GasMeter().GasRemaining()).BigInt()
 
-	res, resErr := p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(acc.GetAddress().Bytes()), &target, calldata, true, remainingGas)
+	res, retErr := p.evmKeeper.CallEVMWithData(cachedCtx, common.Address(acc.GetAddress().Bytes()), &target, calldata, true, remainingGas)
 
 	var returnBz []byte
-	if resErr == nil {
+	if retErr == nil {
 		returnBz = res.Ret
 	} else {
-		returnBz = []byte(resErr.Error())
+		returnBz = []byte(retErr.Error())
 	}
 
 	// emit the event
@@ -438,7 +452,7 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 	}
 
 	// only add logs if the call was successful
-	if resErr == nil && !res.Failed() {
+	if retErr == nil && !res.Failed() {
 		logs := evmtypes.LogsToEthereum(res.Logs)
 		for _, log := range logs {
 			stateDB.AddLog(log)
@@ -458,59 +472,78 @@ func (p Precompile) HandleErrorOrTimeout(ctx sdk.Context,
 	args any,
 ) (retBz []byte, retErr error) {
 	packetQueueItem, err := p.popNextErrorOrTimeout(ctx)
+	if packetQueueItem == nil {
+		return nil, nil // no packets in queue, return no error.
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	// we need to transfer the tokens back to the sender either from the escrow address or by minting them
-	packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
-	if err != nil {
-		// this error would be unrecoverable, so we return nil, nil
-		p.transferKeeper.Logger(ctx).Debug("Failed to unmarshal packet data in handleErrorOrTimeout", "error", err)
-		return nil, nil
-	}
+	cachedCtx, writeFn := ctx.CacheContext()
+	cachedCtx = evmante.BuildEvmExecutionCtx(cachedCtx)
 
-	// // check if the tokens are native to this chain or not
-	tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(ctx, packetData.Token.Denom.IBCDenom())
-	tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(ctx, tokenPairID)
-	if !found {
-		p.transferKeeper.Logger(ctx).Debug("Token pair not found in handleErrorOrTimeout", "denom", packetData.Token.Denom.String())
-		return nil, nil
-	}
-
-	sender, err := sdk.AccAddressFromBech32(packetData.Sender)
-	if err != nil {
-		return nil, err
-	}
-
-	coin, err := packetData.Token.ToCoin()
-	if err != nil {
-		return nil, err
-	}
-
-	var refundSender common.Address
-
-	if packetData.Token.Denom.HasPrefix(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel) {
-		// this is a 0x0 address
-		refundSender = common.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-		err = p.transferKeeper.BankKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(coin))
+	err = func() error {
+		// we need to transfer the tokens back to the sender either from the escrow address or by minting them
+		packetData, err := transfertypes.UnmarshalPacketData(packetQueueItem.Packet.Data, "ics20-1", "")
 		if err != nil {
-			return nil, err
+			// this error would be unrecoverable, so we return nil, nil
+			p.transferKeeper.Logger(ctx).Debug("Failed to unmarshal packet data in handleErrorOrTimeout", "error", err)
+			return nil
 		}
-	} else {
-		escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
-		refundSender = common.Address(escrowAddress.Bytes())
-		if err := p.transferKeeper.TransferKeeper.UnescrowCoin(ctx, escrowAddress, sender, coin); err != nil {
-			return nil, err
-		}
-	}
 
-	if err := p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt()); err != nil {
-		return nil, err
+		// // check if the tokens are native to this chain or not
+		tokenPairID := p.transferKeeper.Erc20Keeper.GetTokenPairID(cachedCtx, packetData.Token.Denom.IBCDenom())
+		tokenPair, found := p.transferKeeper.Erc20Keeper.GetTokenPair(cachedCtx, tokenPairID)
+		if !found {
+			p.transferKeeper.Logger(ctx).Debug("Token pair not found in handleErrorOrTimeout", "denom", packetData.Token.Denom.String())
+			return nil
+		}
+
+		sender, err := sdk.AccAddressFromBech32(packetData.Sender)
+		if err != nil {
+			return err
+		}
+
+		coin, err := packetData.Token.ToCoin()
+		if err != nil {
+			return err
+		}
+
+		var refundSender common.Address
+
+		if packetData.Token.Denom.HasPrefix(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel) {
+			// this is a 0x0 address
+			refundSender = common.Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+			err = p.transferKeeper.BankKeeper.MintCoins(cachedCtx, types.ModuleName, sdk.NewCoins(coin))
+			if err != nil {
+				return err
+			}
+
+			// transfer to sender
+			err = p.transferKeeper.BankKeeper.SendCoinsFromModuleToAccount(cachedCtx, types.ModuleName, sender, sdk.NewCoins(coin))
+			if err != nil {
+				return err
+			}
+		} else {
+			escrowAddress := transfertypes.GetEscrowAddress(packetQueueItem.Packet.SourcePort, packetQueueItem.Packet.SourceChannel)
+			refundSender = common.Address(escrowAddress.Bytes())
+			if err := p.transferKeeper.TransferKeeper.UnescrowCoin(cachedCtx, escrowAddress, sender, coin); err != nil {
+				return err
+			}
+		}
+
+		return p.EmitTransferEvent(ctx, stateDB, tokenPair.GetERC20Contract(), refundSender, common.Address(sender.Bytes()), coin.Amount.BigInt())
+	}()
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	} else {
+		writeFn() // only write the context if there was no error
 	}
 
 	// emit the event
-	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.Packet.SourceChannel, packetQueueItem.Packet.SourcePort, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data); err != nil {
+	if err := p.emitErrorOrTimeoutHandledEvent(ctx, stateDB, p.Address(), packetQueueItem.Packet.Sequence, packetQueueItem.Packet.SourceChannel, packetQueueItem.Packet.SourcePort, packetQueueItem.OriginalTxHash, packetQueueItem.Packet.Data, errMsg); err != nil {
 		return nil, err
 	}
 
@@ -538,50 +571,57 @@ func getSourceCallbackData(
 	return nil, errors.New("packet is not a callback packet")
 }
 
-func (p Precompile) popNextSrcCallback(ctx sdk.Context) (types.PacketQueueItem, error) {
+func (p Precompile) popNextSrcCallback(ctx sdk.Context) (*types.PacketQueueItem, error) {
 	var (
 		packet               types.PacketQueueItem
 		globalPacketSequence uint64
+		found                bool
 	)
-	logger := p.transferKeeper.Logger(ctx)
-
 	if err := p.transferKeeper.SrcCallbackQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Info("Processing packet from queue", "key", key, "value", value)
 		globalPacketSequence = key
 		packet = value
+		found = true
 		return true, nil // stop after first
 	}); err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
+	}
+
+	if !found {
+		return nil, nil
 	}
 
 	// remove the packet from the queue
 	err := p.transferKeeper.SrcCallbackQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
-	return packet, nil
+	return &packet, nil
 }
 
-func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (types.PacketQueueItem, error) {
+func (p Precompile) popNextErrorOrTimeout(ctx sdk.Context) (*types.PacketQueueItem, error) {
 	var (
 		packet               types.PacketQueueItem
 		globalPacketSequence uint64
+		found                bool
 	)
-	logger := p.transferKeeper.Logger(ctx)
 
 	if err := p.transferKeeper.ErrorOrTimeoutQueue.Walk(ctx, nil, func(key uint64, value types.PacketQueueItem) (bool, error) {
-		logger.Info("Processing packet from queue", "key", key, "value", value)
 		globalPacketSequence = key
 		packet = value
+		found = true
 		return true, nil // stop after first
 	}); err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
+	}
+
+	if !found {
+		return nil, nil
 	}
 
 	// remove the packet from the queue
 	err := p.transferKeeper.ErrorOrTimeoutQueue.Remove(ctx, globalPacketSequence)
 	if err != nil {
-		return types.PacketQueueItem{}, err
+		return nil, err
 	}
-	return packet, nil
+	return &packet, nil
 }

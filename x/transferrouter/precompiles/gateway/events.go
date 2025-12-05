@@ -75,7 +75,7 @@ func (p Precompile) emitGatewayExecuteEvent(
        bytes data
    );
 */
-func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB vm.StateDB, precompileAddr common.Address, sequence uint64, channelId string, portId string, txhash []byte, data []byte) error {
+func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB vm.StateDB, precompileAddr common.Address, sequence uint64, channelId string, portId string, txhash []byte, data []byte, errorMsg string) error {
 	event := p.ABI.Events["ErrorOrTimeoutHandled"]
 
 	// Prepare the event topics
@@ -86,9 +86,9 @@ func (p Precompile) emitErrorOrTimeoutHandledEvent(ctx sdk.Context, stateDB vm.S
 
 	// Prepare the event data: sequence, txhash, data
 	// All parameters are non-indexed, so they go in the data field
-	arguments := abi.Arguments{event.Inputs[0], event.Inputs[1], event.Inputs[2], event.Inputs[3], event.Inputs[4]}
+	arguments := abi.Arguments{event.Inputs[0], event.Inputs[1], event.Inputs[2], event.Inputs[3], event.Inputs[4], event.Inputs[5]}
 	seqBig := new(big.Int).SetUint64(sequence)
-	packed, err := arguments.Pack(seqBig, channelId, portId, txhash, data)
+	packed, err := arguments.Pack(seqBig, channelId, portId, txhash, data, errorMsg)
 	if err != nil {
 		return err
 	}

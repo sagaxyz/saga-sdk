@@ -347,46 +347,6 @@ func (s *ProposalHandlerTestSuite) TestPrepareProposal_TxDecodeReturnsNil() {
 	s.Require().NotNil(resp)
 }
 
-// TestProcessProposal_AlwaysAccepts tests that ProcessProposal always accepts
-func (s *ProposalHandlerTestSuite) TestProcessProposal_AlwaysAccepts() {
-	processHandler := s.handler.ProcessProposalHandler()
-
-	testCases := []struct {
-		name string
-		txs  [][]byte
-	}{
-		{
-			name: "empty txs",
-			txs:  [][]byte{},
-		},
-		{
-			name: "single tx",
-			txs:  [][]byte{[]byte("tx1")},
-		},
-		{
-			name: "multiple txs",
-			txs:  [][]byte{[]byte("tx1"), []byte("tx2"), []byte("tx3")},
-		},
-		{
-			name: "with nil tx",
-			txs:  [][]byte{[]byte("tx1"), nil, []byte("tx3")},
-		},
-	}
-
-	for _, tc := range testCases {
-		s.Run(tc.name, func() {
-			req := &abci.RequestProcessProposal{
-				Txs: tc.txs,
-			}
-
-			resp, err := processHandler(s.ctx, req)
-			s.Require().NoError(err)
-			s.Require().NotNil(resp)
-			s.Require().Equal(abci.ResponseProcessProposal_ACCEPT, resp.Status)
-		})
-	}
-}
-
 // TestNewProposalHandler tests the constructor
 func (s *ProposalHandlerTestSuite) TestNewProposalHandler() {
 	handler := transferrouter_abci.NewProposalHandler(

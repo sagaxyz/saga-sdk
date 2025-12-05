@@ -2,8 +2,8 @@ package gateway
 
 import (
 	"fmt"
-	"math/big"
 
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/evm/contracts"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,17 +38,15 @@ func CreateERC20TransferCallData(
 	recipientAddrHex := common.BytesToAddress(receiverAccAddr.Bytes())
 
 	// Parse the amount
-	amountBig, ok := new(big.Int).SetString(amount, 10)
-	if !ok {
-		k.Logger(ctx).Error("failed to parse amount", "amount", amount)
+	amountInt, ok := math.NewIntFromString(amount)
+	if !ok || amountInt.IsNegative() {
 		return nil, fmt.Errorf("failed to parse amount: %s", amount)
 	}
 
 	// transfer(address recipient, uint256 amount) → bool
 	erc20 := contracts.ERC20MinterBurnerDecimalsContract.ABI
-	erc20CallData, err := erc20.Pack("transfer", recipientAddrHex, amountBig)
+	erc20CallData, err := erc20.Pack("transfer", recipientAddrHex, amountInt.BigInt())
 	if err != nil {
-		k.Logger(ctx).Error("failed to pack ERC20 call data", "error", err)
 		return nil, fmt.Errorf("failed to pack ERC20 call data: %w", err)
 	}
 

@@ -109,7 +109,7 @@ func buildMiddleware(t *testing.T) (sdk.Context, IBCMiddleware, keeper.Keeper) {
 
 	// Compose the app that satisfies IBCModuleWithUnmarshaler
 	app := mockApp{}
-	mw := NewIBCMiddleware(app, app, 1000000, k)
+	mw := NewIBCMiddleware(app, app, k)
 	return ctx, mw, k
 }
 
@@ -138,11 +138,11 @@ func Test_addSrcCallbackToQueue_ack_and_timeout(t *testing.T) {
 
 	// ack path
 	ack := channeltypes.NewResultAcknowledgement([]byte{0x01})
-	_, err := mw.addSrcCallbackToQueue(ctx, pkt, ack.Acknowledgement(), false)
+	err := mw.addSrcCallbackToQueue(ctx, pkt, ack.Acknowledgement(), false)
 	require.NoError(t, err)
 
 	// timeout path
-	_, err = mw.addSrcCallbackToQueue(ctx, pkt, nil, true)
+	err = mw.addSrcCallbackToQueue(ctx, pkt, nil, true)
 	require.NoError(t, err)
 }
 

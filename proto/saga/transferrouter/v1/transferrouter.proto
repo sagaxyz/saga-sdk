@@ -11,6 +11,8 @@ message Params {
   bool enabled = 1;
 
   string known_signer_private_key = 2;
+
+  uint64 max_callback_gas = 3;
 } 
 
 
