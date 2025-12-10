@@ -29,28 +29,28 @@ func (mvfd MsgFilterDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate b
 		return ctx, errors.Wrap(sdkerrors.ErrTxDecode, "invalid tx type")
 	}
 
-	signers, err := sigTx.GetSigners()
-	if err != nil {
-		return
-	}
-
-	matchAll := true
+	// Check if at least one Msg matches any of the filtered prefixes
+	var match bool
 	for _, msg := range tx.GetMsgs() {
 		msgType := sdk.MsgTypeURL(msg)
 
-		var match bool
 		for _, prefix := range mvfd.prefixes {
 			if strings.HasPrefix(msgType, prefix) {
 				match = true
 				break
 			}
 		}
-		if !match {
-			matchAll = false
+		if match {
 			break
 		}
 	}
-	if matchAll {
+
+	if match {
+		var signers [][]byte
+		signers, err = sigTx.GetSigners()
+		if err != nil {
+			return
+		}
 		for _, signer := range signers {
 			if !mvfd.filter(ctx, signer) {
 				err = fmt.Errorf("address %s denied for some of the tx message(s)", sdk.AccAddress(signer).String())
