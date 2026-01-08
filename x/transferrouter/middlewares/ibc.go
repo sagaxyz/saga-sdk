@@ -84,7 +84,7 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 		}
 	}
 
-	err = i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
+	err = i.addSrcCallbackToQueue(ctx, params, packet, acknowledgement, false)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 		return err
@@ -133,7 +133,7 @@ func (i IBCMiddleware) OnTimeoutPacket(
 		return err
 	}
 
-	err = i.addSrcCallbackToQueue(ctx, packet, nil, true)
+	err = i.addSrcCallbackToQueue(ctx, params, packet, nil, true)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 		return err
@@ -279,13 +279,7 @@ func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, 
 
 // helper functions
 
-func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
-
-	params, err := i.k.Params.Get(ctx)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return err
-	}
+func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, params types.Params, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
 
 	// get callback data
 	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, params.MaxCallbackGas)
