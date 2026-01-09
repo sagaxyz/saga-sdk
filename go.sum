@@ -752,8 +752,8 @@ github.com/rs/zerolog v1.34.0/go.mod h1:bJsvje4Z08ROH4Nhs5iH600c3IkWhwp44iRc54W6
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
-github.com/sagaxyz/cosmos-evm v0.5.0-saga.rc.2 h1:mcAothUKuhZXq6TLMjHCLZZKgtdr+7i1hZMruDPdSN8=
-github.com/sagaxyz/cosmos-evm v0.5.0-saga.rc.2/go.mod h1:Etp0JwqiWb8QfA7fZ4N7/KCnP5M8BdcM/Gzhk3llkWw=
+github.com/sagaxyz/cosmos-evm v0.5.0-saga.rc.1.15 h1:1uzLh2ZGN4rVlVKADDSYYDFkADFE76/LbH9FC3HkchU=
+github.com/sagaxyz/cosmos-evm v0.5.0-saga.rc.1.15/go.mod h1:Etp0JwqiWb8QfA7fZ4N7/KCnP5M8BdcM/Gzhk3llkWw=
 github.com/sagaxyz/cosmos-sdk v0.53.4-saga h1:M20hmBmbqy719/621dizSlMMHao95lzLDH3njQM59eE=
 github.com/sagaxyz/cosmos-sdk v0.53.4-saga/go.mod h1:1hHy+NG942cwt+xChSSPFpx/Q80cWS4944jFslUJq9c=
 github.com/sagikazarmark/locafero v0.9.0 h1:GbgQGNtTrEmddYDSAH9QLRyfAHY12md+8YFTqyMTC9k=

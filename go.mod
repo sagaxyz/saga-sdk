@@ -207,7 +207,7 @@ replace (
 	// our own fork of cosmos-sdk
 	github.com/cosmos/cosmos-sdk => github.com/sagaxyz/cosmos-sdk v0.53.4-saga
 	// our own fork of Cosmos EVM
-	github.com/cosmos/evm => github.com/sagaxyz/cosmos-evm v0.5.0-saga.rc.2
+	github.com/cosmos/evm => github.com/sagaxyz/cosmos-evm v0.5.0-saga.rc.1.15
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v0.0.0-20250806193535-2fc7571efa91
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
