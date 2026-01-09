@@ -147,7 +147,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 	logger := i.k.Logger(ctx)
 	params, err := i.k.Params.Get(ctx)
 	if err != nil {
-		i.k.Logger(ctx).Error("failed to get params in OnRecvPacket", "error", err)
+		logger.Error("failed to get params in OnRecvPacket", "error", err)
 		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
 
