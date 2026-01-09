@@ -136,13 +136,17 @@ func Test_addSrcCallbackToQueue_ack_and_timeout(t *testing.T) {
 		Data:               bz,
 	}
 
+	params, err := mw.k.Params.Get(ctx)
+	if err != nil {
+		t.Fatalf("failed to get params: %v", err)
+	}
 	// ack path
 	ack := channeltypes.NewResultAcknowledgement([]byte{0x01})
-	err := mw.addSrcCallbackToQueue(ctx, pkt, ack.Acknowledgement(), false)
+	err = mw.addSrcCallbackToQueue(ctx, params, pkt, ack.Acknowledgement(), false)
 	require.NoError(t, err)
 
 	// timeout path
-	err = mw.addSrcCallbackToQueue(ctx, pkt, nil, true)
+	err = mw.addSrcCallbackToQueue(ctx, params, pkt, nil, true)
 	require.NoError(t, err)
 }
 

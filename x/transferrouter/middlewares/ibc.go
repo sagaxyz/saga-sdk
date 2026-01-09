@@ -43,6 +43,16 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 	acknowledgement []byte,
 	relayer sdk.AccAddress,
 ) error {
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params", "error", err)
+		return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
+	}
+	if !params.Enabled {
+		// if the transferrouter module is disabled, we let the underlying module handle the acknowledgement packet
+		return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
+	}
+
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		// not a transfer packet, let the underlying module handle the acknowledgement packet
@@ -74,7 +84,7 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 		}
 	}
 
-	err := i.addSrcCallbackToQueue(ctx, packet, acknowledgement, false)
+	err = i.addSrcCallbackToQueue(ctx, params, packet, acknowledgement, false)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on acknowledgement packet", "error", err)
 		return err
@@ -90,6 +100,16 @@ func (i IBCMiddleware) OnTimeoutPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) error {
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params", "error", err)
+		return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
+	}
+	if !params.Enabled {
+		// if the transferrouter module is disabled, we let the underlying module handle the timeout packet
+		return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
+	}
+
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		// not a transfer packet, let the underlying module handle the timeout
@@ -113,7 +133,7 @@ func (i IBCMiddleware) OnTimeoutPacket(
 		return err
 	}
 
-	err = i.addSrcCallbackToQueue(ctx, packet, nil, true)
+	err = i.addSrcCallbackToQueue(ctx, params, packet, nil, true)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to add src callback to queue on timeout packet", "error", err)
 		return err
@@ -125,6 +145,17 @@ func (i IBCMiddleware) OnTimeoutPacket(
 // OnRecvPacket implements types.IBCModule.
 func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, relayer sdk.AccAddress) exported.Acknowledgement {
 	logger := i.k.Logger(ctx)
+	params, err := i.k.Params.Get(ctx)
+	if err != nil {
+		logger.Error("failed to get params in OnRecvPacket", "error", err)
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
+	}
+
+	if !params.Enabled {
+		// if the transferrouter module is disabled, we let the underlying module handle the recv packet
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
+	}
+
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		logger.Debug(fmt.Sprintf("OnRecvPacket payload is not a FungibleTokenPacketData: %s", err.Error()))
@@ -133,7 +164,7 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 
 	// If it's a PFM packet meant to be forwarded, we return early as we won't handle it here
 	d := make(map[string]interface{})
-	err := json.Unmarshal([]byte(data.Memo), &d)
+	err = json.Unmarshal([]byte(data.Memo), &d)
 	if err == nil && d["forward"] != nil {
 		logger.Debug("Packet handled by PFM")
 		// a packet meant to be forwarded, let the PFM module handle it
@@ -142,12 +173,6 @@ func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, pack
 
 	// Override the receiver address to the gateway contract address
 	overrideReceiver := sdk.AccAddress(gateway.PrecompileAddress.Bytes())
-
-	params, err := i.k.Params.Get(ctx)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
-	}
 
 	// If it's a callback packet, we perform a check to ensure the receiver address is the expected one,
 	// and we set it as the receiver of the funds
@@ -259,13 +284,7 @@ func (i IBCMiddleware) OnChanOpenTry(ctx sdk.Context, order channeltypes.Order, 
 
 // helper functions
 
-func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
-
-	params, err := i.k.Params.Get(ctx)
-	if err != nil {
-		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return err
-	}
+func (i IBCMiddleware) addSrcCallbackToQueue(ctx sdk.Context, params types.Params, packet channeltypes.Packet, acknowledgement []byte, isTimeout bool) error {
 
 	// get callback data
 	_, isCbPacket, err := callbacktypes.GetSourceCallbackData(ctx, i.packetDataUnmarshaler, packet, params.MaxCallbackGas)

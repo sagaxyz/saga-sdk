@@ -196,7 +196,6 @@ func (s *ProposalHandlerTestSuite) TestPrepareProposal_MissingParams() {
 	)
 
 	mockTxSelector := new(MockTxSelector)
-	mockTxSelector.On("Clear").Return()
 
 	handler := transferrouter_abci.NewProposalHandler(transferrouter_abci.ProposalHandlerOptions{
 		Keeper:     k,
@@ -213,9 +212,8 @@ func (s *ProposalHandlerTestSuite) TestPrepareProposal_MissingParams() {
 	}
 
 	resp, err := prepareHandler(ctx, req)
-	s.Require().Error(err)
-	s.Require().Nil(resp)
-	s.Require().Contains(err.Error(), "failed to get params")
+	s.Require().NoError(err)
+	s.Require().Equal(req.Txs, resp.Txs)
 
 	mockTxSelector.AssertExpectations(s.T())
 }

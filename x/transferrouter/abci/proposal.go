@@ -50,6 +50,17 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
 		logger := h.keeper.Logger(ctx)
 
+		// if the transferrouter module is disabled, we return the txs from the request
+		// if there is an error getting the params, it could be because the params are not set yet,
+		// which we need to allow given that the upgrade handler hasn't run yet
+		params, err := h.keeper.Params.Get(ctx)
+		if err != nil || !params.Enabled {
+			logger.Error("failed to get params", "error", err, "params", params)
+			return &abci.ResponsePrepareProposal{
+				Txs: req.Txs,
+			}, nil
+		}
+
 		// 1. Add the source callback queue
 		chainId, err := utils.ParseChainID(ctx.ChainID())
 		if err != nil {
@@ -69,12 +80,6 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		}
 
 		defer h.txSelector.Clear()
-
-		params, err := h.keeper.Params.Get(ctx)
-		if err != nil {
-			logger.Error("Failed to get params", "error", err)
-			return nil, errors.New("failed to get params")
-		}
 
 		// Parse the configured private key (in hex format) and derive the corresponding
 		// Ethereum address of the known signer.
@@ -139,9 +144,15 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
 		params, err := h.keeper.Params.Get(ctx)
-		if err != nil {
-			return nil, err
+		// here we return an accept response because we don't want to reject the proposal if the params are not set yet
+		// otherwise we would be halting block production.
+		if err != nil || !params.Enabled {
+			h.keeper.Logger(ctx).Error("failed to get params", "error", err, "params", params)
+			return &abci.ResponseProcessProposal{
+				Status: abci.ResponseProcessProposal_ACCEPT,
+			}, nil
 		}
+
 		if params.KnownSignerPrivateKey == "" {
 			return nil, errors.New("known signer private key is empty")
 		}
