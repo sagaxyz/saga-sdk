@@ -55,6 +55,7 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 		// which we need to allow given that the upgrade handler hasn't run yet
 		params, err := h.keeper.Params.Get(ctx)
 		if err != nil || !params.Enabled {
+			logger.Error("failed to get params", "error", err, "params", params)
 			return &abci.ResponsePrepareProposal{
 				Txs: req.Txs,
 			}, nil
@@ -143,7 +144,10 @@ func (h *ProposalHandler) PrepareProposalHandler() sdk.PrepareProposalHandler {
 func (h *ProposalHandler) ProcessProposalHandler() sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
 		params, err := h.keeper.Params.Get(ctx)
+		// here we return an accept response because we don't want to reject the proposal if the params are not set yet
+		// otherwise we would be halting block production.
 		if err != nil || !params.Enabled {
+			h.keeper.Logger(ctx).Error("failed to get params", "error", err, "params", params)
 			return &abci.ResponseProcessProposal{
 				Status: abci.ResponseProcessProposal_ACCEPT,
 			}, nil

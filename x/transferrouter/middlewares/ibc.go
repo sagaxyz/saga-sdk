@@ -46,7 +46,7 @@ func (i IBCMiddleware) OnAcknowledgementPacket(
 	params, err := i.k.Params.Get(ctx)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return err
+		return i.app.OnAcknowledgementPacket(ctx, channelVersion, packet, acknowledgement, relayer)
 	}
 	if !params.Enabled {
 		// if the transferrouter module is disabled, we let the underlying module handle the acknowledgement packet
@@ -103,7 +103,7 @@ func (i IBCMiddleware) OnTimeoutPacket(
 	params, err := i.k.Params.Get(ctx)
 	if err != nil {
 		i.k.Logger(ctx).Error("failed to get params", "error", err)
-		return err
+		return i.app.OnTimeoutPacket(ctx, channelVersion, packet, relayer)
 	}
 	if !params.Enabled {
 		// if the transferrouter module is disabled, we let the underlying module handle the timeout packet
@@ -144,13 +144,18 @@ func (i IBCMiddleware) OnTimeoutPacket(
 
 // OnRecvPacket implements types.IBCModule.
 func (i IBCMiddleware) OnRecvPacket(ctx sdk.Context, channelVersion string, packet channeltypes.Packet, relayer sdk.AccAddress) exported.Acknowledgement {
+	logger := i.k.Logger(ctx)
 	params, err := i.k.Params.Get(ctx)
-	if !params.Enabled || err != nil {
+	if err != nil {
+		i.k.Logger(ctx).Error("failed to get params in OnRecvPacket", "error", err)
+		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
+	}
+
+	if !params.Enabled {
 		// if the transferrouter module is disabled, we let the underlying module handle the recv packet
 		return i.app.OnRecvPacket(ctx, channelVersion, packet, relayer)
 	}
 
-	logger := i.k.Logger(ctx)
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		logger.Debug(fmt.Sprintf("OnRecvPacket payload is not a FungibleTokenPacketData: %s", err.Error()))
