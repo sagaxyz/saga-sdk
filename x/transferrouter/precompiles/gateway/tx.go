@@ -217,11 +217,6 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
-	if err != nil {
-		p.transferKeeper.Logger(ctx).Error("failed to execute call", "error", err)
-		return nil, err
-	}
-
 	p.transferKeeper.Logger(ctx).Info("Adding EVM logs to stateDB", "logCount", len(logs))
 	for _, log := range logs {
 		stateDB.AddLog(log)
