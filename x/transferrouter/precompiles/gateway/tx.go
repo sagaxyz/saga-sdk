@@ -101,6 +101,10 @@ func (p Precompile) Execute(
 	// This defer is used so we can write the cached context events back to the main context, but also to clear the returned error,
 	// so it can still remove the packet from the queue if the execution fails.
 	defer func() {
+		// These steps must not consume gas to avoid exceeding the gas limit.
+		// This is so the defer can finish the execution successfully.
+		ctx = ctx.WithGasMeter(evmtypes.NewInfiniteGasMeterWithLimit(0))
+
 		success := retErr == nil
 		p.transferKeeper.Logger(ctx).Debug("Starting defer cleanup", "executionSuccess", success)
 
@@ -217,17 +221,13 @@ func (p Precompile) Execute(
 		return nil, err
 	}
 
-	if err != nil {
-		p.transferKeeper.Logger(ctx).Error("failed to execute call", "error", err)
-		return nil, err
-	}
-
 	p.transferKeeper.Logger(ctx).Info("Adding EVM logs to stateDB", "logCount", len(logs))
 	for _, log := range logs {
 		stateDB.AddLog(log)
 	}
 
-	return retBz, nil
+	// do not return anything here, as the returning values are named variables
+	return
 }
 
 // popNextPacket gets the next packet from the queue and removes it
@@ -457,8 +457,9 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 		for _, log := range logs {
 			stateDB.AddLog(log)
 		}
+
+		writeFn()
 	}
-	writeFn()
 
 	return nil, nil
 }
