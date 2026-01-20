@@ -457,8 +457,9 @@ func (p Precompile) ExecuteSrcCallback(ctx sdk.Context,
 		for _, log := range logs {
 			stateDB.AddLog(log)
 		}
+
+		writeFn()
 	}
-	writeFn()
 
 	return nil, nil
 }
